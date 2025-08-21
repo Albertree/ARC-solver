@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 # from .ARCLOADER import *
 
-settings = json.load(open('solver/tools/settings.json', 'r'))
+settings = json.load(open('tools/settings.json', 'r'))
 colors_rgb = settings['colors_rgb']
 
 # color note 

@@ -2,7 +2,7 @@
 import json
 import os
 from typing import NamedTuple
-from ..ARCKG.pair import PAIR, PAIRInfo
+from ARCKG.pair import PAIR, PAIRInfo
 
 class TASKInfo(NamedTuple):
     id: int
@@ -83,9 +83,11 @@ class TASKManager() :
     @staticmethod
     def from_hex_code(task_hex_code:str) :
         # Try to find the JSON file in different ARC data directories
+
+        print(os.getcwd())
         possible_paths = [
-            f"./data/ARC_AGI/training/{task_hex_code}.json",
-            f"./data/ARC_AGI/evaluation/{task_hex_code}.json"
+            f"data/ARC_AGI/training/{task_hex_code}.json",
+            f"data/ARC_AGI/evaluation/{task_hex_code}.json"
         ]
         
         task_data = None

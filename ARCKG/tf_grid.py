@@ -1,5 +1,5 @@
 from .grid import GRID
-from ..DSL.layer_utils import merge_layers
+from DSL.layer_utils import merge_layers
 
 class TF_GRID(GRID):
     def __init__(self, accumulated_layers, t, p, g):

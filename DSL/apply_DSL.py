@@ -1,7 +1,7 @@
 from .transformation_DSL import *
-from ..ARCKG.tf_grid import TF_GRID
+from ARCKG.tf_grid import TF_GRID
 from .selection import SELECTION
-from ..basics.utils import printcg
+from basics.utils import printcg
 from .layer_utils import merge_layers
 
 

@@ -1,4 +1,4 @@
-from ..ARCKG.grid import GRID
+from ARCKG.grid import GRID
 import os
 import ast
 import json

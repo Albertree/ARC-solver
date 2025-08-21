@@ -1,4 +1,4 @@
-from transformation_DSL import pprint
+from DSL.transformation_DSL import pprint
 
 # SELECTION
 def selection_to_colorgrid(selection, main_grid):

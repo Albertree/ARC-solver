@@ -1,6 +1,6 @@
-from ..ARCKG.tf_grid import TF_GRID
-from .hodel_utils import *
-from .dsl3 import *
+from ARCKG.tf_grid import TF_GRID
+from DSL.hodel_utils import *
+from DSL.dsl3 import *
 
 def pprint(name, sth):
     print(name)

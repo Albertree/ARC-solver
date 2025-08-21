@@ -1,10 +1,10 @@
 import os
 import importlib.util
-from ..basics.utils import printcg
-from ..managers.task_manager import TASKManager
-from ..ARCKG.grid import GRID
-from ..DSL.apply_DSL import apply_DSL
-from ..DSL.transformation_DSL import coloring, make_grid
+from basics.utils import printcg
+from managers.task_manager import TASKManager
+from ARCKG.grid import GRID
+from DSL.apply_DSL import apply_DSL
+from DSL.transformation_DSL import coloring, make_grid
 
 def main(task_hex_code_filter=None):
     base_result_dir = os.path.join(os.path.dirname(__file__), "..", "result_code")

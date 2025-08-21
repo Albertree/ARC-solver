@@ -2,13 +2,13 @@ import sys
 import os
 
 # Add the project root to the Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+project_root = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
 os.chdir(project_root)
 
-from solver.workers.level_1_solver import Level1Solver
-from solver.managers.task_manager import TASKManager
-from solver.tools.validate_solution import main as validate
+from workers.level_1_solver import Level1Solver
+from managers.task_manager import TASKManager
+from tools.validate_solution import main as validate
 
 if __name__ == "__main__":
     TASK_HEX_CODE = "08ed6ac7"
