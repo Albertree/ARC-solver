@@ -1,0 +1,231 @@
+from typing import NamedTuple
+from .ARCKG_component import ARCKGComponent
+from .grid_component import GridComponent
+from .pixel import PIXEL
+from .types.type import PIXELData_Type
+
+class OBJECTInfo(NamedTuple):
+    id: int
+    type: str
+    raw_data: frozenset
+
+class OBJECT(GridComponent):
+    def __init__(self, id:int, type:str, parent:ARCKGComponent, raw_data:frozenset): #, pixel_data:PIXELData_Type):
+        super().__init__(id, type, parent)
+        self.raw_data = raw_data
+
+    def object_colcoord_to_colorgrid(self, object):
+        object = list(object)
+
+        max_col = 0
+        max_row = 0
+        min_col = 100
+        min_row = 100
+        for n in range(len(object)):
+            if object[n][1][0] > max_col:
+                max_col = object[n][1][0]
+            if object[n][1][1] > max_row:
+                max_row = object[n][1][1] 
+
+            if object[n][1][0] < min_col:
+                min_col = object[n][1][0]
+            if object[n][1][1] < min_row:
+                min_row = object[n][1][1]
+
+        if min_col == 100:
+            min_col = max_col
+        if min_row == 100:
+            min_row = max_row
+        
+        if min_col == 0:
+            col_move = 0
+        else:
+            col_move = min_col
+
+        if min_row == 0:
+            row_move = 0
+        else:
+            row_move = min_row
+
+        colorgrid = [[13 for j in range(max_row - min_row + 1)] for i in range(max_col - min_col + 1)]
+        for n in range(len(object)):
+            colorgrid[object[n][1][0]-(col_move)][object[n][1][1]-(row_move)] = object[n][0]
+        return colorgrid
+
+    def colcoord_to_coordinate(self, colcoord):
+        return [(colcoord[i][1][0], colcoord[i][1][1]) for i in range(len(colcoord))]
+
+
+    def measure_shape(self, object):
+        # return an array of 0 or 1, 0 for value 13, 1 for other values
+        shape = [[0 for j in range(len(object[0]))] for i in range(len(object))]
+        for i in range(len(object)):
+            for j in range(len(object[0])): 
+                if object[i][j] != 13:
+                    shape[i][j] = 1 # 0 for valid color (color between 0 and 9)
+                else:
+                    shape[i][j] = -1 # -1 for no color (color 13)
+        return shape
+    
+    def measure_area(self, shape):
+        return sum([1 for i in range(len(shape)) for j in range(len(shape[0])) if shape[i][j] == 1])
+
+    def absolute_coordinate_of_object(self, coordinate, pos):
+        return [(coordinate[i][0] + pos[0], coordinate[i][1] + pos[1]) for i in range(len(coordinate))]
+
+    def center_of_grid(self, grid):
+        center = []
+        if len(grid) % 2 == 1:
+            # vertical odd, horizontal odd
+            if len(grid[0]) % 2 == 1:
+                center.append((len(grid) // 2, len(grid[0]) // 2))
+            # vertical odd, horizontal even
+            else:
+                center.append((len(grid) // 2, len(grid[0]) // 2 - 1))
+                center.append((len(grid) // 2, len(grid[0]) // 2))
+        else:
+            # vertical even, horizontal odd
+            if len(grid[0]) % 2 == 1:
+                center.append((len(grid) // 2 - 1, len(grid[0]) // 2))
+                center.append((len(grid) // 2, len(grid[0]) // 2))
+            # vertical even, horizontal even
+            else:
+                center.append((len(grid) // 2 - 1, len(grid[0]) // 2 - 1))
+                center.append((len(grid) // 2 - 1, len(grid[0]) // 2))
+                center.append((len(grid) // 2, len(grid[0]) // 2 - 1))
+                center.append((len(grid) // 2, len(grid[0]) // 2))
+        return center
+
+    def margin_of_grid(self, grid):
+        margin = []
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if i == 0 or i == len(grid) - 1 or j == 0 or j == len(grid[0]) - 1:
+                    margin.append((i, j))
+        return margin
+
+    def inner_of_grid(self, grid):
+        inner = []  
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if i != 0 and i != len(grid) - 1 and j != 0 and j != len(grid[0]) - 1:
+                    inner.append((i, j))
+        return inner
+
+    def corner_of_grid(self, grid):
+        corner = []
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if (i == 0 or i == len(grid) - 1) and (j == 0 or j == len(grid[0]) - 1):
+                    corner.append((i, j))
+        return corner
+
+    def edge_of_grid(self, grid):
+        edge = []
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if i == 0 or i == len(grid) - 1 or j == 0 or j == len(grid[0]) - 1:
+                    if not ((i == 0 or i == len(grid) - 1) and (j == 0 or j == len(grid[0]) - 1)):
+                        edge.append((i, j))
+        return edge
+
+    def grid_horizontal_symmetry(self, grid):
+        # Check if the grid is horizontally symmetric
+        rows = len(grid)
+        cols = len(grid[0])
+        for i in range(rows // 2 + 1):
+            if grid[i] != grid[rows - i - 1]:
+                return False
+        return True
+
+    def grid_vertical_symmetry(self, grid):
+        # Check if the grid is vertically symmetric
+        rows = len(grid)
+        cols = len(grid[0])
+        for j in range(cols // 2 + 1):
+            for i in range(rows):
+                if grid[i][j] != grid[i][cols - j - 1]:
+                    return False
+        return True
+
+    def grid_diagonal_symmetry(self, grid):
+        # Check if the grid is symmetric along the main diagonal
+        size = len(grid)
+        for i in range(size):
+            for j in range(i + 1, size):
+                if grid[i][j] != grid[j][i]:
+                    return False
+        return True
+
+    def grid_antidiagonal_symmetry(self, grid):
+        # Check if the grid is symmetric along the anti-diagonal
+        size = len(grid)
+        for i in range(size):
+            for j in range(size - i - 1):
+                if grid[i][j] != grid[size - j - 1][size - i - 1]:
+                    return False
+        return True
+    
+    def update_property(self, object):
+        self.childs = self.pixels
+
+        self.colorgrid = self.object_colcoord_to_colorgrid(object['obj']) 
+        self.colcoord = list(object['obj'])
+        
+        self.view = self.colorgrid
+
+        self.pos = object["pos"]
+        self.color = object["color"]
+        self.method = object["method"]
+        self.coordinate = self.colcoord_to_coordinate(self.colcoord)
+
+        self.height = len(self.colorgrid)
+        self.width = len(self.colorgrid[0])
+        self.size = (self.height, self.width)
+        self.shape = self.measure_shape(self.colorgrid)
+        self.area = self.measure_area(self.shape)
+        self.center = self.absolute_coordinate_of_object(self.center_of_grid(self.colorgrid), self.pos)
+
+        self.margin = self.absolute_coordinate_of_object(self.margin_of_grid(self.colorgrid), self.pos)
+        self.inner = self.absolute_coordinate_of_object(self.inner_of_grid(self.colorgrid), self.pos)
+        self.corner = self.absolute_coordinate_of_object(self.corner_of_grid(self.colorgrid), self.pos)
+        self.edge = self.absolute_coordinate_of_object(self.edge_of_grid(self.colorgrid), self.pos)
+
+        self.left_top = (self.pos[0], self.pos[1])
+        self.right_top = (self.pos[0], self.pos[1] + self.width - 1)
+        self.left_bottom = (self.pos[0] + self.height - 1, self.pos[1])
+        self.right_bottom = (self.pos[0] + self.height - 1, self.pos[1] + self.width - 1)
+
+        self.hori_symm = self.grid_horizontal_symmetry(self.colorgrid) # 상하 대칭
+        self.verti_symm = self.grid_vertical_symmetry(self.colorgrid) # 좌우 대칭
+        if self.height == self.width:
+            self.diag_symm = self.grid_diagonal_symmetry(self.colorgrid)
+            self.anti_symm = self.grid_antidiagonal_symmetry(self.colorgrid)
+        else:
+            self.diag_symm = False
+            self.anti_symm = False
+
+    @staticmethod
+    def contains(obj:GridComponent, pixel:PIXEL) -> bool:
+        if isinstance(obj,OBJECT):
+             return pixel.pixel_data in obj.pixel_data
+        else:
+            return False
+    
+    @staticmethod
+    def from_json(object_info:OBJECTInfo, parent:ARCKGComponent):
+        ooo = OBJECT(id=object_info.id, type=object_info.type, raw_data=object_info.raw_data, parent=parent)
+        obj_coordinate = ooo.colcoord_to_coordinate(list(object_info.raw_data['obj']))
+
+        pixel_list = []
+        for pixel in parent.pixels:
+            if pixel.coordinate in obj_coordinate:
+                pixel_list.append(pixel)
+        
+        ooo.pixels = pixel_list
+        ooo.update_property(object_info.raw_data)
+
+        return ooo
+
+    def __repr__(self):
+        return f"OBJECT(Size {self.height}x{self.width} and color {self.color} {self.type}, at {self.pos}, in {self.parent})"
