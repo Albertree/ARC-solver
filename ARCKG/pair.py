@@ -1,7 +1,7 @@
 from typing import NamedTuple
 
-from .grid import GRID, GRIDInfo
 from .ARCKG_component import ARCKGComponent
+from .grid import GRID, GRIDInfo
 
 class PAIRInfo(NamedTuple):
     id: int
@@ -49,16 +49,16 @@ class PAIR(ARCKGComponent):
 
         return ppp
     
-    def compute_children(self):
-        # GRID 의 child (OBJECT) 들을 불러와 자신의 property 중 children 에 저장합니다.
-        # For now, return empty list - this can be implemented later with actual pixel/object detection
-        # pixels = [...]
-        # self.children = pixels
-        if hasattr(self, 'parent') and self.parent and len(self.parent) > 0:
-            print(f"GRID parent ID: {self.parent[0].id}")
+    # def compute_children(self):
+    #     # GRID 의 child (OBJECT) 들을 불러와 자신의 property 중 children 에 저장합니다.
+    #     # For now, return empty list - this can be implemented later with actual pixel/object detection
+    #     # pixels = [...]
+    #     # self.children = pixels
+    #     if hasattr(self, 'parent') and self.parent and len(self.parent) > 0:
+    #         print(f"GRID parent ID: {self.parent[0].id}")
         
-        # Return empty list for now - can be implemented with actual child components later
-        return []
+    #     # Return empty list for now - can be implemented with actual child components later
+    #     return []
     
     def __repr__(self):
         return f"PAIR({self.id}th {self.type} of TASK({self.parent.task_hex_code}))"

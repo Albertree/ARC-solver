@@ -1,4 +1,4 @@
-from managers.task_manager import TASKManager
+from managers.arc_manager import ARCManager
 from managers.cli_manager import CLIManager
 from workers.solver import Solver
 
@@ -23,7 +23,7 @@ if __name__ == "__main__" :
 
     ###
 
-    task:TASKManager = TASKManager.from_hex_code(task_hex_code=TASK_HEX_CODE)
+    task = ARCManager.from_hex_code(task_hex_code=TASK_HEX_CODE)
     breakpoint()
     solver = Solver(task=task)
     solver.run()

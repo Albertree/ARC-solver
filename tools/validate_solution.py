@@ -1,7 +1,7 @@
 import os
 import importlib.util
 from basics.utils import printcg
-from managers.task_manager import TASKManager
+from managers.arc_manager import ARCManager
 from ARCKG.grid import GRID
 from DSL.apply_DSL import apply_DSL
 from DSL.transformation_DSL import coloring, make_grid
@@ -23,8 +23,8 @@ def main(task_hex_code_filter=None):
                         parts = filename.replace(".py", "").split("_")
                         pair_number = int(parts[1])
                         
-                        task_manager = TASKManager.from_hex_code(task_hex)
-                        pair = task_manager.example_pairs[pair_number]
+                        task = ARCManager.from_hex_code(task_hex)
+                        pair = task.example_pairs[pair_number]
                         
                         module_name = f"solver.result_code.{task_hex}.{level_dir}.{filename.replace('.py', '')}"
                         spec = importlib.util.spec_from_file_location(module_name, os.path.join(level_path, filename))

@@ -3,8 +3,9 @@ from components.condition import Condition
 from components.rule import Rule
 from components.transformation_history import TFHistory
 from managers.cli_manager import CLIManager
-from managers.task_manager import TASKManager
+from managers.arc_manager import ARCManager
 from ARCKG.pair import PAIR
+from ARCKG.task import TASK
 from ARCKG.object import OBJECT
 from ARCKG.pixel import PIXEL
 from workers.tf_abstractor import TFAbstractor
@@ -12,7 +13,7 @@ from workers.tf_generator import TFGenerator
 
 
 class Solver() :
-    def __init__(self,task: TASKManager) :
+    def __init__(self,task: TASK) :
         self.cli:CLIManager = CLIManager()
         self.task_pairs:list[PAIR] = task.get_example_pairs()
         self.tf_storage:list[TFHistory|None] = [None]*len(self.task_pairs)
