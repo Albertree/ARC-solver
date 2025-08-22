@@ -1,4 +1,4 @@
-from typing import NamedTuple, List
+from typing import NamedTuple
 
 from .ARCKG_component import ARCKGComponent
 from .pair import PAIR, PAIRInfo
@@ -13,24 +13,15 @@ class TASK(ARCKGComponent):
         super().__init__(id, type)
         self.raw_data = raw_data
         self.hex_code = hex_code
-        
-        # self.example_pairs: List[PAIR] = []
-        # self.test_pairs: List[PAIR] = []
-        # self.task_hex_code = None
-        
-        # # Properties that will be set by ARCManager
-        # self.example_pair_count = 0
-        # self.test_pair_count = 0
-        # self.train = []
-        # self.test = []
-        # self.view = []
-        # self.view_example = []
-        # self.view_test = []
-        
-        # self.childs = [self.example_pairs, self.test_pairs]
+
+        self.example_pairs = [self.raw_data['train']]
+        self.test_pairs = [self.raw_data['test']]
+
+        self.view = self.task_dict_to_list(self.raw_data)
+
+        self.property = dict()
 
     def task_dict_to_list(self, raw_data: dict) -> list:
-        """Turn all nested components of task dictionary to list"""
         view = []
 
         ttrain = []
@@ -48,11 +39,6 @@ class TASK(ARCKGComponent):
         return view
 
     def update_property(self):
-        """Update all properties based on the pairs"""
-
-        self.example_pairs = self.raw_data['train']
-        self.test_pairs = self.raw_data['test']
-
         self.example_pair_count = len(self.example_pairs) 
         self.test_pair_count = len(self.test_pairs)
 
@@ -60,17 +46,11 @@ class TASK(ARCKGComponent):
         self.train = self.example_pairs
         self.test = self.test_pairs
 
-        self.childs = [self.example_pairs, self.test_pairs]
-        self.train = self.example_pairs
-        self.test = self.test_pairs
-
-        # Set view properties using task_dict_to_list
-        self.view = self.task_dict_to_list(self.raw_data)
         self.view_example = self.view[:self.example_pair_count]
         self.view_test = self.view[self.example_pair_count:]
 
-    def get_example_pairs(self) -> List[PAIR]:
-        return self.example_pairs
+        self.property['example_pair_count'] = self.example_pair_count
+        self.property['test_pair_count'] = self.test_pair_count
 
     @staticmethod
     def from_json(task_info:TASKInfo, task_hex_code: str):
@@ -105,8 +85,22 @@ class TASK(ARCKGComponent):
         
         # Update task properties
         ttt.update_property()
-
+        ttt.to_json()
         return ttt
+    
+    def to_json(self):
+        import os
+        import json
+
+        task_dict = self.property
+        
+        path = f'memory/task_{self.id}/'
+        file_name = f'task_{self.id}.json'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        
+        with open(f'{path}/{file_name}', 'w') as f:
+            json.dump(task_dict, f, indent=2)
 
     def __repr__(self):
         return f"TASK(id={self.id}, type={self.type}, hex_code={self.hex_code}, example_pairs={len(self.example_pairs)}, test_pairs={len(self.test_pairs)})"

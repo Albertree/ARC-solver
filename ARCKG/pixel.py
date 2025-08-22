@@ -12,6 +12,7 @@ class PIXEL(GridComponent):
     def __init__(self, id:int, type:str, parent:list, raw_data:PIXELData_Type): #, pixel_data:PIXELData_Type):
         super().__init__(id, type, parent)
         self.raw_data = raw_data
+        self.property = dict()
 
     def update_property(self, pixel):
         self.colorgrid = [[pixel[0]]]
@@ -24,12 +25,59 @@ class PIXEL(GridComponent):
         self.row_index = pixel[0][1][0]
         self.col_index = pixel[0][1][1]
 
+        # self.property['colorgrid'] = self.colorgrid
+        # self.property['colcoord'] = self.colcoord
+        # self.property['view'] = self.view
+        self.property['color'] = self.color
+        self.property['coordinate'] = {
+            'row_index': self.row_index,
+            'col_index': self.col_index
+        }
+
     @staticmethod
     def from_json(pixel_info:PIXELInfo, parent:ARCKGComponent):
-        xxx = PIXEL(id=pixel_info.id, type=pixel_info.type, raw_data=pixel_info.raw_data, parent=[parent])
+        xxx = PIXEL(id=pixel_info.id, type=pixel_info.type, raw_data=pixel_info.raw_data, parent=parent)
         xxx.update_property(pixel_info.raw_data)
-
+        xxx.to_json()
         return xxx
+
+    def to_json(self):
+        import os
+        import json
+
+        pixel_dict = self.property
+        
+        file_name = f'pixel_{self.id}.json'
+        
+        # Save under grid (always save under grid)
+        # Navigate up: pixel -> grid -> pair -> task
+        grid = self.parent[0] if self.parent else None
+        if grid and hasattr(grid, 'parent') and grid.parent:
+            pair = grid.parent[0] if isinstance(grid.parent, list) else grid.parent
+            if pair and hasattr(pair, 'parent') and pair.parent:
+                task = pair.parent
+                if task:
+                    path_g = f'memory/task_{task.id}/pair_{pair.id}/grid_{grid.id}/pixel_{self.id}/'
+                    if not os.path.exists(path_g):
+                        os.makedirs(path_g)
+                    with open(f'{path_g}/{file_name}', 'w') as f:
+                        json.dump(pixel_dict, f, indent=2)
+        
+        # Save under object parents if they exist
+        for parent in self.parent:
+            if hasattr(parent, 'type') and parent.type == 'object':
+                # Navigate up from object: object -> grid -> pair -> task
+                obj_grid = parent.parent[0] if hasattr(parent, 'parent') and parent.parent else None
+                if obj_grid and hasattr(obj_grid, 'parent') and obj_grid.parent:
+                    obj_pair = obj_grid.parent[0] if isinstance(obj_grid.parent, list) else obj_grid.parent
+                    if obj_pair and hasattr(obj_pair, 'parent') and obj_pair.parent:
+                        obj_task = obj_pair.parent
+                        if obj_task:
+                            path_o = f'memory/task_{obj_task.id}/pair_{obj_pair.id}/grid_{obj_grid.id}/object_{parent.id}/pixel_{self.id}/'
+                            if not os.path.exists(path_o):
+                                os.makedirs(path_o)
+                            with open(f'{path_o}/{file_name}', 'w') as f:
+                                json.dump(pixel_dict, f, indent=2)
 
     def __repr__(self):
         return f"PIXEL({self.color}, {self.coordinate})"

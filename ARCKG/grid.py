@@ -17,6 +17,8 @@ class GRID(GridComponent) :
         self.raw_data = raw_data
         self.pixels = []
         self.objects = []
+        self.property = dict()
+
 
     def colorgrid_to_colcoord(self, colorgrid):
         return [(colorgrid[i][j], (i, j)) for i in range(len(colorgrid)) for j in range(len(colorgrid[0])) if colorgrid[i][j] != 13]
@@ -188,6 +190,33 @@ class GRID(GridComponent) :
             self.diag_symm = False
             self.anti_symm = False
 
+
+
+        # size
+        self.property['size'] = {
+            'height': self.height,
+            'width': self.width
+        }
+
+        # color
+        self.property['color'] = {color: True for color in self.color}
+        self.property['color'].update({'color_count': len(self.color)})
+
+        # area
+        self.property['area'] = {color: sum(1 for row in self.colorgrid for cell in row if cell == color) for color in self.color}
+        self.property['area'].update({'total': sum(self.property['area'].values())})
+
+        # symmetry
+        self.property['symmetry'] = {
+            'hori_symm': self.hori_symm,
+            'verti_symm': self.verti_symm,
+            'diag_symm': self.diag_symm,
+            'anti_symm': self.anti_symm
+        }
+
+        # breakpoint()
+
+
     @staticmethod
     def from_json(grid_info:GRIDInfo, parent:ARCKGComponent):
         ggg = GRID(id=grid_info.id, type=grid_info.type, raw_data=grid_info.raw_data, parent=parent)
@@ -217,12 +246,25 @@ class GRID(GridComponent) :
         ggg.objects = object_list
     
         ggg.update_property()
-
+        ggg.to_json()
         return ggg
     
+    def to_json(self):
+        import os
+        import json
+
+        grid_dict = self.property
+        path = f'memory/task_{self.parent[0].parent.id}/pair_{self.parent[0].id}/grid_{self.id}/'
+        file_name = f'grid_{self.id}.json'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        
+        with open(f'{path}/{file_name}', 'w') as f:
+            json.dump(grid_dict, f, indent=2)
+
     def __repr__(self):
         grid_type = "input" if self.id==0 else "output"
         pair_id = self.parent[0].id
-        task_id = self.parent[0].parent.task_hex_code
+        task_id = self.parent[0].parent.hex_code
         return f"GRID({grid_type} grid of PAIR({pair_id}th pair of TASK({task_id})))"
         

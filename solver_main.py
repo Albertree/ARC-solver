@@ -7,12 +7,12 @@ if __name__ == "__main__":
     
     task = ARCManager.from_hex_code(TASK_HEX_CODE)
 
-    breakpoint()
+    # breakpoint()
     for i, pair in enumerate(task.example_pairs):
         solver = Level1Solver(pair.input_grid, pair.output_grid, f"{TASK_HEX_CODE}_train_{i}")
         solver.solve()
 
     print(f"Level 1 programs generated for task {TASK_HEX_CODE} in 'solver/result_code'")
     
-    validate(TASK_HEX_CODE) 
+    # validate(TASK_HEX_CODE) 
 

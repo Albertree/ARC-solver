@@ -13,6 +13,7 @@ class PAIR(ARCKGComponent):
         super().__init__(id, type)
         self.raw_data = raw_data
         self.parent = parent
+        self.property = dict()
 
     def update_property(self):
         self.childs = [self.input_grid, self.output_grid]
@@ -21,6 +22,8 @@ class PAIR(ARCKGComponent):
 
         self.view = [self.input_grid.view, self.output_grid.view]
         
+        self.property['grid_count'] = len(self.childs)
+
     
     @staticmethod
     def from_json(pair_info:PAIRInfo, parent:ARCKGComponent):        
@@ -46,20 +49,23 @@ class PAIR(ARCKGComponent):
                 ppp.output_grid = ggg
         
         ppp.update_property()
-
+        ppp.to_json()
         return ppp
     
-    # def compute_children(self):
-    #     # GRID 의 child (OBJECT) 들을 불러와 자신의 property 중 children 에 저장합니다.
-    #     # For now, return empty list - this can be implemented later with actual pixel/object detection
-    #     # pixels = [...]
-    #     # self.children = pixels
-    #     if hasattr(self, 'parent') and self.parent and len(self.parent) > 0:
-    #         print(f"GRID parent ID: {self.parent[0].id}")
+    def to_json(self):
+        import os
+        import json
+
+        pair_dict = self.property
+
+        path = f'memory/task_{self.parent.id}/pair_{self.id}/'
+        file_name = f'pair_{self.id}.json'
+        if not os.path.exists(path):
+            os.makedirs(path)
         
-    #     # Return empty list for now - can be implemented with actual child components later
-    #     return []
+        with open(f'{path}/{file_name}', 'w') as f:
+            json.dump(pair_dict, f, indent=2)
     
     def __repr__(self):
-        return f"PAIR({self.id}th {self.type} of TASK({self.parent.task_hex_code}))"
+        return f"PAIR({self.id}th {self.type} of TASK({self.parent.hex_code}))"
     

@@ -13,6 +13,7 @@ class OBJECT(GridComponent):
     def __init__(self, id:int, type:str, parent:ARCKGComponent, raw_data:frozenset): #, pixel_data:PIXELData_Type):
         super().__init__(id, type, parent)
         self.raw_data = raw_data
+        self.property = dict()
 
     def object_colcoord_to_colorgrid(self, object):
         object = list(object)
@@ -205,12 +206,56 @@ class OBJECT(GridComponent):
             self.diag_symm = False
             self.anti_symm = False
 
-    @staticmethod
-    def contains(obj:GridComponent, pixel:PIXEL) -> bool:
-        if isinstance(obj,OBJECT):
-             return pixel.pixel_data in obj.pixel_data
+
+
+        if len(self.color) == 1:
+            self.property['color'] = self.color[0]
         else:
-            return False
+            self.property['color'] = self.color
+
+        self.property['color'] = self.color
+        self.property['coordinate'] = {
+            'row_index': self.pos[0],
+            'col_index': self.pos[1]
+        }
+        self.property['pos'] = {
+            'left_top': {
+                'row_index': self.pos[0],
+                'col_index': self.pos[1]
+            },
+            'right_top': {
+                'row_index': self.pos[0],
+                'col_index': self.pos[1] + self.width - 1
+            },
+            'left_bottom': {
+                'row_index': self.pos[0] + self.height - 1,
+                'col_index': self.pos[1]
+            },
+            'right_bottom': {
+                'row_index': self.pos[0] + self.height - 1,
+                'col_index': self.pos[1] + self.width - 1
+            }
+        }
+        self.property['method'] = self.method
+
+        self.property['size'] = {
+            'height': self.height,
+            'width': self.width
+        }
+
+        self.property['shape'] = self.shape
+
+        self.property['area'] = self.area
+
+        # self.property['center'] = self.center
+
+        self.property['symmetry'] = {
+            'hori_symm': self.hori_symm,
+            'verti_symm': self.verti_symm,
+            'diag_symm': self.diag_symm,
+            'anti_symm': self.anti_symm
+        }
+
     
     @staticmethod
     def from_json(object_info:OBJECTInfo, parent:ARCKGComponent):
@@ -221,11 +266,26 @@ class OBJECT(GridComponent):
         for pixel in parent.pixels:
             if pixel.coordinate in obj_coordinate:
                 pixel_list.append(pixel)
-        
+                pixel.parent.append(ooo)
+                pixel.to_json()
         ooo.pixels = pixel_list
         ooo.update_property(object_info.raw_data)
-
+        ooo.to_json()    
+        
         return ooo
+
+    def to_json(self):
+        import os
+        import json
+
+        object_dict = self.property
+        path = f'memory/task_{self.parent[0].parent[0].parent.id}/pair_{self.parent[0].parent[0].id}/grid_{self.parent[0].id}/object_{self.id}/'
+        file_name = f'object_{self.id}.json'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        
+        with open(f'{path}/{file_name}', 'w') as f:
+            json.dump(object_dict, f, indent=2)
 
     def __repr__(self):
         return f"OBJECT(Size {self.height}x{self.width} and color {self.color} {self.type}, at {self.pos}, in {self.parent})"
