@@ -9,12 +9,14 @@ class ARCSolver:
     def __init__(self, task: TASK):
         self.task = task
         self.task_hex_code = task.hex_code
-        self.programs = []  # Store programs for each pair
+        # self.programs = []  # Store programs for each pair
 
     def solve(self):
         for i, pair in enumerate(self.task.example_pairs):
             print(f"Processing example pair {i} for task {self.task_hex_code}")
-            self._generate_level_1_program(pair, i)
+            lv1_program = self._generate_level_1_program(pair, i)
+            # lv2_program = self._generate_level_2_program(lv1_program, pair, i)
+            # lv3_program = self._generate_level_3_program(lv2_program, pair, i)
         
         print(f"Level 1 programs generated for task {self.task_hex_code} in 'solver/result_code'")
 
@@ -55,7 +57,7 @@ class ARCSolver:
 
         self._save_program(program, pair_index)
 
-        breakpoint()
+        return program
 
     def ast_to_dict(self, node):
         """Recursively convert an AST node to a dictionary."""
