@@ -279,13 +279,19 @@ class OBJECT(GridComponent):
         import json
 
         object_dict = self.property
-        path = f'memory/task_{self.parent[0].parent[0].parent.id}/pair_{self.parent[0].parent[0].id}/grid_{self.parent[0].id}/object_{self.id}/'
-        file_name = f'object_{self.id}.json'
+
+        # OBJECT_node - OBJECT_property
+        path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/GRID_nodes/GRID_{self.parent[0].id}/OBJECT_nodes/OBJECT_{self.id}/OBJECT_property'
+        file_name = f'OBJECT_{self.id}_property.json'
         if not os.path.exists(path):
             os.makedirs(path)
         
         with open(f'{path}/{file_name}', 'w') as f:
             json.dump(object_dict, f, indent=2)
+
+        # OBJECT_edge
+        if not os.path.exists(f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/GRID_nodes/GRID_{self.parent[0].id}/OBJECT_edges'):
+            os.makedirs(f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/GRID_nodes/GRID_{self.parent[0].id}/OBJECT_edges')
 
     def __repr__(self):
         return f"OBJECT(Size {self.height}x{self.width} and color {self.color} {self.type}, at {self.pos}, in {self.parent})"

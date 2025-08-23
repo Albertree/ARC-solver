@@ -254,13 +254,20 @@ class GRID(GridComponent) :
         import json
 
         grid_dict = self.property
-        path = f'memory/task_{self.parent[0].parent.id}/pair_{self.parent[0].id}/grid_{self.id}/'
-        file_name = f'grid_{self.id}.json'
+
+        # GRID_node - GRID_property
+        path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_nodes/GRID_{self.id}/GRID_property'
+        file_name = f'GRID_{self.id}_property.json'
         if not os.path.exists(path):
             os.makedirs(path)
         
         with open(f'{path}/{file_name}', 'w') as f:
             json.dump(grid_dict, f, indent=2)
+
+        # GRID_edge
+        if not os.path.exists(f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_edges'):
+            os.makedirs(f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_edges')
+
 
     def __repr__(self):
         grid_type = "input" if self.id==0 else "output"

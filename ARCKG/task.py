@@ -93,14 +93,20 @@ class TASK(ARCKGComponent):
         import json
 
         task_dict = self.property
-        
-        path = f'memory/task_{self.id}/'
-        file_name = f'task_{self.id}.json'
+
+        # TASK_node - TASK_property
+        path = f'memory/TASK_nodes/TASK_{self.hex_code}/TASK_property'
+        file_name = f'TASK_{self.hex_code}_property.json'
         if not os.path.exists(path):
             os.makedirs(path)
         
         with open(f'{path}/{file_name}', 'w') as f:
             json.dump(task_dict, f, indent=2)
+        
+        # TASK_edge
+        if not os.path.exists(f'memory/TASK_edges'):
+            os.makedirs(f'memory/TASK_edges')
+        
 
     def __repr__(self):
         return f"TASK(id={self.id}, type={self.type}, hex_code={self.hex_code}, example_pairs={len(self.example_pairs)}, test_pairs={len(self.test_pairs)})"

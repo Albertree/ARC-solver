@@ -4,7 +4,7 @@ from tools.validate_solution import main as validate
 
 if __name__ == "__main__":
     TASK_HEX_CODE = "08ed6ac7"
-    
+
     task = ARCManager.from_hex_code(TASK_HEX_CODE)
 
     solver = ARCSolver(task)

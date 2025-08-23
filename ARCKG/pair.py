@@ -33,7 +33,7 @@ class PAIR(ARCKGComponent):
             if k == 'input':
                 grid_info = GRIDInfo(
                     id = i,
-                    type = 'input', 
+                    type = 'grid', 
                     raw_data = pair_info.raw_data['input']
                 )
                 ggg = GRID.from_json(grid_info, parent=ppp)
@@ -42,7 +42,7 @@ class PAIR(ARCKGComponent):
             elif k == 'output':
                 grid_info = GRIDInfo(
                     id = i,
-                    type = 'output', 
+                    type = 'grid', 
                     raw_data = pair_info.raw_data['output']
                 )
                 ggg = GRID.from_json(grid_info, parent=ppp)
@@ -58,13 +58,20 @@ class PAIR(ARCKGComponent):
 
         pair_dict = self.property
 
-        path = f'memory/task_{self.parent.id}/pair_{self.id}/'
-        file_name = f'pair_{self.id}.json'
+        # PAIR_node - PAIR_property
+        path = f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_nodes/PAIR_{self.id}/PAIR_property'
+        file_name = f'PAIR_{self.id}_property.json'
         if not os.path.exists(path):
             os.makedirs(path)
         
         with open(f'{path}/{file_name}', 'w') as f:
             json.dump(pair_dict, f, indent=2)
+
+        # PAIR_edge
+        if not os.path.exists(f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_edges'):
+            os.makedirs(f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_edges')
+        
+        
     
     def __repr__(self):
         return f"PAIR({self.id}th {self.type} of TASK({self.parent.hex_code}))"
