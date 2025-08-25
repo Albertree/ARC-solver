@@ -12,9 +12,6 @@ class ARCSolver:
         self.task_hex_code = task.hex_code
         # self.programs = []  # Store programs for each pair
 
-        # from init_memory import init_memory
-        # init_memory(task)
-
     def solve(self):
         for i, pair in enumerate(self.task.example_pairs):
             print(f"Processing example pair {i} for task {self.task_hex_code}")
@@ -25,6 +22,8 @@ class ARCSolver:
         print(f"Level 1 programs generated for task {self.task_hex_code} in 'solver/result_code'")
         for line in lv1_program:
             print(line)
+
+    
 
     def _generate_level_1_program(self, pair, pair_index: int):
         """Solve a single input/output grid pair"""
@@ -126,22 +125,21 @@ class ARCSolver:
 
 
     def play(self):
+        # Clean up existing comparison directory
+        comparison_base_path = "comparison"
+        if os.path.exists(comparison_base_path):
+            import shutil
+            shutil.rmtree(comparison_base_path)
+            print(f"Cleaned up existing comparison directory: {comparison_base_path}")
+        
         for i, pair in enumerate(self.task.childs):
             pair_id = i
-
-            # pair_path = f"memory/TASK_nodes/TASKcomparison/task_{TASK_HEX_CODE}/PAIR_{pair_id}"
-            # if not os.path.exists(pair_path):
-            #     os.makedirs(pair_path)
-
-        # pair_path = f"memory/comparison/task_{TASK_HEX_CODE}/PAIR_{pair_id}"
-        # if not os.path.exists(pair_path):
-        #     os.makedirs(pair_path)
 
             # grid comparison #########################################################
             grid1 = pair.childs[0]
             grid2 = pair.childs[1]
 
-            g_path = f"memory/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/GRID"
+            g_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/GRID"
             if not os.path.exists(g_path):
                 os.makedirs(g_path)
             
@@ -159,14 +157,14 @@ class ARCSolver:
             total_o_comparisons = len(o_group1) * len(o_group2)
             o_comparison_count = 0
 
-            o_path = f"memory/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/OBJECT"
+            o_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/OBJECT"
             if not os.path.exists(o_path):
                 os.makedirs(o_path)
 
             for i, obj1 in enumerate(o_group1):
                 for j, obj2 in enumerate(o_group2):
                     o_comparison_count += 1
-                    # print(f"Comparing {obj1.__repr__()} and {obj2.__repr__()} ({o_comparison_count}/{total_o_comparisons})")
+                    print(f"Comparing {obj1.__repr__()} and {obj2.__repr__()} ({o_comparison_count}/{total_o_comparisons})")
                     comparison_receipt = compare(obj1, obj2)
                     comm_count = count_comm_categories(comparison_receipt)
 
@@ -183,19 +181,39 @@ class ARCSolver:
             total_x_comparisons = len(x_group1) * len(x_group2)
             x_comparison_count = 0
 
-            x_path = f"memory/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/PIXEL"
+            x_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/PIXEL"
             if not os.path.exists(x_path):
                 os.makedirs(x_path)
 
             for i, pix1 in enumerate(x_group1):
                 for j, pix2 in enumerate(x_group2):
                     x_comparison_count += 1
-                    # print(f"Comparing {pix1.__repr__()} and {pix2.__repr__()} ({x_comparison_count}/{total_x_comparisons})")
+                    print(f"Comparing {pix1.__repr__()} and {pix2.__repr__()} ({x_comparison_count}/{total_x_comparisons})")
                     comparison_receipt = compare(pix1, pix2)
                     comm_count = count_comm_categories(comparison_receipt)
 
                     if comm_count >= 1:
-                        with open(f"{x_path}/X_{x_comparison_count}_{comm_count}.json", "w") as f:
+                        # Create score-based subfolder
+                        score_path = os.path.join(x_path, str(comm_count))
+                        if not os.path.exists(score_path):
+                            os.makedirs(score_path)
+                        
+                        # For score 1, create additional subfolders based on color and coordinate results
+                        if comm_count == 1:
+                            # Check color and coordinate results
+                            color_result = "COMM" if comparison_receipt["category"]["color"]["color"]["type"] == "COMM" else "DIFF"
+                            coordinate_result = "COMM" if comparison_receipt["category"]["coordinate"]["row"]["type"] == "COMM" and comparison_receipt["category"]["coordinate"]["col"]["type"] == "COMM" else "DIFF"
+                            
+                            # Create subfolder name based on results
+                            subfolder_name = f"color_{color_result}_coord_{coordinate_result}"
+                            final_path = os.path.join(score_path, subfolder_name)
+                        else:
+                            final_path = score_path
+                        
+                        if not os.path.exists(final_path):
+                            os.makedirs(final_path)
+                        
+                        with open(f"{final_path}/X_{x_comparison_count}_{comm_count}.json", "w") as f:
                             json.dump(comparison_receipt, f, indent=2)
                     else:
                         pass
