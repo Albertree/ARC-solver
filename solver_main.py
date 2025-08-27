@@ -8,7 +8,9 @@ if __name__ == "__main__":
     task = ARCManager.from_hex_code(TASK_HEX_CODE)
 
     solver = ARCSolver(task)
-    solver.play()
+    solver.temp_solve()
+    # solver.temp_solve2()
+    # solver.play()
     # solver.solve()
 
     # validate(TASK_HEX_CODE) 

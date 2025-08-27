@@ -14,6 +14,7 @@ class PAIR(ARCKGComponent):
         self.raw_data = raw_data
         self.parent = parent
         self.property = dict()
+        self.program = []
 
     def update_property(self):
         self.childs = [self.input_grid, self.output_grid]

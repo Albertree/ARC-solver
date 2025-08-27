@@ -5,6 +5,7 @@ import ast
 import json
 from .program_optimizer import ProgramOptimizer
 from comparison import *
+from .solver_utils import *
 
 class ARCSolver:
     def __init__(self, task: TASK):
@@ -219,4 +220,455 @@ class ARCSolver:
                         pass
 
 
-            # breakpoint()
+        
+    def temp_solve(self):
+        spacing1 = " " * 4
+        spacing2 = " " * 8
+        spacing3 = " " * 12
+        spacing4 = " " * 16
+
+
+
+        print("Start")
+        print("Inter-TASK Analysis")
+        for _ in range(1):
+            print("    nothing")
+        print()
+
+        print("Intra-TASK Analysis (T1, T2, T3, T4)") # 특징, 객체, 변화 존재 여부의 공통성(COMM) 중심으로 공통적인 부분을 찾는 것이 목표
+        print("Intra-TASK Inter-PAIR Analysis (T1)")
+        for pair_idx, pair in enumerate(self.task.example_pairs):
+            if is_empty_program(pair.program):
+                print(f"{spacing1}PAIR {pair_idx} has no program -> Do deeper analysis of a PAIR to make program")
+                print(f"{spacing2}Intra-PAIR Analysis (P1, P2, P3)")
+                print(f"{spacing2}Inter-GRID Analysis (P1)")
+                print(f"{spacing3}Comparing {pair.input_grid.__repr__()} and {pair.output_grid.__repr__()}")
+                print(f"{spacing3}GRID-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
+                print(f"{spacing3}Applying deep GRID knowledge to program...")
+                print(f"{spacing3}Not enough information to make program -> Do deeper analysis of a PAIR to make program")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Inter-OBJECT Analysis (P2)")
+                print(f"{spacing3}Comparing {len(pair.childs[0].objects)} objects in input grid and {len(pair.childs[1].objects)} objects in output grid")
+                print(f"{spacing3}Total {len(pair.childs[0].objects) * len(pair.childs[1].objects)} object comparisons")
+                for obj_idx_i, obj_i in enumerate(pair.childs[0].objects):
+                    for obj_idx_o, obj_o in enumerate(pair.childs[1].objects):
+                        print(f"{spacing3}Comparing OBJECT {obj_idx_i.__repr__()} and {obj_idx_o.__repr__()}")
+                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, Method: DIFF ...")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Completed OBJECT Comparisons, Analyzing the comparison results...")
+                print(f"{spacing2}Prioritizing based on symbolic distance...")
+                print(f"{spacing2}Generating a program...")
+                print(f"{spacing2}Program generated!")
+                print(f"{spacing2}Validating the program...")
+                print(f"{spacing2}Program is invalid -> Do deeper analysis of a PAIR to make program")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Inter-PIXEL Analysis (P3)")
+                print(f"{spacing3}Comparing {len(pair.childs[0].pixels)} pixels in input grid and {len(pair.childs[1].pixels)} pixels in output grid")
+                print(f"{spacing3}Total {len(pair.childs[0].pixels) * len(pair.childs[1].pixels)} pixel comparisons")
+                for pix_idx_i, pix_i in enumerate(pair.childs[0].pixels):
+                    for pix_idx_o, pix_o in enumerate(pair.childs[1].pixels):
+                        print(f"{spacing3}Comparing PIXEL {pix_idx_i.__repr__()} and {pix_idx_o.__repr__()}")
+                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Completed PIXEL Comparisons, Analyzing the comparison results...")
+                print(f"{spacing2}Prioritizing based on symbolic distance...")
+                print(f"{spacing2}Generating a program...")
+                print(f"{spacing2}Program generated!")
+                print(f"{spacing2}Validating the program on this PAIR...")
+                print(f"{spacing2}Program is valid on this PAIR!")
+                print(f"{spacing2}Validating the program on other PAIRS...")
+                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Intra-GRID Inter-Pixel Analysis (G2)")
+                print(f"{spacing3}Comparing {len(pair.childs[0].pixels)} PIXELs in {pair.input_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[0].pixels) * len(pair.childs[0].pixels)-1} pixel comparisons")
+                for pix_idx_1, pix_1 in enumerate(pair.childs[0].pixels):
+                    for pix_idx_2, pix_2 in enumerate(pair.childs[0].pixels):
+                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
+                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing3}Comparing {len(pair.childs[1].pixels)} PIXELs in {pair.output_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[1].pixels) * len(pair.childs[1].pixels)-1} pixel comparisons")
+                for pix_idx_1, pix_1 in enumerate(pair.childs[1].pixels):
+                    for pix_idx_2, pix_2 in enumerate(pair.childs[1].pixels):
+                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
+                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Completed PIXEL Comparisons, Analyzing the comparison results...")
+                print(f"{spacing2}Grouping based on Commonalities...")
+                print(f"{spacing2}Generating a program...")
+                print(f"{spacing2}Program generated!")
+                print(f"{spacing2}Validating the program on this PAIR...")
+                print(f"{spacing2}Program is valid on this PAIR!")
+                print(f"{spacing2}Validating the program on other PAIRS...")
+                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Intra-GRID Inter-Object Analysis (G1)")
+                print(f"{spacing3}Comparing {len(pair.childs[0].objects)} OBJECTs in {pair.input_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[0].objects) * len(pair.childs[0].objects)-1} object comparisons")
+                for obj_idx_1, obj_1 in enumerate(pair.childs[0].objects):
+                    for obj_idx_2, obj_2 in enumerate(pair.childs[0].objects):
+                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} and {obj_2.__repr__()}.")
+                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing3}Comparing {len(pair.childs[1].objects)} OBJECTs in {pair.output_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[1].objects) * len(pair.childs[1].objects)-1} object comparisons")
+                for obj_idx_1, obj_1 in enumerate(pair.childs[1].objects):
+                    for obj_idx_2, obj_2 in enumerate(pair.childs[1].objects):
+                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} and {obj_2.__repr__()}.")
+                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Completed OBJECT Comparisons, Analyzing the comparison results...")
+                print(f"{spacing2}Grouping based on Commonalities...")
+                print(f"{spacing2}Generating a program...")
+                print(f"{spacing2}Program generated!")
+                print(f"{spacing2}Validating the program on this PAIR...")
+                print(f"{spacing2}Program is valid on this PAIR!")
+                print(f"{spacing2}Validating the program on other PAIRS...")
+                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Intra-OBJECT Inter-Pixel Analysis (O1)")
+                print(f"{spacing3}Comparing PIXELs in OBJECTs in {pair.input_grid.__repr__()}.")
+                for obj in pair.childs[0].objects:
+                    print(f"{spacing3}Comparing {len(obj.pixels)} PIXELs in {obj.__repr__()}.")
+                    print(f"{spacing3}Total {len(obj.pixels) * len(obj.pixels)-1} pixel comparisons")
+                    for pix_idx_1, pix_1 in enumerate(obj.pixels):
+                        for pix_idx_2, pix_2 in enumerate(obj.pixels):
+                            print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
+                            print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
+                print(f"{spacing2}Completed Inter-PIXEL Comparisons in all OBJECTs in input grid, Analyzing the comparison results...")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing3}Comparing PIXELs in OBJECTs in {pair.output_grid.__repr__()}.")
+                for obj in pair.childs[1].objects:
+                    print(f"{spacing3}Comparing {len(obj.pixels)} PIXELs in {obj.__repr__()}.")
+                    print(f"{spacing3}Total {len(obj.pixels) * len(obj.pixels)-1} pixel comparisons")
+                    for pix_idx_1, pix_1 in enumerate(obj.pixels):
+                        for pix_idx_2, pix_2 in enumerate(obj.pixels):
+                            print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
+                            print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
+                print(f"{spacing2}Completed Inter-PIXEL Comparisons in all OBJECTs in output grid, Analyzing the comparison results...")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Analyzing the comparison results...")
+                print(f"{spacing2}Prioritizing based on symbolic distance...")
+                print(f"{spacing2}Searching for meaningful relations...")
+                print(f"{spacing2}Generating a program...")
+                print(f"{spacing2}Program generated!")
+                print(f"{spacing2}Validating the program on this PAIR...")
+                print(f"{spacing2}Program is valid on this PAIR!")
+                print(f"{spacing2}Validating the program on other PAIRS...")
+                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
+                print()
+                input("Press Enter to continue...")                
+
+                print("----------------------------------------------------")
+                print(f"With Current level of Intra-PAIR Analysis, we cannot make a program that works on other PAIRs.")
+                print(f"Need to see other PAIRs more deeply to make a program that works on other PAIRs.")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing1}Inter-PAIR Analysis (T1, T2, T3, T4)")
+                print(f"{spacing2}Inter-PAIR GRID Analysis (T2)")
+                next_pair_idx = pair_idx + 1
+                if next_pair_idx >= self.task.example_pair_count:
+                    next_pair_idx = 0
+                    break
+                next_pair = self.task.example_pairs[next_pair_idx]
+                print(f"{spacing3}Comparing {pair.input_grid.__repr__()} and {next_pair.input_grid.__repr__()}")
+                print(f"{spacing3}GRID-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
+                print(f"{spacing3}Comparing {pair.output_grid.__repr__()} and {next_pair.output_grid.__repr__()}")
+                print(f"{spacing3}GRID-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
+                print(f"{spacing3}Applying deep GRID knowledge to program...")
+                print(f"{spacing3}Program generated!")
+                print(f"{spacing3}Validating the program on this PAIR...")
+                print(f"{spacing3}Program is valid on this PAIR!")
+                print(f"{spacing3}Validating the program on other PAIRS...")
+                print(f"{spacing3}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Inter-PAIR OBJECT Analysis (T3)")
+                print(f"{spacing3}Comparing {len(pair.childs[0].objects)} OBJECTs in {pair.input_grid.__repr__()} with {len(next_pair.childs[0].objects)} OBJECTs in {next_pair.input_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[0].objects) * len(next_pair.childs[0].objects)} object comparisons")
+                for obj_idx_1, obj_1 in enumerate(pair.childs[0].objects):
+                    for obj_idx_2, obj_2 in enumerate(next_pair.childs[0].objects):
+                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} in {pair.input_grid.__repr__()} and {obj_2.__repr__()} in {next_pair.input_grid.__repr__()}.")
+                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing3}Comparing {len(pair.childs[1].objects)} OBJECTs in {pair.output_grid.__repr__()} with {len(next_pair.childs[1].objects)} OBJECTs in {next_pair.output_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[1].objects) * len(next_pair.childs[1].objects)} object comparisons")
+                for obj_idx_1, obj_1 in enumerate(pair.childs[1].objects):
+                    for obj_idx_2, obj_2 in enumerate(next_pair.childs[1].objects):
+                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} in {pair.output_grid.__repr__()} and {obj_2.__repr__()} in {next_pair.output_grid.__repr__()}.")
+                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Completed OBJECT Comparisons, Analyzing the comparison results...")
+                print(f"{spacing2}Searching for meaningful commonalities...")
+                print(f"{spacing2}Generating a program...")
+                print(f"{spacing2}Program generated!")
+                print(f"{spacing2}Validating the program on this PAIR...")
+                print(f"{spacing2}Program is valid on this PAIR!")
+                print(f"{spacing2}Validating the program on other PAIRS...")
+                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Inter-PAIR PIXEL Analysis (T4)")
+                print(f"{spacing3}Comparing {len(pair.childs[0].pixels)} PIXELs in {pair.input_grid.__repr__()} with {len(next_pair.childs[0].pixels)} PIXELs in {next_pair.input_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[0].pixels) * len(next_pair.childs[0].pixels)} pixel comparisons")
+                for pix_idx_1, pix_1 in enumerate(pair.childs[0].pixels):
+                    for pix_idx_2, pix_2 in enumerate(next_pair.childs[0].pixels):
+                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} in {pair.input_grid.__repr__()} and {pix_2.__repr__()} in {next_pair.input_grid.__repr__()}.")
+                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing3}Comparing {len(pair.childs[1].pixels)} PIXELs in {pair.output_grid.__repr__()} with {len(next_pair.childs[1].pixels)} PIXELs in {next_pair.output_grid.__repr__()}.")
+                print(f"{spacing3}Total {len(pair.childs[1].pixels) * len(next_pair.childs[1].pixels)} pixel comparisons")
+                for pix_idx_1, pix_1 in enumerate(pair.childs[1].pixels):
+                    for pix_idx_2, pix_2 in enumerate(next_pair.childs[1].pixels):
+                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} in {pair.output_grid.__repr__()} and {pix_2.__repr__()} in {next_pair.output_grid.__repr__()}.")
+                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
+                print()
+                input("Press Enter to continue...")
+                print(f"{spacing2}Completed PIXEL Comparisons, Analyzing the comparison results...")
+                print(f"{spacing2}Searching for meaningful commonalities...")
+                print(f"{spacing2}Generating a program...")
+                print(f"{spacing2}Program generated!")
+                print(f"{spacing2}Validating the program on this PAIR...")
+                print(f"{spacing2}Program is valid on this PAIR!")
+                print(f"{spacing2}Validating the program on other PAIRS...")
+                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
+                print()
+                input("Press Enter to continue...")
+
+                print("----------------------------------------------------")
+                print(f"With Current level of Intra-TASK Analysis, we cannot make a program that works on other PAIRs.")
+                print(f"Need to inspect deeper with the comparison results to find meaningful commonalities.")
+                print(f"Reveiwing all the collected comparison results...")
+                print()
+                input("Press Enter to continue...")
+                print(f"Start Deeper Analysis of a PAIR")
+                print("@@@")
+
+                break
+            else:
+                pass
+        print()
+
+
+
+        # pair_program = []
+        # pair_count = self.task.example_pair_count
+        
+        # # Collect all pair programs
+        # for pair in self.task.example_pairs:
+        #     pair_program.append(pair.program)
+        
+        # # Check if there's at least one pair with no program
+        # has_empty_program = any(len(program) == 0 for program in pair_program)
+        
+        # # Check if there's no common program across all pairs
+        # if pair_count > 0:
+        #     # Find common programs across all pairs
+        #     common_programs = set(pair_program[0]) if pair_program[0] else set()
+        #     for program in pair_program[1:]:
+        #         if program:
+        #             common_programs = common_programs.intersection(set(program))
+        #         else:
+        #             common_programs = set()  # If any pair has no program, no common programs
+        # else:
+        #     common_programs = set()
+        
+        # has_no_common_program = len(common_programs) == 0
+        
+        # # Print comparison messages for all pair combinations
+        # for p in range(pair_count):
+        #     for pp in range(p+1, pair_count):
+        #         print(f"Comparing {self.task.example_pairs[p]} and {self.task.example_pairs[pp]}")
+        
+        # # Check conditions and print appropriate message
+        # if has_empty_program or has_no_common_program:
+        #     print("    No program or No common program -> Do deeper analysis of PAIR to make program") 
+        #     # T1 보다 깊게 들어가려면 Intra-PAIR Analysis를 특정 레벨 완료해야 함. 
+        #     # -> 현재 가진 속성으로 만든 가설, 규칙, 프로그램은 모두 다음페어에서 동작하지 않는 것을 보이는 것이 필요. 
+        # print()
+
+        # print("Intra-PAIR Analysis (P1, P2, P3)") # Input/Output을 비교하여 다른 점 (DIFF)를 중심으로 프로그램을 만드는 것이 목표
+        
+        # num_pairs = self.task.example_pair_count
+        # current_program = None
+        # successful_program = None
+        # memory = {}  # Store successful analysis results
+        
+        # # Main loop: Process each PAIR
+        # for pair_idx in range(num_pairs):
+        #     print(f"\n=== Processing PAIR {pair_idx} ===")
+            
+            
+
+        
+
+
+
+
+
+
+    # def temp_solve2(self):
+    #     print("=== Starting Intra-TASK Analysis ===")
+        
+    #     # Intra-TASK Analysis
+    #     task_solved = False
+        
+    #     while not task_solved:
+    #         print("\n--- Inter-PAIR Analysis ---")
+            
+    #         # Check if any pair has program
+    #         for pair_idx, pair in enumerate(self.task.example_pairs):
+    #             print(f"Checking PAIR {pair_idx}: pair.program exists?")
+                
+    #             if hasattr(pair, 'program') and pair.program:
+    #                 print(f"PAIR {pair_idx} has program, validating with other pairs...")
+    #                 print("  Comparison T1: Inter-TASK PAIR level comparison")
+    #                 print("  Comparison T2: Inter-TASK GRID level comparison") 
+    #                 print("  Comparison T3: Inter-TASK OBJECT level comparison")
+    #                 print("  Comparison T4: Inter-TASK PIXEL level comparison")
+                    
+    #                 # Validate program with all other pairs
+    #                 valid_for_all = True
+    #                 for other_idx, other_pair in enumerate(self.task.example_pairs):
+    #                     if other_idx != pair_idx:
+    #                         print(f"  Validating program on PAIR {other_idx}")
+    #                         # if not validate_program(pair.program, other_pair):
+    #                         #     valid_for_all = False
+    #                         #     break
+                    
+    #                 if valid_for_all:
+    #                     print("Task program found! Solver complete.")
+    #                     task_solved = True
+    #                     return
+    #             else:
+    #                 print(f"PAIR {pair_idx} has no program, entering Intra-PAIR Analysis...")
+                    
+    #                 # Intra-PAIR Analysis
+    #                 pair_solved = False
+    #                 abstraction_level = 0
+                    
+    #                 while not pair_solved and abstraction_level < 3:  # PIXEL, OBJECT, GRID levels
+                        
+    #                     if abstraction_level == 0:  # Shallow analysis
+    #                         print(f"\n  === Intra-PAIR Analysis for PAIR {pair_idx} ===")
+    #                         print("  Inter-GRID Analysis (shallow: color, size, symmetry)")
+    #                         print("    Comparison P1: In-PAIR GRID level comparison")
+                            
+    #                         print("    Going deeper: Inter-OBJECT Analysis (between GRIDs)")
+    #                         print("      Comparison P2: In-PAIR OBJECT level comparison - Input/Output OBJECT mapping")
+                            
+    #                         print("      Going deeper: Inter-PIXEL Analysis (between GRIDs)")
+    #                         print("        Comparison P3: In-PAIR PIXEL level comparison - Input/Output PIXEL changes")
+                            
+    #                         print("        Generating fundamental level-1 program...")
+    #                         # program = generate_fundamental_program()
+    #                         print("        Level-1 program generated!")
+                        
+    #                     # Program abstraction and validation
+    #                     print(f"    Program abstraction at level {abstraction_level}")
+                        
+    #                     if abstraction_level == 0:
+    #                         print("    PIXEL level program validation")
+    #                     elif abstraction_level == 1:
+    #                         print("    OBJECT level program abstraction")
+    #                     elif abstraction_level == 2:
+    #                         print("    GRID level program abstraction")
+                        
+    #                     # Check with other pairs
+    #                     program_works = False
+    #                     for val_pair_idx, val_pair in enumerate(self.task.example_pairs):
+    #                         if val_pair_idx != pair_idx:
+    #                             print(f"      Validating on PAIR {val_pair_idx}...")
+    #                             # if validate_program(current_program, val_pair):
+    #                             #     program_works = True
+                        
+    #                     if program_works:
+    #                         print(f"    Program works! Moving to next pair.")
+    #                         pair_solved = True
+    #                         break
+    #                     else:
+    #                         print(f"    Program failed validation.")
+                            
+    #                         if abstraction_level < 2:
+    #                             abstraction_level += 1
+    #                             print(f"    Moving to abstraction level {abstraction_level}")
+    #                         else:
+    #                             print("    All abstraction levels failed, entering deep analysis...")
+                                
+    #                             # Intra-GRID Analysis (Deep Analysis)
+    #                             deep_analysis_success = False
+    #                             grid_analysis_depth = 0
+                                
+    #                             while not deep_analysis_success and grid_analysis_depth < 2:
+                                    
+    #                                 if grid_analysis_depth == 0:
+    #                                     print("      === Intra-GRID Analysis (Deep) ===")
+    #                                     print("      Deep GRID analysis (color sets, areas, sizes)")
+                                        
+    #                                     for grid_idx, grid in enumerate([pair.input_grid, pair.output_grid]):
+    #                                         print(f"        Analyzing GRID {grid_idx}")
+    #                                         print("        Inter-OBJECT Analysis (within GRID)")
+    #                                         print("          Comparison G1: In-GRID OBJECT level comparison - All objects within GRID")
+                                            
+    #                                         # Check if this helps
+    #                                         print("        Applying deep GRID knowledge to program...")
+    #                                         # enhanced_program = enhance_with_grid_knowledge()
+                                            
+    #                                         # Validate again
+    #                                         for val_pair_idx, val_pair in enumerate(self.task.example_pairs):
+    #                                             if val_pair_idx != pair_idx:
+    #                                                 print(f"          Re-validating on PAIR {val_pair_idx}...")
+                                            
+    #                                         program_works_after_grid = False  # Simulate failure
+    #                                         if program_works_after_grid:
+    #                                             deep_analysis_success = True
+    #                                             break
+                                    
+    #                                 if not deep_analysis_success and grid_analysis_depth == 0:
+    #                                     print("      GRID deep analysis failed, going to OBJECT deep analysis...")
+    #                                     grid_analysis_depth = 1
+                                        
+    #                                     print("        === Intra-OBJECT Analysis ===")
+    #                                     for obj in pair.input_grid.objects:
+    #                                         print(f"        Analyzing OBJECT {obj.id}")
+    #                                         print("          Inter-PIXEL Analysis (within OBJECT)")
+    #                                         print("            Comparison O1: In-OBJECT PIXEL level comparison - All pixels within OBJECT")
+    #                                         print("            Finding relational properties...")
+                                            
+    #                                         # Apply object-level knowledge
+    #                                         print("          Applying OBJECT relational knowledge...")
+                                            
+    #                                         # Validate
+    #                                         for val_pair_idx, val_pair in enumerate(self.task.example_pairs):
+    #                                             if val_pair_idx != pair_idx:
+    #                                                 print(f"            Re-validating on PAIR {val_pair_idx}...")
+                                    
+    #                                 # If still no success
+    #                                 if not deep_analysis_success:
+    #                                     print("      Deep analysis exhausted for this pair.")
+    #                                     print("      Current analysis rules cannot solve this problem.")
+    #                                     return  # Stop after first pair as requested
+                                
+    #                             pair_solved = deep_analysis_success
+                    
+    #                 # After processing first pair, stop as requested
+    #                 print(f"\nFirst pair processing complete. Stopping as requested.")
+    #                 return
+
