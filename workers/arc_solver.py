@@ -4,7 +4,7 @@ import os
 import ast
 import json
 from .program_optimizer import ProgramOptimizer
-from comparison import *
+from comparison import compare, count_comm_in_category, print_comparison_result
 from .solver_utils import *
 
 class ARCSolver:
@@ -124,101 +124,100 @@ class ARCSolver:
         with open(file_path_ast, "w") as f:
             json.dump(ast_dict, f, indent=4) 
 
-
-    def play(self):
-        # Clean up existing comparison directory
-        comparison_base_path = "comparison"
-        if os.path.exists(comparison_base_path):
-            import shutil
-            shutil.rmtree(comparison_base_path)
-            print(f"Cleaned up existing comparison directory: {comparison_base_path}")
+    # # this function compatible with comparison_old.py
+    # def play(self):
+    #     # Clean up existing comparison directory
+    #     comparison_base_path = "comparison"
+    #     if os.path.exists(comparison_base_path):
+    #         import shutil
+    #         shutil.rmtree(comparison_base_path)
+    #         print(f"Cleaned up existing comparison directory: {comparison_base_path}")
         
-        for i, pair in enumerate(self.task.childs):
-            pair_id = i
+    #     for i, pair in enumerate(self.task.childs):
+    #         pair_id = i
 
-            # grid comparison #########################################################
-            grid1 = pair.childs[0]
-            grid2 = pair.childs[1]
+    #         # grid comparison #########################################################
+    #         grid1 = pair.childs[0]
+    #         grid2 = pair.childs[1]
 
-            g_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/GRID"
-            if not os.path.exists(g_path):
-                os.makedirs(g_path)
+    #         g_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/GRID"
+    #         if not os.path.exists(g_path):
+    #             os.makedirs(g_path)
             
-            print(f"Comparing {grid1.__repr__()} and {grid2.__repr__()}")
-            comparison_receipt = compare(grid1, grid2)
-            comm_count = count_comm_categories(comparison_receipt)
+    #         print(f"Comparing {grid1.__repr__()} and {grid2.__repr__()}")
+    #         comparison_receipt = compare(grid1, grid2)
+    #         comm_count = count_comm_categories(comparison_receipt)
 
-            with open(f"{g_path}/G_1_{comm_count}.json", "w") as f:
-                json.dump(comparison_receipt, f, indent=2)
-
-
-            # object comparison #########################################################
-            o_group1 = grid1.objects
-            o_group2 = grid2.objects
-            total_o_comparisons = len(o_group1) * len(o_group2)
-            o_comparison_count = 0
-
-            o_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/OBJECT"
-            if not os.path.exists(o_path):
-                os.makedirs(o_path)
-
-            for i, obj1 in enumerate(o_group1):
-                for j, obj2 in enumerate(o_group2):
-                    o_comparison_count += 1
-                    print(f"Comparing {obj1.__repr__()} and {obj2.__repr__()} ({o_comparison_count}/{total_o_comparisons})")
-                    comparison_receipt = compare(obj1, obj2)
-                    comm_count = count_comm_categories(comparison_receipt)
-
-                    if comm_count >= 5:
-                        with open(f"{o_path}/O_{o_comparison_count}_{comm_count}.json", "w") as f:
-                            json.dump(comparison_receipt, f, indent=2)
-                    else:
-                        pass
+    #         with open(f"{g_path}/G_1_{comm_count}.json", "w") as f:
+    #             json.dump(comparison_receipt, f, indent=2)
 
 
-            # pixel comparison #########################################################
-            x_group1 = grid1.pixels
-            x_group2 = grid2.pixels
-            total_x_comparisons = len(x_group1) * len(x_group2)
-            x_comparison_count = 0
+    #         # object comparison #########################################################
+    #         o_group1 = grid1.objects
+    #         o_group2 = grid2.objects
+    #         total_o_comparisons = len(o_group1) * len(o_group2)
+    #         o_comparison_count = 0
 
-            x_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/PIXEL"
-            if not os.path.exists(x_path):
-                os.makedirs(x_path)
+    #         o_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/OBJECT"
+    #         if not os.path.exists(o_path):
+    #             os.makedirs(o_path)
 
-            for i, pix1 in enumerate(x_group1):
-                for j, pix2 in enumerate(x_group2):
-                    x_comparison_count += 1
-                    print(f"Comparing {pix1.__repr__()} and {pix2.__repr__()} ({x_comparison_count}/{total_x_comparisons})")
-                    comparison_receipt = compare(pix1, pix2)
-                    comm_count = count_comm_categories(comparison_receipt)
+    #         for i, obj1 in enumerate(o_group1):
+    #             for j, obj2 in enumerate(o_group2):
+    #                 o_comparison_count += 1
+    #                 print(f"Comparing {obj1.__repr__()} and {obj2.__repr__()} ({o_comparison_count}/{total_o_comparisons})")
+    #                 comparison_receipt = compare(obj1, obj2)
+    #                 comm_count = count_comm_categories(comparison_receipt)
 
-                    if comm_count >= 1:
-                        # Create score-based subfolder
-                        score_path = os.path.join(x_path, str(comm_count))
-                        if not os.path.exists(score_path):
-                            os.makedirs(score_path)
+    #                 if comm_count >= 5:
+    #                     with open(f"{o_path}/O_{o_comparison_count}_{comm_count}.json", "w") as f:
+    #                         json.dump(comparison_receipt, f, indent=2)
+    #                 else:
+    #                     pass
+
+
+    #         # pixel comparison #########################################################
+    #         x_group1 = grid1.pixels
+    #         x_group2 = grid2.pixels
+    #         total_x_comparisons = len(x_group1) * len(x_group2)
+    #         x_comparison_count = 0
+
+    #         x_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/PIXEL"
+    #         if not os.path.exists(x_path):
+    #             os.makedirs(x_path)
+
+    #         for i, pix1 in enumerate(x_group1):
+    #             for j, pix2 in enumerate(x_group2):
+    #                 x_comparison_count += 1
+    #                 print(f"Comparing {pix1.__repr__()} and {pix2.__repr__()} ({x_comparison_count}/{total_x_comparisons})")
+    #                 comparison_receipt = compare(pix1, pix2)
+    #                 comm_count = count_comm_categories(comparison_receipt)
+
+    #                 if comm_count >= 1:
+    #                     # Create score-based subfolder
+    #                     score_path = os.path.join(x_path, str(comm_count))
+    #                     if not os.path.exists(score_path):
+    #                         os.makedirs(score_path)
                         
-                        # For score 1, create additional subfolders based on color and coordinate results
-                        if comm_count == 1:
-                            # Check color and coordinate results
-                            color_result = "COMM" if comparison_receipt["category"]["color"]["color"]["type"] == "COMM" else "DIFF"
-                            coordinate_result = "COMM" if comparison_receipt["category"]["coordinate"]["row"]["type"] == "COMM" and comparison_receipt["category"]["coordinate"]["col"]["type"] == "COMM" else "DIFF"
+    #                     # For score 1, create additional subfolders based on color and coordinate results
+    #                     if comm_count == 1:
+    #                         # Check color and coordinate results
+    #                         color_result = "COMM" if comparison_receipt["category"]["color"]["color"]["type"] == "COMM" else "DIFF"
+    #                         coordinate_result = "COMM" if comparison_receipt["category"]["coordinate"]["row"]["type"] == "COMM" and comparison_receipt["category"]["coordinate"]["col"]["type"] == "COMM" else "DIFF"
                             
-                            # Create subfolder name based on results
-                            subfolder_name = f"color_{color_result}_coord_{coordinate_result}"
-                            final_path = os.path.join(score_path, subfolder_name)
-                        else:
-                            final_path = score_path
+    #                         # Create subfolder name based on results
+    #                         subfolder_name = f"color_{color_result}_coord_{coordinate_result}"
+    #                         final_path = os.path.join(score_path, subfolder_name)
+    #                     else:
+    #                         final_path = score_path
                         
-                        if not os.path.exists(final_path):
-                            os.makedirs(final_path)
+    #                     if not os.path.exists(final_path):
+    #                         os.makedirs(final_path)
                         
-                        with open(f"{final_path}/X_{x_comparison_count}_{comm_count}.json", "w") as f:
-                            json.dump(comparison_receipt, f, indent=2)
-                    else:
-                        pass
-
+    #                     with open(f"{final_path}/X_{x_comparison_count}_{comm_count}.json", "w") as f:
+    #                         json.dump(comparison_receipt, f, indent=2)
+    #                 else:
+    #                     pass
 
         
     def temp_solve(self):
@@ -514,15 +513,6 @@ class ARCSolver:
         # # Main loop: Process each PAIR
         # for pair_idx in range(num_pairs):
         #     print(f"\n=== Processing PAIR {pair_idx} ===")
-            
-            
-
-        
-
-
-
-
-
 
     # def temp_solve2(self):
     #     print("=== Starting Intra-TASK Analysis ===")
@@ -672,3 +662,112 @@ class ARCSolver:
     #                 print(f"\nFirst pair processing complete. Stopping as requested.")
     #                 return
 
+
+    def object_mapping(self):
+        def color_text_no_bg(index, text):
+            COLORS = {
+                0: (0, 0, 0),         # black
+                1: (0, 116, 217),     # blue
+                2: (255, 65, 54),     # red
+                3: (46, 204, 64),     # green
+                4: (255, 220, 0),     # yellow
+                5: (170, 170, 170),   # gray
+                6: (240, 18, 190),    # pink
+                7: (255, 133, 27),    # orange
+                8: (127, 219, 255),   # light blue
+                9: (135, 12, 37),     # dark red
+                10: (128, 0, 128),    # purple
+                11: (0, 128, 128),    # teal
+                12: (101, 67, 33),    # brown
+                13: (214, 255, 255),  # white
+                14: (79, 79, 79)      # dark gray
+            }
+            r, g, b = COLORS[index]
+            return f"\033[38;2;{r};{g};{b}m{text}\033[0m"
+
+
+        def visualize_objects_side_by_side(obj1, obj2):
+            print("\nOBJECT COMPARISON")
+            max_height = max(len(obj1.view), len(obj2.view))
+            max_width1 = max(len(row) for row in obj1.view) if obj1.view else 0
+            max_width2 = max(len(row) for row in obj2.view) if obj2.view else 0
+            
+            print("Object 1          |  Object 2")
+            print("-" * 60)
+            for i in range(max_height):
+                if i < len(obj1.view):
+                    row1 = obj1.view[i]
+                    colored1 = ''.join([color_text_no_bg(val, "██") for val in row1])
+                else:
+                    colored1 = ' ' * (max_width1 * 2)  # Empty row with proper width
+                
+                if i < len(obj2.view):
+                    row2 = obj2.view[i]
+                    colored2 = ''.join([color_text_no_bg(val, "██") for val in row2])
+                else:
+                    colored2 = ' ' * (max_width2 * 2)  # Empty row with proper width
+                
+                obj1_width = max_width1 * 2
+                print(f"{colored1:<{obj1_width}} | {colored2}")
+            print()
+
+
+        task = self.task
+        pair = task.example_pairs[0]
+        comp1 = pair.input_grid
+        comp2 = pair.output_grid
+
+        total_comparisons = len(comp1.objects) * len(comp2.objects)
+        comparison_count = 0
+
+        for i, obj1 in enumerate(comp1.objects):
+            for j, obj2 in enumerate(comp2.objects):
+                comparison_count += 1
+                print("\033[2J\033[H", end='', flush=True)
+                print(f"Comparison {comparison_count}/{total_comparisons} - Object {i} vs Object {j}")
+                
+                visualize_objects_side_by_side(obj1, obj2)
+                comparison = compare(obj1.property, obj2.property)
+                
+                if isinstance(comparison, dict) and "details" in comparison:
+                    details = comparison["details"]
+                    if isinstance(details, dict):
+                        comm_count = 0
+                        total_categories = len(details)
+                        
+                        for category_name, category_data in details.items():
+                            if isinstance(category_data, dict) and category_data.get("type") == "COMM":
+                                comm_count += 1
+                        
+                        score = comm_count
+                        total_checks = total_categories
+                    else:
+                        score, total_checks = 0, 0
+                else:
+                    score, total_checks = 0, 0
+                
+                print(f"Score: {score}/{total_checks}")
+                
+                if score > 4:
+                    print("\n" + "-" * 70)
+                    print(f"OBJECT COMPARISON SUMMARY [score: {score}/{total_checks}]")
+                    print()
+                    
+                    print_comparison_result(comparison)
+                    
+                    print()
+                    print("Controls: [Enter] = Next comparison | [q] = Quit")
+                    user_input = input().strip().lower()
+                    
+                    if user_input == 'q':
+                        print("Exiting...")
+                        exit()
+                else:
+                    continue
+
+        print(f"\nCompleted all {total_comparisons} comparisons!")
+
+    
+
+
+        

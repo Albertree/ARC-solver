@@ -46,7 +46,10 @@ class PIXEL(GridComponent):
         import json
 
         pixel_dict = self.property
-
+        pixel_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
+        pixel_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
+        pixel_path += f'GRID_nodes/GRID_{self.parent[0].id}/'
+    
         # PIXEL_node - PIXEL_property
         file_name = f'PIXEL_{self.id}_property.json'
         
@@ -57,15 +60,19 @@ class PIXEL(GridComponent):
             if pair and hasattr(pair, 'parent') and pair.parent:
                 task = pair.parent
                 if task:
-                    path_g = f'memory/TASK_nodes/TASK_{task.hex_code}/PAIR_nodes/PAIR_{pair.id}/GRID_nodes/GRID_{grid.id}/PIXEL_nodes/PIXEL_{self.id}/PIXEL_property'
+                    path_g = f'{pixel_path}/PIXEL_nodes/PIXEL_{self.id}/PIXEL_property'
                     if not os.path.exists(path_g):
                         os.makedirs(path_g)
                     with open(f'{path_g}/{file_name}', 'w') as f:
                         json.dump(pixel_dict, f, indent=2)
-
-                    # # PIXEL_edge (if activated, PIXEL_edges will be saved under GRID_nodes/GRID_N/)
-                    # if not os.path.exists(f'memory/TASK_nodes/TASK_{task.hex_code}/PAIR_nodes/PAIR_{pair.id}/GRID_nodes/GRID_{grid.id}/PIXEL_edges'):
-                    #     os.makedirs(f'memory/TASK_nodes/TASK_{task.hex_code}/PAIR_nodes/PAIR_{pair.id}/GRID_nodes/GRID_{grid.id}/PIXEL_edges')
+                    
+                    # PIXEL_edge (if activated, PIXEL_edges will be saved under GRID_nodes/GRID_N/)
+                    pixel_g_edge_path = f'memory/TASK_nodes/TASK_{task.hex_code}/'
+                    pixel_g_edge_path += f'PAIR_nodes/PAIR_{pair.id}/'
+                    pixel_g_edge_path += f'GRID_nodes/GRID_{grid.id}/'
+                    pixel_g_edge_path += f'PIXEL_edges'
+                    if not os.path.exists(pixel_g_edge_path):
+                        os.makedirs(pixel_g_edge_path)
         
         # Save under object parents if they exist
         for parent in self.parent:
@@ -76,15 +83,20 @@ class PIXEL(GridComponent):
                     if obj_pair and hasattr(obj_pair, 'parent') and obj_pair.parent:
                         obj_task = obj_pair.parent
                         if obj_task:
-                            path_o = f'memory/TASK_nodes/TASK_{obj_task.hex_code}/PAIR_nodes/PAIR_{obj_pair.id}/GRID_nodes/GRID_{obj_grid.id}/OBJECT_nodes/OBJECT_{parent.id}/PIXEL_nodes/PIXEL_{self.id}/PIXEL_property'
+                            path_o = f'{pixel_path}/OBJECT_nodes/OBJECT_{self.parent[1].id}/PIXEL_nodes/PIXEL_{self.id}/PIXEL_property'
                             if not os.path.exists(path_o):
                                 os.makedirs(path_o)
                             with open(f'{path_o}/{file_name}', 'w') as f:
                                 json.dump(pixel_dict, f, indent=2)
 
                             # PIXEL_edge
-                            if not os.path.exists(f'memory/TASK_nodes/TASK_{obj_task.hex_code}/PAIR_nodes/PAIR_{obj_pair.id}/GRID_nodes/GRID_{obj_grid.id}/OBJECT_nodes/OBJECT_{parent.id}/PIXEL_edges'):
-                                os.makedirs(f'memory/TASK_nodes/TASK_{obj_task.hex_code}/PAIR_nodes/PAIR_{obj_pair.id}/GRID_nodes/GRID_{obj_grid.id}/OBJECT_nodes/OBJECT_{parent.id}/PIXEL_edges')
+                            pixel_o_edge_path = f'memory/TASK_nodes/TASK_{obj_task.hex_code}/'
+                            pixel_o_edge_path += f'PAIR_nodes/PAIR_{obj_pair.id}/'
+                            pixel_o_edge_path += f'GRID_nodes/GRID_{obj_grid.id}/'
+                            pixel_o_edge_path += f'OBJECT_nodes/OBJECT_{parent.id}/'
+                            pixel_o_edge_path += f'PIXEL_edges'
+                            if not os.path.exists(pixel_o_edge_path):
+                                os.makedirs(pixel_o_edge_path)
 
     def __repr__(self):
         return f"PIXEL({self.color}, {self.coordinate})"

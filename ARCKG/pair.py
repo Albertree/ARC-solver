@@ -58,9 +58,12 @@ class PAIR(ARCKGComponent):
         import json
 
         pair_dict = self.property
+        pair_path = f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_nodes/PAIR_{self.id}/'
+        if not os.path.exists(pair_path):
+            os.makedirs(pair_path)
 
         # PAIR_node - PAIR_property
-        path = f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_nodes/PAIR_{self.id}/PAIR_property'
+        path = f'{pair_path}/PAIR_property'
         file_name = f'PAIR_{self.id}_property.json'
         if not os.path.exists(path):
             os.makedirs(path)
@@ -68,9 +71,11 @@ class PAIR(ARCKGComponent):
         with open(f'{path}/{file_name}', 'w') as f:
             json.dump(pair_dict, f, indent=2)
 
-        # PAIR_edge
-        if not os.path.exists(f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_edges'):
-            os.makedirs(f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_edges')
+         # PAIR_edge
+        pair_edge_path = f'memory/TASK_nodes/TASK_{self.parent.hex_code}/'
+        pair_edge_path += f'PAIR_edges'
+        if not os.path.exists(pair_edge_path):
+            os.makedirs(pair_edge_path)
         
         
     

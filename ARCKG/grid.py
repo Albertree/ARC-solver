@@ -26,8 +26,26 @@ class GRID(GridComponent) :
     def colcoord_to_coordinate(self, colcoord):
         return [(colcoord[i][1][0], colcoord[i][1][1]) for i in range(len(colcoord))]
 
-    def grid_color(self, grid):
-        return sorted(list(set([grid[i][j] for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] != 13])))
+    # def grid_color(self, grid):
+    #     return sorted(list(set([grid[i][j] for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] != 13])))
+    def grid_color(self, colorgrid):
+        color = {0: False, 
+                 1: False, 
+                 2: False, 
+                 3: False, 
+                 4: False, 
+                 5: False, 
+                 6: False, 
+                 7: False, 
+                 8: False, 
+                 9: False 
+                 }
+        for i in range(len(colorgrid)):
+            for j in range(len(colorgrid[0])):
+                if colorgrid[i][j] != 13:
+                    if color[colorgrid[i][j]] == False:
+                        color[colorgrid[i][j]] = True
+        return color
 
     def measure_shape(self, object):
         # return an array of 0 or 1, 0 for value 13, 1 for other values
@@ -199,8 +217,9 @@ class GRID(GridComponent) :
         }
 
         # color
-        self.property['color'] = {color: True for color in self.color}
-        self.property['color'].update({'color_count': len(self.color)})
+        # self.property['color'] = {color: True for color in self.color}
+        # self.property['color'].update({'color_count': len(self.color)})
+        self.property['color'] = self.color
 
         # area
         self.property['area'] = {color: sum(1 for row in self.colorgrid for cell in row if cell == color) for color in self.color}
@@ -254,19 +273,25 @@ class GRID(GridComponent) :
         import json
 
         grid_dict = self.property
+        grid_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_nodes/GRID_{self.id}/'
+        if not os.path.exists(grid_path):
+            os.makedirs(grid_path)
 
         # GRID_node - GRID_property
-        path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_nodes/GRID_{self.id}/GRID_property'
+        path = f'{grid_path}/GRID_property'
         file_name = f'GRID_{self.id}_property.json'
         if not os.path.exists(path):
             os.makedirs(path)
-        
+
         with open(f'{path}/{file_name}', 'w') as f:
             json.dump(grid_dict, f, indent=2)
 
-        # GRID_edge
-        if not os.path.exists(f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_edges'):
-            os.makedirs(f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_edges')
+         # GRID_edge
+        grid_edge_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/'
+        grid_edge_path += f'PAIR_nodes/PAIR_{self.parent[0].id}/'
+        grid_edge_path += f'GRID_edges'
+        if not os.path.exists(grid_edge_path):
+            os.makedirs(grid_edge_path)
 
 
     def __repr__(self):

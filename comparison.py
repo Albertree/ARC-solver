@@ -1,767 +1,437 @@
-from basics.ARCLOADER import *
-from basics.VISUALIZATION import *
-from ARCKG.task import TASK
-from ARCKG.pair import PAIR
-from ARCKG.grid import GRID
-from ARCKG.pixel import PIXEL
-from ARCKG.object import OBJECT
-
-import copy
+from managers.arc_manager import ARCManager
+from pprint import pprint
+import os
 import json
-import numpy as np
 
-grid_compare_category_list = ["size", "color", "area", "symmetry"]
-object_compare_category_list = ["method", "size", "position", "color", "area", "shape", "symmetry"]
-pixel_compare_category_list = ["color", "coordinate"]
+def id_to_json_path(id):
+    TASK_HEX_CODE = id[0]
+    pnum = id[1]
+    gnum = id[2]
+    onum = id[3]
+    xnum = id[4]
+    typ = id[5]
 
-compare_result_template = {
-    "comp1": None,
-    "comp2": None,
-    "category": {}
-}
+    if typ == "task" or typ == "t":
+        return f"memory/TASK_nodes/TASK_{TASK_HEX_CODE}/TASK_property/TASK_{TASK_HEX_CODE}_property.json"
+    elif typ == "pair" or typ == "p":
+        return f"memory/TASK_nodes/TASK_{TASK_HEX_CODE}/PAIR_nodes/PAIR_{pnum}/PAIR_property/PAIR_{pnum}_property.json"
+    elif typ == "grid" or typ == "g":
+        return f"memory/TASK_nodes/TASK_{TASK_HEX_CODE}/PAIR_nodes/PAIR_{pnum}/GRID_nodes/GRID_{gnum}/GRID_property/GRID_{gnum}_property.json"
+    elif typ == "object" or typ == "o":
+        return f"memory/TASK_nodes/TASK_{TASK_HEX_CODE}/PAIR_nodes/PAIR_{pnum}/GRID_nodes/GRID_{gnum}/OBJECT_nodes/OBJECT_{onum}/OBJECT_property/OBJECT_{onum}_property.json"
+    elif typ == "pixel" or typ == "x":
+        return f"memory/TASK_nodes/TASK_{TASK_HEX_CODE}/PAIR_nodes/PAIR_{pnum}/GRID_nodes/GRID_{gnum}/PIXEL_nodes/PIXEL_{xnum}/PIXEL_property/PIXEL_{xnum}_property.json"
+    else:
+        raise ValueError("Invalid type. Check the type.")
 
-expression_unit_template = {
-    "type": None,
-    "comp1": None,
-    "comp2": None,
-    "delta": None
-}
+def json_path_to_id(json_path):
+    root = "memory/"
+    if "TASK_property" in json_path:
+        return (json_path.split(root)[-1].split("/")[1].split("_")[-1], None, None, None, None, "task")
+    elif "PAIR_property" in json_path:
+        return (json_path.split(root)[-1].split("/")[1].split("_")[-1], json_path.split(root)[-1].split("/")[-3].split("_")[-1], None, None, None, "pair")
+    elif "GRID_property" in json_path:
+        return (json_path.split(root)[-1].split("/")[1].split("_")[-1], json_path.split(root)[-1].split("/")[-5].split("_")[-1], json_path.split(root)[-1].split("/")[-3].split("_")[-1], None, None, "grid")
+    elif "OBJECT_property" in json_path:
+        return (json_path.split(root)[-1].split("/")[1].split("_")[-1], json_path.split(root)[-1].split("/")[-7].split("_")[-1], json_path.split(root)[-1].split("/")[-5].split("_")[-1], json_path.split(root)[-1].split("/")[-3].split("_")[-1], None, "object")
+    elif "PIXEL_property" in json_path:
+        return (json_path.split(root)[-1].split("/")[1].split("_")[-1], json_path.split(root)[-1].split("/")[-7].split("_")[-1], json_path.split(root)[-1].split("/")[-5].split("_")[-1], None, json_path.split(root)[-1].split("/")[-3].split("_")[-1], "pixel")
+    else:
+        raise ValueError("Invalid json path. Check the json path.")
 
-def horizontal_flip(matrix):
-    """Flip matrix horizontally (left-right)"""
-    return np.fliplr(matrix)
+def load_json_file(json_path):
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"File not found: {json_path}")
+    with open(json_path, "r") as f:
+        return json.load(f)
 
-def vertical_flip(matrix):
-    """Flip matrix vertically (up-down)"""
-    return np.flipud(matrix)
-
-def diagonal_flip(matrix):
-    """Flip matrix along main diagonal (transpose)"""
-    return np.transpose(matrix)
-
-def anti_diagonal_flip(matrix):
-    """Flip matrix along anti-diagonal"""
-    return np.transpose(np.flipud(np.fliplr(matrix)))
-
-def rotate90(matrix):
-    """Rotate matrix 90 degrees clockwise"""
-    return np.rot90(matrix, k=-1)
-
-def rotate180(matrix):
-    """Rotate matrix 180 degrees"""
-    return np.rot90(matrix, k=2)
-
-def rotate270(matrix):
-    """Rotate matrix 270 degrees clockwise (90 degrees counter-clockwise)"""
-    return np.rot90(matrix, k=1)
-
-def check_alternatives(comp1_matrix, comp2_matrix):
-    """Check if comp1_matrix matches any transformation of comp2_matrix"""
-    transformations = [
-        horizontal_flip,
-        vertical_flip,
-        diagonal_flip,
-        anti_diagonal_flip,
-        rotate90,
-        rotate180,
-        rotate270
-    ]
+def compare(comp1, comp2, path=""):
+    result = {
+        "type": None,
+        "comp1": comp1,
+        "comp2": comp2,
+        "details": {}
+    }
     
-    # Check if matrices are the same without transformation
-    if np.array_equal(comp1_matrix, comp2_matrix):
-        return True
+    # Handle different data types
+    if type(comp1) != type(comp2):
+        result["type"] = "DIFF"
+        return result
     
-    # Check each transformation
-    for transform_func in transformations:
-        try:
-            transformed = transform_func(comp2_matrix)
-            if np.array_equal(comp1_matrix, transformed):
-                return True
-        except:
-            continue
+    # Handle None values
+    if comp1 is None and comp2 is None:
+        result["type"] = "COMM"
+        return result
+    elif comp1 is None or comp2 is None:
+        result["type"] = "DIFF"
+        return result
     
-    return False
-
-
-#####
-def determine_category_result(value):
-    """Determine the overall result for a category based on its subcategories."""
-    if isinstance(value, dict):
-        if 'type' in value:
-            # This is a leaf node
-            return value['type']
+    # Handle primitive types (int, float, str, bool)
+    if isinstance(comp1, (int, float, str, bool)):
+        if comp1 == comp2:
+            result["type"] = "COMM"
         else:
-            # This is a category with subcategories
-            sub_results = []
-            for sub_value in value.values():
-                sub_result = determine_category_result(sub_value)
-                if sub_result in ['COMM', 'DIFF']:
-                    sub_results.append(sub_result)
+            result["type"] = "DIFF"
+        return result
+    
+    # Handle lists
+    if isinstance(comp1, list):
+        if len(comp1) != len(comp2):
+            result["type"] = "DIFF"
+            return result
+        
+        # Compare each element in the list
+        list_results = []
+        all_common = True
+        for i, (item1, item2) in enumerate(zip(comp1, comp2)):
+            item_result = compare(item1, item2, f"{path}[{i}]")
+            list_results.append(item_result)
+            if item_result["type"] == "DIFF":
+                all_common = False
+        
+        result["type"] = "COMM" if all_common else "DIFF"
+        result["details"] = list_results
+        return result
+    
+    # Handle dictionaries
+    if isinstance(comp1, dict):
+        # Get all unique keys from both dictionaries
+        all_keys = set(comp1.keys()) | set(comp2.keys())
+        
+        if not all_keys:
+            # Both dictionaries are empty
+            result["type"] = "COMM"
+            return result
+        
+        # Compare each key
+        key_results = {}
+        all_common = True
+        
+        for key in all_keys:
+            key_path = f"{path}.{key}" if path else key
             
-            # If all subcategories are COMM, then the category is COMM
-            # If any subcategory is DIFF, then the category is DIFF
-            if not sub_results:
-                return "UNKNOWN"
-            elif all(result == 'COMM' for result in sub_results):
-                return 'COMM'
+            if key not in comp1:
+                # Key missing in comp1
+                key_results[key] = {
+                    "type": "DIFF",
+                    "comp1": None,
+                    "comp2": comp2[key],
+                    "details": {}
+                }
+                all_common = False
+            elif key not in comp2:
+                # Key missing in comp2
+                key_results[key] = {
+                    "type": "DIFF",
+                    "comp1": comp1[key],
+                    "comp2": None,
+                    "details": {}
+                }
+                all_common = False
             else:
-                return 'DIFF'
-    else:
-        return str(value)
+                # Key exists in both, compare values
+                key_result = compare(comp1[key], comp2[key], key_path)
+                key_results[key] = key_result
+                if key_result["type"] == "DIFF":
+                    all_common = False
+        
+        result["type"] = "COMM" if all_common else "DIFF"
+        result["details"] = key_results
+        return result
     
-# def determine_category_reuslt_of_pixel(value):
-#     if isinstance(value, dict):
-#         if 'type' in value:
-#             # This is a leaf node
-#             return value['type']
-#         else:
-#             # This is a category with subcategories
-#             sub_results = []
-#             for sub_value in value.values():
-#                 sub_result = determine_category_result(sub_value)
-#                 if sub_result in ['COMM', 'DIFF']:
-#                     sub_results.append(sub_result)
-            
-#             # If all subcategories are COMM, then the category is COMM
-#             # If any subcategory is DIFF, then the category is DIFF
-#             if not sub_results:
-#                 return "UNKNOWN"
-#             elif all(result == 'COMM' for result in sub_results):
-#                 return 'COMM'
-#             else:
-#                 return 'DIFF'
-#     else:
-#         return str(value)
+    # Handle other types (tuples, sets, etc.)
+    try:
+        if comp1 == comp2:
+            result["type"] = "COMM"
+        else:
+            result["type"] = "DIFF"
+    except:
+        result["type"] = "DIFF"
     
-def count_comm_categories(comparison_dict):
-    category_data = comparison_dict['category']
+    return result
+
+
+def count_comm_in_category(category_data, count_leaf_nodes_only=False):
     comm_count = 0
-
-    # check the first three words of 'comp1'
-    comp_type = comparison_dict['comp1'].split('(')[0]
+    diff_count = 0
     
-    if comp_type == 'GRID':
-        grid_categories = ['size', 'color', 'area', 'symmetry']
+    if isinstance(category_data, dict):
+        # If this has a type and no details (or empty details), it's a leaf node
+        if "type" in category_data and ("details" not in category_data or not category_data["details"]):
+            if category_data["type"] == "COMM":
+                comm_count += 1
+            elif category_data["type"] == "DIFF":
+                diff_count += 1
+        # If this has details, process the subcategories
+        elif "details" in category_data:
+            sub_details = category_data["details"]
+            if isinstance(sub_details, dict):
+                for sub_key, sub_value in sub_details.items():
+                    if count_leaf_nodes_only:
+                        # Only count if this is a leaf node (has type but no details)
+                        if isinstance(sub_value, dict) and "type" in sub_value and ("details" not in sub_value or not sub_value["details"]):
+                            if sub_value["type"] == "COMM":
+                                comm_count += 1
+                            elif sub_value["type"] == "DIFF":
+                                diff_count += 1
+                    else:
+                        # Recursively count the subcategory
+                        sub_comm, sub_diff = count_comm_in_category(sub_value, count_leaf_nodes_only)
+                        comm_count += sub_comm
+                        diff_count += sub_diff
+            elif isinstance(sub_details, list):
+                for item in sub_details:
+                    sub_comm, sub_diff = count_comm_in_category(item, count_leaf_nodes_only)
+                    comm_count += sub_comm
+                    diff_count += sub_diff
+    
+    return comm_count, diff_count
 
-        for category in grid_categories:
-            if category in category_data:
-                category_result = determine_category_result(category_data[category])
-                if category_result == 'COMM':
+def get_combined_comparison_data(comparison_result):
+    def count_comm_in_category(category_data, count_leaf_nodes_only=False):
+        comm_count = 0
+        diff_count = 0
+        
+        if isinstance(category_data, dict):
+            # If this has a type and no details (or empty details), it's a leaf node
+            if "type" in category_data and ("details" not in category_data or not category_data["details"]):
+                if category_data["type"] == "COMM":
                     comm_count += 1
+                elif category_data["type"] == "DIFF":
+                    diff_count += 1
+            # If this has details, process the subcategories
+            elif "details" in category_data:
+                sub_details = category_data["details"]
+                if isinstance(sub_details, dict):
+                    for sub_key, sub_value in sub_details.items():
+                        if count_leaf_nodes_only:
+                            # Only count if this is a leaf node (has type but no details)
+                            if isinstance(sub_value, dict) and "type" in sub_value and ("details" not in sub_value or not sub_value["details"]):
+                                if sub_value["type"] == "COMM":
+                                    comm_count += 1
+                                elif sub_value["type"] == "DIFF":
+                                    diff_count += 1
+                        else:
+                            # Recursively count the subcategory
+                            sub_comm, sub_diff = count_comm_in_category(sub_value, count_leaf_nodes_only)
+                            comm_count += sub_comm
+                            diff_count += sub_diff
+                elif isinstance(sub_details, list):
+                    for item in sub_details:
+                        sub_comm, sub_diff = count_comm_in_category(item, count_leaf_nodes_only)
+                        comm_count += sub_comm
+                        diff_count += sub_diff
+        
+        return comm_count, diff_count
     
-    if comp_type == 'OBJECT':
-        object_categories = ['method', 'size', 'position', 'color', 'area', 'shape', 'symmetry']
-
-        for category in object_categories:
-            if category in category_data:
-                category_result = determine_category_result(category_data[category])
-                if category_result == 'COMM':
-                    comm_count += 1
-    
-    if comp_type == 'PIXEL':
-        pixel_categories = ['color', 'coordinate']
-
-        for category in pixel_categories:
-            if category in category_data:
-                category_result = determine_category_result(category_data[category])
-                if category_result == 'COMM':
-                    comm_count += 1
-    
-
-    return comm_count
-
-
-
-
-
-###
-
-def grid_compare(comp1, comp2):
-    # print(f"Comparing grids: {comp1.id} and {comp2.id}")
-
-    # initialize the result template
-    grid_compare_result = copy.deepcopy(compare_result_template)
-    grid_compare_result["comp1"] = str(comp1.__repr__())
-    grid_compare_result["comp2"] = str(comp2.__repr__())
-    grid_compare_result["category"] = {key: {} for key in grid_compare_category_list}
-
-    # Define all property lists first
-    size_props = ["height", "width"]
-    
-    color1 = set(comp1.color)
-    color2 = set(comp2.color)
-    union_colorset = color1.union(color2)
-    color_props = [color for color in union_colorset]
-    color_props.append("num_of_colors")
-    
-    area_props = [color for color in union_colorset]
-    area_props.append("total")
-    
-    symmetry_props = ["hori_symm", "verti_symm", "diag_symm", "anti_symm"]
-
-    # initialize the categories and properties based on component information
-    for key in grid_compare_result["category"]:
-        if key == "size":
-            for e in size_props:
-                grid_compare_result["category"]["size"][e] = copy.deepcopy(expression_unit_template)
+    def process_category_recursive(category_data):
+        result = {
+            "type": category_data.get("type", "UNKNOWN")
+        }
+        
+        # Check if this category has deeper subcategories
+        has_deeper_subcategories = False
+        if isinstance(category_data, dict) and "details" in category_data:
+            sub_details = category_data["details"]
+            if isinstance(sub_details, dict):
+                has_deeper_subcategories = any(
+                    isinstance(sub_value, dict) and "details" in sub_value and sub_value["details"]
+                    for sub_value in sub_details.values()
+                )
+        
+        # Calculate score
+        if has_deeper_subcategories:
+            # For categories with deeper subcategories, count only the immediate subcategories
+            comm_count, diff_count = count_comm_in_category(category_data, count_leaf_nodes_only=True)
             
-        if key == "color":
-            for e in color_props:
-                grid_compare_result["category"]["color"][e] = copy.deepcopy(expression_unit_template)
-
-        if key == "area":
-            for e in area_props:
-                grid_compare_result["category"]["area"][e] = copy.deepcopy(expression_unit_template)
-
-        if key == "symmetry":
-            for e in symmetry_props:
-                grid_compare_result["category"]["symmetry"][e] = copy.deepcopy(expression_unit_template)
-
-    # compare the properties
-    for key in grid_compare_result["category"]:
-        if key == "size":
-            for prop in size_props:
-                comp1_value = getattr(comp1, prop)
-                comp2_value = getattr(comp2, prop)
-                
-                if comp1_value == comp2_value:
-                    grid_compare_result["category"]["size"][prop]["type"] = "COMM"
-                    grid_compare_result["category"]["size"][prop]["comp1"] = comp1_value
-                    grid_compare_result["category"]["size"][prop]["comp2"] = comp2_value
-                    grid_compare_result["category"]["size"][prop]["delta"] = "0"
-                else:
-                    grid_compare_result["category"]["size"][prop]["type"] = "DIFF"
-                    grid_compare_result["category"]["size"][prop]["comp1"] = comp1_value
-                    grid_compare_result["category"]["size"][prop]["comp2"] = comp2_value
-                    grid_compare_result["category"]["size"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
+            # For categories with deeper subcategories, we need to count the immediate subcategories differently
+            if isinstance(category_data, dict) and "details" in category_data:
+                sub_details = category_data["details"]
+                if isinstance(sub_details, dict):
+                    comm_count = 0
+                    diff_count = 0
+                    for sub_key, sub_value in sub_details.items():
+                        if isinstance(sub_value, dict) and "type" in sub_value:
+                            if sub_value["type"] == "COMM":
+                                comm_count += 1
+                            elif sub_value["type"] == "DIFF":
+                                diff_count += 1
+        else:
+            # For regular categories, count all leaf nodes
+            comm_count, diff_count = count_comm_in_category(category_data)
+        
+        total_count = comm_count + diff_count
+        result["score"] = f"{comm_count}/{total_count}"
+        
+        # Process subcategories (renamed to category for unification)
+        if isinstance(category_data, dict) and "details" in category_data:
+            sub_details = category_data["details"]
+            if isinstance(sub_details, dict):
+                result["category"] = {}
+                for sub_key, sub_value in sub_details.items():
+                    result["category"][sub_key] = process_category_recursive(sub_value)
+        else:
+            # Add comp1 and comp2 only if this is a leaf node (no subcategories)
+            if isinstance(category_data, dict) and "comp1" in category_data and "comp2" in category_data:
+                result["comp1"] = category_data["comp1"]
+                result["comp2"] = category_data["comp2"]
+        
+        return result
+    
+    # Process top-level categories
+    combined_data = {
+        "type": comparison_result.get("type", "UNKNOWN"),
+        "score": "0/0",  # Will be updated below
+        "category": {}
+    }
+    
+    if isinstance(comparison_result, dict) and "details" in comparison_result:
+        details = comparison_result["details"]
+        if isinstance(details, dict):
+            # Count top-level categories
+            comm_categories = 0
+            total_categories = len(details)
+            for category_name, category_data in details.items():
+                if isinstance(category_data, dict) and category_data.get("type") == "COMM":
+                    comm_categories += 1
             
-        if key == "color":
-            for prop in color_props:
-                if prop == "num_of_colors":
-                    comp1_value = len(comp1.color)
-                    comp2_value = len(comp2.color)
-
-                    if comp1_value == comp2_value:
-                        grid_compare_result["category"]["color"][prop]["type"] = "COMM"
-                        grid_compare_result["category"]["color"][prop]["comp1"] = comp1_value
-                        grid_compare_result["category"]["color"][prop]["comp2"] = comp2_value
-                        grid_compare_result["category"]["color"][prop]["delta"] = "0"
-                    else:
-                        grid_compare_result["category"]["color"][prop]["type"] = "DIFF"
-                        grid_compare_result["category"]["color"][prop]["comp1"] = comp1_value
-                        grid_compare_result["category"]["color"][prop]["comp2"] = comp2_value
-                        grid_compare_result["category"]["color"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
-
-                else: # prop is a color (int)
-                    comp1_value = comp1.color
-                    comp2_value = comp2.color
-                    # color in both comp1 and comp2
-                    if prop in comp1_value and prop in comp2_value:
-                        grid_compare_result["category"]["color"][prop]["type"] = "COMM"
-                        grid_compare_result["category"]["color"][prop]["comp1"] = True
-                        grid_compare_result["category"]["color"][prop]["comp2"] = True
-                        grid_compare_result["category"]["color"][prop]["delta"] = "="
-                    # color in comp1 but not in comp2
-                    elif prop in comp1_value and prop not in comp2_value:
-                        grid_compare_result["category"]["color"][prop]["type"] = "DIFF"
-                        grid_compare_result["category"]["color"][prop]["comp1"] = True
-                        grid_compare_result["category"]["color"][prop]["comp2"] = False
-                        grid_compare_result["category"]["color"][prop]["delta"] = "-"
-                    # color in comp2 but not in comp1
-                    elif prop not in comp1_value and prop in comp2_value:
-                        grid_compare_result["category"]["color"][prop]["type"] = "DIFF"
-                        grid_compare_result["category"]["color"][prop]["comp1"] = False
-                        grid_compare_result["category"]["color"][prop]["comp2"] = True
-                        grid_compare_result["category"]["color"][prop]["delta"] = "+"
-        
-        if key == "area":
-            for prop in area_props:
-                if prop == "total":
-                    comp1_value = comp1.area
-                    comp2_value = comp2.area
-
-                    if comp1_value == comp2_value:
-                        grid_compare_result["category"]["area"][prop]["type"] = "COMM"
-                        grid_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        grid_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        grid_compare_result["category"]["area"][prop]["delta"] = "0"
-                    else:
-                        grid_compare_result["category"]["area"][prop]["type"] = "DIFF"
-                        grid_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        grid_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        grid_compare_result["category"]["area"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
-
-                else: # prop is a color (int)
-                    comp1_value = 0
-                    for x in comp1.pixels:
-                        if x.color == prop:
-                            comp1_value += 1
-
-                    comp2_value = 0
-                    for x in comp2.pixels:
-                        if x.color == prop:
-                            comp2_value += 1
-
-                    if comp1_value == comp2_value:
-                        grid_compare_result["category"]["area"][prop]["type"] = "COMM"
-                        grid_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        grid_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        grid_compare_result["category"]["area"][prop]["delta"] = "0"
-                    else:
-                        grid_compare_result["category"]["area"][prop]["type"] = "DIFF"
-                        grid_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        grid_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        grid_compare_result["category"]["area"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
-        
-        if key == "symmetry":
-            for prop in symmetry_props:
-                comp1_value = getattr(comp1, prop)
-                comp2_value = getattr(comp2, prop)
-
-                if comp1_value == comp2_value:
-                    grid_compare_result["category"]["symmetry"][prop]["type"] = "COMM"
-                    grid_compare_result["category"]["symmetry"][prop]["comp1"] = comp1_value
-                    grid_compare_result["category"]["symmetry"][prop]["comp2"] = comp2_value
-                    grid_compare_result["category"]["symmetry"][prop]["delta"] = "="
-                else:
-                    grid_compare_result["category"]["symmetry"][prop]["type"] = "DIFF"
-                    grid_compare_result["category"]["symmetry"][prop]["comp1"] = comp1_value
-                    grid_compare_result["category"]["symmetry"][prop]["comp2"] = comp2_value
-                    grid_compare_result["category"]["symmetry"][prop]["delta"] = "x"
-    
-    return grid_compare_result
-
-def object_compare(comp1, comp2):
-    # print(f"Comparing objects: {comp1.id} and {comp2.id}")
-
-    # initialize the result template
-    object_compare_result = copy.deepcopy(compare_result_template)
-    object_compare_result["comp1"] = str(comp1.__repr__())
-    object_compare_result["comp2"] = str(comp2.__repr__())
-    object_compare_result["category"] = {key: {} for key in object_compare_category_list}
-
-    # Define all property lists first
-    # no method_props 
-    size_props = ["height", "width"]
-    position_props = ["left_top", "right_top", "left_bottom", "right_bottom"]
-    sub_position_props = ["row_pos", "col_pos"]
-    
-    color1 = set(comp1.color) if hasattr(comp1, 'color') else set()
-    color2 = set(comp2.color) if hasattr(comp2, 'color') else set()
-    union_colorset = color1.union(color2)
-    color_props = [color for color in union_colorset]
-    color_props.append("num_of_colors")
-    
-    area_props = [color for color in union_colorset]
-    area_props.append("total")
-    
-    # no shape_props
-    symmetry_props = ["hori_symm", "verti_symm", "diag_symm", "anti_symm"]
-
-    # initialize the categories and properties based on component information
-    for key in object_compare_result["category"]:
-        if key == "method":
-            object_compare_result["category"]["method"] = copy.deepcopy(expression_unit_template)
-        
-        if key == "size":
-            for e in size_props:
-                object_compare_result["category"]["size"][e] = copy.deepcopy(expression_unit_template)
+            combined_data["score"] = f"{comm_categories}/{total_categories}"
             
-        if key == "position":
-            for e in position_props:
-                object_compare_result["category"]["position"][e] = {}
-                for sub_e in sub_position_props:
-                    object_compare_result["category"]["position"][e][sub_e] = copy.deepcopy(expression_unit_template)
-        
-        if key == "color":
-            for e in color_props:
-                object_compare_result["category"]["color"][e] = copy.deepcopy(expression_unit_template)
+            # Process each category
+            sorted_items = sorted(details.items())
+            for category_name, category_data in sorted_items:
+                combined_data["category"][category_name] = process_category_recursive(category_data)
+    
+    return combined_data
 
-        if key == "area":
-            for e in area_props:
-                object_compare_result["category"]["area"][e] = copy.deepcopy(expression_unit_template)
-                
-        if key == "shape":
-            object_compare_result["category"]["shape"] = copy.deepcopy(expression_unit_template)
+def save_comparison_result(comparison_result, output_path, comp1_repr="", comp2_repr=""):
+    combined_data = get_combined_comparison_data(comparison_result)
+    
+    # Create the final structure with comp1, comp2, and result
+    final_data = {
+        "comp1": comp1_repr,
+        "comp2": comp2_repr,
+        "result": combined_data
+    }
+    
+    with open(output_path, 'w') as f:
+        json.dump(final_data, f, indent=2, default=str)
+    
+    print(f"Combined comparison data saved to: {output_path}")
 
-        if key == "symmetry":
-            for e in symmetry_props:
-                object_compare_result["category"]["symmetry"][e] = copy.deepcopy(expression_unit_template)
-
-    # compare the properties
-    for key in object_compare_result["category"]:
-        if key == "method":
-            comp1_value = getattr(comp1, "method", None)
-            comp2_value = getattr(comp2, "method", None)
-                
-            if comp1_value == comp2_value:
-                object_compare_result["category"]["method"]["type"] = "COMM"
-                object_compare_result["category"]["method"]["comp1"] = comp1_value
-                object_compare_result["category"]["method"]["comp2"] = comp2_value
-                object_compare_result["category"]["method"]["delta"] = "="
+def print_comparison_result(comparison_result):
+    print("=== Comparison Result and Scores ===")
+    # Count top-level categories
+    if isinstance(comparison_result, dict) and "details" in comparison_result:
+        details = comparison_result["details"]
+        if isinstance(details, dict):
+            comm_categories = 0
+            total_categories = len(details)
+            for category_name, category_data in details.items():
+                if isinstance(category_data, dict) and category_data.get("type") == "COMM":
+                    comm_categories += 1
+            
+            # Determine status and type
+            if comm_categories == total_categories:
+                status = "✓"
+                category_type = "COMM"
             else:
-                object_compare_result["category"]["method"]["type"] = "DIFF"
-                object_compare_result["category"]["method"]["comp1"] = comp1_value
-                object_compare_result["category"]["method"]["comp2"] = comp2_value
-                object_compare_result["category"]["method"]["delta"] = "x"
-        
-        if key == "size":
-            for prop in size_props:
-                comp1_value = getattr(comp1, prop, 0)
-                comp2_value = getattr(comp2, prop, 0)
-                
-                if comp1_value == comp2_value:
-                    object_compare_result["category"]["size"][prop]["type"] = "COMM"
-                    object_compare_result["category"]["size"][prop]["comp1"] = comp1_value
-                    object_compare_result["category"]["size"][prop]["comp2"] = comp2_value
-                    object_compare_result["category"]["size"][prop]["delta"] = "0"
-                else:
-                    object_compare_result["category"]["size"][prop]["type"] = "DIFF"
-                    object_compare_result["category"]["size"][prop]["comp1"] = comp1_value
-                    object_compare_result["category"]["size"][prop]["comp2"] = comp2_value
-                    object_compare_result["category"]["size"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
-                    
-        if key == "position":
-            for prop in position_props:
-                if prop == "left_top":
-                    comp1_pos = getattr(comp1, "left_top")
-                    comp2_pos = getattr(comp2, "left_top")
-                elif prop == "right_top":
-                    comp1_pos = getattr(comp1, "right_top")
-                    comp2_pos = getattr(comp2, "right_top")
-                elif prop == "left_bottom":
-                    comp1_pos = getattr(comp1, "left_bottom")
-                    comp2_pos = getattr(comp2, "left_bottom")
-                elif prop == "right_bottom":
-                    comp1_pos = getattr(comp1, "right_bottom")
-                    comp2_pos = getattr(comp2, "right_bottom")
-
-                for sub_prop in sub_position_props:
-                    if sub_prop == "row_pos":
-                        comp1_value = comp1_pos[0]
-                        comp2_value = comp2_pos[0]
-                    elif sub_prop == "col_pos":
-                        comp1_value = comp1_pos[1]
-                        comp2_value = comp2_pos[1]
-
-                    if comp1_value == comp2_value:
-                        object_compare_result["category"]["position"][prop][sub_prop]["type"] = "COMM"
-                        object_compare_result["category"]["position"][prop][sub_prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["position"][prop][sub_prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["position"][prop][sub_prop]["delta"] = "0"
-                    else:
-                        object_compare_result["category"]["position"][prop][sub_prop]["type"] = "DIFF"
-                        object_compare_result["category"]["position"][prop][sub_prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["position"][prop][sub_prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["position"][prop][sub_prop]["delta"] = f"{comp2_value - comp1_value:+}"
-
-        if key == "color":
-            for prop in color_props:
-                if prop == "num_of_colors":
-                    comp1_value = len(comp1.color)
-                    comp2_value = len(comp2.color)
-
-                    if comp1_value == comp2_value:
-                        object_compare_result["category"]["color"][prop]["type"] = "COMM"
-                        object_compare_result["category"]["color"][prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["color"][prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["color"][prop]["delta"] = "0"
-                    else:
-                        object_compare_result["category"]["color"][prop]["type"] = "DIFF"
-                        object_compare_result["category"]["color"][prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["color"][prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["color"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
-
-                else: # prop is a color (int)
-                    comp1_value = comp1.color
-                    comp2_value = comp2.color
-                    # color in both comp1 and comp2
-                    if prop in comp1_value and prop in comp2_value:
-                        object_compare_result["category"]["color"][prop]["type"] = "COMM"
-                        object_compare_result["category"]["color"][prop]["comp1"] = True
-                        object_compare_result["category"]["color"][prop]["comp2"] = True
-                        object_compare_result["category"]["color"][prop]["delta"] = "="
-                    # color in comp1 but not in comp2
-                    elif prop in comp1_value and prop not in comp2_value:
-                        object_compare_result["category"]["color"][prop]["type"] = "DIFF"
-                        object_compare_result["category"]["color"][prop]["comp1"] = True
-                        object_compare_result["category"]["color"][prop]["comp2"] = False
-                        object_compare_result["category"]["color"][prop]["delta"] = "-"
-                    # color in comp2 but not in comp1
-                    elif prop not in comp1_value and prop in comp2_value:
-                        object_compare_result["category"]["color"][prop]["type"] = "DIFF"
-                        object_compare_result["category"]["color"][prop]["comp1"] = False
-                        object_compare_result["category"]["color"][prop]["comp2"] = True
-                        object_compare_result["category"]["color"][prop]["delta"] = "+"
-        
-        if key == "area":
-            for prop in area_props:
-                if prop == "total":
-                    comp1_value = getattr(comp1, 'area')
-                    comp2_value = getattr(comp2, 'area')
-
-                    if comp1_value == comp2_value:
-                        object_compare_result["category"]["area"][prop]["type"] = "COMM"
-                        object_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["area"][prop]["delta"] = "0"
-                    else:
-                        object_compare_result["category"]["area"][prop]["type"] = "DIFF"
-                        object_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["area"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
-
-                else: # prop is a color (int)
-                    comp1_value = 0
-                    if hasattr(comp1, 'childs'):
-                        for x in comp1.childs:
-                            if x.color == prop:
-                                comp1_value += 1
-
-                    comp2_value = 0
-                    if hasattr(comp2, 'childs'):
-                        for x in comp2.childs:
-                            if x.color == prop:
-                                comp2_value += 1
-
-                    if comp1_value == comp2_value:
-                        object_compare_result["category"]["area"][prop]["type"] = "COMM"
-                        object_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["area"][prop]["delta"] = "0"
-                    else:
-                        object_compare_result["category"]["area"][prop]["type"] = "DIFF"
-                        object_compare_result["category"]["area"][prop]["comp1"] = comp1_value
-                        object_compare_result["category"]["area"][prop]["comp2"] = comp2_value
-                        object_compare_result["category"]["area"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
-                        
-        if key == "shape":
-            comp1_value = getattr(comp1, "shape")
-            comp2_value = getattr(comp2, "shape")
-                
-            # Try transformation checking first if both values exist
-            shapes_match = False
-            if comp1_value is not None and comp2_value is not None:
-                try:
-                    comp1_matrix = np.array(comp1_value)
-                    comp2_matrix = np.array(comp2_value)
-                    shapes_match = check_alternatives(comp1_matrix, comp2_matrix)
-                except:
-                    # Fall back to simple comparison if matrix operations fail
-                    shapes_match = (comp1_value == comp2_value)
-            else:
-                # Simple comparison for None or invalid values
-                shapes_match = (comp1_value == comp2_value)
+                status = "✗"
+                category_type = "DIFF"
             
-            if shapes_match:
-                object_compare_result["category"]["shape"]["type"] = "COMM"
-                object_compare_result["category"]["shape"]["comp1"] = comp1_value
-                object_compare_result["category"]["shape"]["comp2"] = comp2_value
-                object_compare_result["category"]["shape"]["delta"] = "="
-            else:
-                object_compare_result["category"]["shape"]["type"] = "DIFF"
-                object_compare_result["category"]["shape"]["comp1"] = comp1_value
-                object_compare_result["category"]["shape"]["comp2"] = comp2_value
-                object_compare_result["category"]["shape"]["delta"] = "x"
+            print(f"{status}: {comm_categories}/{total_categories} {category_type}")
     
-        if key == "symmetry":
-            for prop in symmetry_props:
-                comp1_value = getattr(comp1, prop)
-                comp2_value = getattr(comp2, prop)
-
-                if comp1_value == comp2_value:
-                    object_compare_result["category"]["symmetry"][prop]["type"] = "COMM"
-                    object_compare_result["category"]["symmetry"][prop]["comp1"] = comp1_value
-                    object_compare_result["category"]["symmetry"][prop]["comp2"] = comp2_value
-                    object_compare_result["category"]["symmetry"][prop]["delta"] = "="
-                else:
-                    object_compare_result["category"]["symmetry"][prop]["type"] = "DIFF"
-                    object_compare_result["category"]["symmetry"][prop]["comp1"] = comp1_value
-                    object_compare_result["category"]["symmetry"][prop]["comp2"] = comp2_value
-                    object_compare_result["category"]["symmetry"][prop]["delta"] = "x"
     
-    return object_compare_result
-
-def pixel_compare(comp1, comp2):
-    # print(f"Comparing pixels: {comp1.id} and {comp2.id}")
-
-    # initialize the result template
-    pixel_compare_result = copy.deepcopy(compare_result_template)
-    pixel_compare_result["comp1"] = str(comp1.__repr__())
-    pixel_compare_result["comp2"] = str(comp2.__repr__())
-    pixel_compare_result["category"] = {key: {} for key in pixel_compare_category_list}
-
-    # Define all property lists first
-    color_props = ["color"]
-    coordinate_props = ["row", "col"]  # assuming pixels have row, col coordinates
-
-    # initialize the categories and properties based on component information
-    for key in pixel_compare_result["category"]:
-        if key == "color":
-            for e in color_props:
-                pixel_compare_result["category"]["color"][e] = copy.deepcopy(expression_unit_template)
-            
-        if key == "coordinate":
-            for e in coordinate_props:
-                pixel_compare_result["category"]["coordinate"][e] = copy.deepcopy(expression_unit_template)
-
-    # compare the properties
-    for key in pixel_compare_result["category"]:
-        if key == "color":
-            for prop in color_props:
-                comp1_value = getattr(comp1, prop, None)
-                comp2_value = getattr(comp2, prop, None)
-                
-                if comp1_value == comp2_value:
-                    pixel_compare_result["category"]["color"][prop]["type"] = "COMM"
-                    pixel_compare_result["category"]["color"][prop]["comp1"] = comp1_value
-                    pixel_compare_result["category"]["color"][prop]["comp2"] = comp2_value
-                    pixel_compare_result["category"]["color"][prop]["delta"] = "="
-                else:
-                    pixel_compare_result["category"]["color"][prop]["type"] = "DIFF"
-                    pixel_compare_result["category"]["color"][prop]["comp1"] = comp1_value
-                    pixel_compare_result["category"]["color"][prop]["comp2"] = comp2_value
-                    pixel_compare_result["category"]["color"][prop]["delta"] = "x"
+    
+    def print_category_scores_recursive(result_dict, indent=0):
+        """Recursively print category scores with indentation."""
+        if not isinstance(result_dict, dict) or "details" not in result_dict:
+            return
         
-        if key == "coordinate":
-            for prop in coordinate_props:
-                # Handle coordinate access - assuming pixels have pos attribute with [row, col]
-                comp1_pos = getattr(comp1, "coordinate")
-                comp2_pos = getattr(comp2, "coordinate")
+        details = result_dict["details"]
+        if not isinstance(details, dict):
+            return
+        
+        prefix = " " * 30 * indent  # 30 spaces per indentation level
+        
+        # Sort category names for consistent output
+        sorted_items = sorted(details.items())
+        for category_name, category_data in sorted_items:
+            # Check if this category has deeper subcategories
+            has_deeper_subcategories = False
+            if isinstance(category_data, dict) and "details" in category_data:
+                sub_details = category_data["details"]
+                if isinstance(sub_details, dict):
+                    has_deeper_subcategories = any(
+                        isinstance(sub_value, dict) and "details" in sub_value and sub_value["details"]
+                        for sub_value in sub_details.values()
+                    )
+            
+            # Count COMM and DIFF in this category
+            if has_deeper_subcategories:
+                # For categories with deeper subcategories, count only the immediate subcategories
+                comm_count, diff_count = count_comm_in_category(category_data, count_leaf_nodes_only=True)
                 
-                if prop == "row":
-                    comp1_value = comp1_pos[0]
-                    comp2_value = comp2_pos[0]
-                elif prop == "col":
-                    comp1_value = comp1_pos[1]
-                    comp2_value = comp2_pos[1]
-                
-                if comp1_value == comp2_value:
-                    pixel_compare_result["category"]["coordinate"][prop]["type"] = "COMM"
-                    pixel_compare_result["category"]["coordinate"][prop]["comp1"] = comp1_value
-                    pixel_compare_result["category"]["coordinate"][prop]["comp2"] = comp2_value
-                    pixel_compare_result["category"]["coordinate"][prop]["delta"] = "0"
-                else:
-                    pixel_compare_result["category"]["coordinate"][prop]["type"] = "DIFF"
-                    pixel_compare_result["category"]["coordinate"][prop]["comp1"] = comp1_value
-                    pixel_compare_result["category"]["coordinate"][prop]["comp2"] = comp2_value
-                    pixel_compare_result["category"]["coordinate"][prop]["delta"] = f"{comp2_value - comp1_value:+}"
+                # For categories with deeper subcategories, we need to count the immediate subcategories differently
+                if isinstance(category_data, dict) and "details" in category_data:
+                    sub_details = category_data["details"]
+                    if isinstance(sub_details, dict):
+                        comm_count = 0
+                        diff_count = 0
+                        for sub_key, sub_value in sub_details.items():
+                            if isinstance(sub_value, dict) and "type" in sub_value:
+                                if sub_value["type"] == "COMM":
+                                    comm_count += 1
+                                elif sub_value["type"] == "DIFF":
+                                    diff_count += 1
+            else:
+                # For regular categories, count all leaf nodes
+                comm_count, diff_count = count_comm_in_category(category_data)
+            
+            total_count = comm_count + diff_count
+            
+            if total_count > 0:
+                status = "✓" if category_data.get("type") == "COMM" else "✗"
+                print(f"{prefix}{status} {category_name}: {comm_count}/{total_count} ({category_data.get('type', 'MIXED')})")
+            else:
+                # No subcategories to count
+                status = "✓" if category_data.get("type") == "COMM" else "✗"
+                print(f"{prefix}{status} {category_name}: ({category_data.get('type', 'MIXED')})")
+            
+            # Always print subcategories if they exist
+            if isinstance(category_data, dict) and "details" in category_data:
+                sub_details = category_data["details"]
+                if isinstance(sub_details, dict):
+                    print_category_scores_recursive(category_data, indent + 1)
     
-    return pixel_compare_result
+    # Start with 30 spaces indentation for all category scores
+    print_category_scores_recursive(comparison_result, indent=1)
+    print("=" * 30)
 
-def compare(comp1, comp2):
-    if comp1.type == "grid" and comp2.type == "grid":
-        return grid_compare(comp1, comp2)
-    elif comp1.type == "object" and comp2.type == "object":
-        return object_compare(comp1, comp2)
-    elif comp1.type == "pixel" and comp2.type == "pixel":
-        return pixel_compare(comp1, comp2)
-    else:
-        raise ValueError("Invalid comparison type. Check the component id.")
-    
-
+            
 if __name__ == "__main__":
-    pass
-    # with open("everything_train.pkl", "rb") as f:
-    #     everything = pickle.load(f)
+    # comparing from memory (.json)
+
+    TASK_HEX_CODE = "08ed6ac7"
+    ARCManager.from_hex_code(TASK_HEX_CODE)
+
+    pnum = (0, 0)
+    gnum = (0, 1)
+    onum = (1, 2)
+    xnum = (9, 0)
+    typ = "pixel"
     
-    # #########################################################
-    # # grid compare example
-    # #########################################################
-
-    # tnum = 123
-    # pnum = 0
-
-    # id1 = (tnum, pnum, 0, None, None)
-    # id2 = (tnum, pnum, 1, None, None)
-
-    # comp1 = next(comp for comp in everything if comp.id == id1)
-    # comp2 = next(comp for comp in everything if comp.id == id2)
-
-    # grid_result = compare(comp1, comp2)
-
-    # with open("example_grid_comparison_receipt.json", "w") as f:
-    #     json.dump(grid_result, f, indent=2)
+    id1 = (TASK_HEX_CODE, pnum[0], gnum[0], onum[0], xnum[0], typ)
+    id2 = (TASK_HEX_CODE, pnum[1], gnum[1], onum[1], xnum[1], typ)
     
-
+    comp1 = load_json_file(id_to_json_path(id1))
+    comp2 = load_json_file(id_to_json_path(id2))
     
-    # # visualize the comparing grids
-    # comparing_grids = []
-    # g1 = next(comp for comp in everything if comp.id == id1)
-    # g2 = next(comp for comp in everything if comp.id == id2)
-    # comparing_grids.append(g1.view)
-    # comparing_grids.append(g2.view)
-
-    # plot_data(comparing_grids)
-
-
-
-
-    # #########################################################
-    # # object compare example
-    # #########################################################
-
-    # tnum = 280
-    # pnum = 0
-    # gnum = 1
-    # onum1 = 2
-    # onum2 = 0
-
-    # id3 = (tnum, pnum, gnum, onum1, None)
-    # id4 = (tnum, pnum, gnum, onum2, None)
-
-    # comp3 = next(comp for comp in everything if comp.id == id3)
-    # comp4 = next(comp for comp in everything if comp.id == id4)
-
-    # object_result = compare(comp3, comp4)
+    result = compare(comp1, comp2)
     
-    # with open("example_object_comparison_receipt.json", "w") as f:
-    #     json.dump(object_result, f, indent=2)
-
-
-
-    # # visualize the comparing objects
-    # comparing_objects = []
-    # o1 = next(comp for comp in everything if comp.id == id3)
-    # o2 = next(comp for comp in everything if comp.id == id4)
-    # comparing_objects.append(o1.view)
-    # comparing_objects.append(o2.view)
-
-    # plot_data(comparing_objects)
-
-
-
-
-
-    # #########################################################
-    # # pixel compare example
-    # #########################################################
-
-    # tnum = 280
-    # pnum = 0
-    # gnum = 1
-    # onum = None
-    # xnum1 = 0
-    # xnum2 = 3
-
-    # id5 = (tnum, pnum, gnum, onum, xnum1)
-    # id6 = (tnum, pnum, gnum, onum, xnum2)
-
-    # comp5 = next(comp for comp in everything if comp.id == id5)
-    # comp6 = next(comp for comp in everything if comp.id == id6)
-
-    # pixel_result = compare(comp5, comp6)
+    # # Print the comparison score
+    # print_comparison_result(result)
     
-    # with open("example_pixel_comparison_receipt.json", "w") as f:
-    #     json.dump(pixel_result, f, indent=2)
-
-
-
-    # # visualize the comparing pixels
-    # comparing_pixels = []
-    # p1 = next(comp for comp in everything if comp.id == id5)
-    # p2 = next(comp for comp in everything if comp.id == id6)
-    # comparing_pixels.append(p1.view)
-    # comparing_pixels.append(p2.view)
-
-    # plot_data(comparing_pixels)
+    # Save to JSON file
+    output_path = f"comparison_result_{TASK_HEX_CODE}_{typ}.json"
+    save_comparison_result(result, output_path, f"ID: {id1}", f"ID: {id2}")

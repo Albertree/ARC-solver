@@ -14,10 +14,25 @@ def get_left_top_pos(obj):
 
 def get_color(obj):
     obj = list(obj)
-    color = set()
+    # color = set()
+    color = {0: False, 
+             1: False, 
+             2: False, 
+             3: False, 
+             4: False, 
+             5: False, 
+             6: False, 
+             7: False, 
+             8: False, 
+             9: False 
+             }
+
     for i in range(len(obj)):
-        color.add(obj[i][0])
-    return list(color)
+        if color[obj[i][0]] == False:
+            color[obj[i][0]] = True
+        # color.add(obj[i][0])
+        # color.update({obj[i][1][0]: True})
+    return color
 
 # change object list to dictionary and save the object function parameters
 def find_all_objects(grid):
@@ -47,7 +62,7 @@ def find_all_objects(grid):
                     "obj": obj,
                     "pos": get_left_top_pos(obj),
                     "color": get_color(obj),
-                    "method": [univalued, diagonal, without_bg]
+                    "method": {"univalued": univalued, "diagonal": diagonal, "without_bg": without_bg}
                 }
                 object_list.append(object_info)
 
