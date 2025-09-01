@@ -797,23 +797,10 @@ class ARCSolver:
                 
                 visualize_objects_side_by_side(obj1, obj2)
                 comparison = compare(obj1.property, obj2.property)
-                
-                if isinstance(comparison, dict) and "details" in comparison:
-                    details = comparison["details"]
-                    if isinstance(details, dict):
-                        comm_count = 0
-                        total_categories = len(details)
-                        
-                        for category_name, category_data in details.items():
-                            if isinstance(category_data, dict) and category_data.get("type") == "COMM":
-                                comm_count += 1
-                        
-                        score = comm_count
-                        total_checks = total_categories
-                    else:
-                        score, total_checks = 0, 0
-                else:
-                    score, total_checks = 0, 0
+                # breakpoint()
+
+                score = int(comparison["score"].split("/")[0])
+                total_checks = int(comparison["score"].split("/")[1])
                 
                 print(f"Score: {score}/{total_checks}")
                 
@@ -822,9 +809,10 @@ class ARCSolver:
                     print(f"OBJECT COMPARISON SUMMARY [score: {score}/{total_checks}]")
                     print()
                     
-                    print_comparison_result(comparison)
+                    # pprint(comparison)
+                    print(comparison["category"])
                     
-                    print()
+                    # print()
                     print("Controls: [Enter] = Next comparison | [q] = Quit")
                     user_input = input().strip().lower()
                     
