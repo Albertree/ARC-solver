@@ -789,14 +789,12 @@ def load_json_file(json_path):
         return json.load(f)
 
 def save_comparison_result(comparison_result, output_path, id1=None, id2=None):
-    result = comparison_result
-    
     final_data = {
         "id1": str(id1),
         "id2": str(id2),
-        "result": result
+        "result": comparison_result
     }
-
+    
     with open(output_path, 'w') as f:
         json.dump(final_data, f, indent=2, default=str)
     

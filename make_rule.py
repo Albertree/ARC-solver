@@ -3,11 +3,11 @@ from collections import deque
 from pprint import pprint
 
 def bfs_traverse_comparison_tree(comparison_result):
-    # if not comparison_result or "result" not in comparison_result:
-    #     return []
+    if "result" in comparison_result:
+        comparison_result = comparison_result["result"]
     
     visited_nodes = []
-    queue = deque([("result", comparison_result["result"], [])])
+    queue = deque([("result", comparison_result, [])])
     
     while queue:
         node_name, node_data, path = queue.popleft()
@@ -31,8 +31,8 @@ def bfs_traverse_comparison_tree(comparison_result):
     return visited_nodes
 
 def dfs_traverse_comparison_tree(comparison_result):
-    # if not comparison_result or "result" not in comparison_result:
-    #     return []
+    if "result" in comparison_result:
+        comparison_result = comparison_result["result"]
     
     visited_nodes = []
     
@@ -54,7 +54,7 @@ def dfs_traverse_comparison_tree(comparison_result):
             for sub_name, sub_data in node_data["category"].items():
                 dfs_recursive(sub_name, sub_data, current_path)
     
-    dfs_recursive("result", comparison_result["result"], [])
+    dfs_recursive("result", comparison_result, [])
     return visited_nodes
 
 
@@ -102,23 +102,42 @@ def dfs_traverse_comparison_tree(comparison_result):
 
 # Generate rules for DIFF type - focusing on what needs to change
 def rule_generator_diff(comparison_result, traversal_method="BFS"):
-    print(f"DIFF rule generator using {traversal_method} traversal")
-    rules = []
+    if "result" in comparison_result:
+        print("in if")
+        comparison_result = comparison_result["result"]
+
+    data = comparison_result["category"]
     
-    # Select traversal method
-    if traversal_method.upper() == "BFS":
-        traversed_nodes = bfs_traverse_comparison_tree(comparison_result)
-    elif traversal_method.upper() == "DFS":
-        traversed_nodes = dfs_traverse_comparison_tree(comparison_result)
-    else:
-        raise ValueError("traversal_method must be 'BFS' or 'DFS'")
+    if data["size"]["type"] == "DIFF":
+        rule = {
+            "condition": {"name": "size",
+                          "type": "DIFF"
+                          },
+            "action": {"name": "make_grid",
+                       "args": [data["size"]["category"]["height"]["comp2"], data["size"]["category"]["width"]["comp2"], 13]
+                       }
+        }
+
+        print(rule)
+        breakpoint()
+        return rule
+    # print(f"DIFF rule generator using {traversal_method} traversal")
+    # rules = []
     
-    # Find DIFF nodes that are leaf nodes (empty category)
-    diff_leaf_nodes = [
-        node for node in traversed_nodes 
-        if node["type"] == "DIFF" and 
-        node["category"] == {}
-    ]
+    # # Select traversal method
+    # if traversal_method.upper() == "BFS":
+    #     traversed_nodes = bfs_traverse_comparison_tree(comparison_result)
+    # elif traversal_method.upper() == "DFS":
+    #     traversed_nodes = dfs_traverse_comparison_tree(comparison_result)
+    # else:
+    #     raise ValueError("traversal_method must be 'BFS' or 'DFS'")
+    
+    # # Find DIFF nodes that are leaf nodes (empty category)
+    # diff_leaf_nodes = [
+    #     node for node in traversed_nodes 
+    #     if node["type"] == "DIFF" and 
+    #     node["category"] == {}
+    # ]
 
     rule = {
         "condition": {},
@@ -128,28 +147,22 @@ def rule_generator_diff(comparison_result, traversal_method="BFS"):
     added_color = []
     removed_color = []
 
+    print(f"Found {len(diff_leaf_nodes)} DIFF leaf nodes")
+    pprint(diff_leaf_nodes)
+    breakpoint()
+
     for node in diff_leaf_nodes:
         current_data = node["data"]
-        comp2_value = current_data.get("data").get("comp2")
-        # comp1_value = current_data.get("data").get("comp1")
-        
-        if "color" in node["path"]:
-            if comp2_value == True: 
-                added_color.append(comp2_value)
-            else:# comp2_value == False:
-                removed_color.append(comp2_value)
-
-        if "area" in node["path"]:
-            if comp2_value == True: 
-                added_color.append(comp2_value)
-            else:# comp2_value == False:
-                removed_color.append(comp2_value)
+        comp2_value = current_data["data"]["comp2"]
 
         if "size" in node["path"]:
-            if comp2_value == True: 
-                added_color.append(comp2_value)
-            else:# comp2_value == False:
-                removed_color.append(comp2_value)
+           rule["condition"] = {"name": "size",
+                                "type": "DIFF"
+                                }
+
+           rule["action"] = {"name": "make_grid",
+                             "args": [comp2_value]
+                            }
     
     return rules
 
@@ -185,13 +198,34 @@ def rule_generator_comm(category_result, category_name):
     return rules
 
 if __name__ == "__main__":
-    with open("comparison_result_08ed6ac7_grid.json", "r") as f:
-        comparison_result = json.load(f)
+    from managers.arc_manager import ARCManager
+    from comparison import compare, compare_from_ids
+
+    TASK_HEX_CODE = "007bbfb7"
+
+    task = ARCManager.from_hex_code(TASK_HEX_CODE)
+
+
+    ARCManager.from_hex_code(TASK_HEX_CODE)
+
+    pnum = (0, 0)
+    gnum = (0, 1)
+    onum = (1, 2)
+    xnum = (9, 0)
+    typ = "grid"
+    
+    id1 = (TASK_HEX_CODE, pnum[0], gnum[0], onum[0], xnum[0], typ)
+    id2 = (TASK_HEX_CODE, pnum[1], gnum[1], onum[1], xnum[1], typ)
+    comparison_result = compare_from_ids(id1, id2)
+
+    # input_grid = task.example_pairs[0].input_grid
+    # output_grid = task.example_pairs[0].output_grid
+
+    # comparison_result = compare(input_grid.property, output_grid.property)
+
     
     nodes = bfs_traverse_comparison_tree(comparison_result)
-    pprint(nodes)
     print(len(nodes))
-    breakpoint()
 
     # Tree Structure Analysis
     # analysis = analyze_tree_structure(comparison_result)
