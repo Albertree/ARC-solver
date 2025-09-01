@@ -1,11 +1,12 @@
-from ARCKG.grid import GRID
+# from ARCKG.grid import GRID
 from ARCKG.task import TASK
 import os
 import ast
 import json
-from .program_optimizer import ProgramOptimizer
-from comparison import compare, count_comm_in_category, print_comparison_result
+# from .program_optimizer import ProgramOptimizer
+from comparison import * 
 from .solver_utils import *
+from pprint import pprint
 
 class ARCSolver:
     def __init__(self, task: TASK):
@@ -124,6 +125,74 @@ class ARCSolver:
         with open(file_path_ast, "w") as f:
             json.dump(ast_dict, f, indent=4) 
 
+
+    def test(self):
+
+
+
+        for pair_idx, pair in enumerate(self.task.example_pairs):
+            if is_empty_program(pair.program):
+                # no prgrogram in PAIR -> Do deeper analysis of a PAIR to make program
+                print(f"PAIR {pair_idx} has no program -> Do deeper analysis of a PAIR to make program")
+                print(f"Intra-PAIR Analysis (P1, P2, P3)")
+                print(f"Inter-GRID Analysis (P1)")
+
+                id1 = get_component_full_id(pair.input_grid)
+                id2 = get_component_full_id(pair.output_grid)
+                comparison_save_path = id_pair_to_comparison_path(id1, id2)
+
+                comparison_result = compare(pair.input_grid.property, pair.output_grid.property)
+                save_comparison_result(comparison_result, comparison_save_path, id1, id2)
+                
+                print(f"1 GRID comparison is completed!")
+
+                # make rule from grid comparison result
+                
+                
+                # make program using grid comparison result
+                
+                # cannot -> go deeper (object comparison in PAIR)
+                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
+                print("Inter-OBJECT Analysis (P2)")
+                print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                for obj_i in pair.input_grid.objects:
+                    for obj_o in pair.output_grid.objects:
+                        id1 = get_component_full_id(obj_i)
+                        id2 = get_component_full_id(obj_o)
+                        comparison_save_path = id_pair_to_comparison_path(id1, id2)
+                        
+                        comparison_result = compare(obj_i.property, obj_o.property)
+                        save_comparison_result(comparison_result, comparison_save_path, id1, id2)
+
+                print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
+
+                # make rules from object comparison result
+
+                # make program using object comparison result
+                
+                # cannot -> go deeper (pixel comparison in PAIR)
+                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
+                print("Inter-PIXEL Analysis (P3)")
+                print(f"Comparing {len(pair.input_grid.pixels)} pixels in input grid and {len(pair.output_grid.pixels)} pixels in output grid")
+                for pix_i in pair.input_grid.pixels:
+                    for pix_o in pair.output_grid.pixels:
+                        id1 = get_component_full_id(pix_i)
+                        id2 = get_component_full_id(pix_o)
+                        comparison_save_path = id_pair_to_comparison_path(id1, id2)
+
+                        comparison_result = compare(pix_i.property, pix_o.property)
+                        save_comparison_result(comparison_result, comparison_save_path, id1, id2)
+
+                print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
+
+                # make rules from pixel comparison result
+
+                # make level-1 program using grid, object, pixel comparison result
+                
+
+
+
+
     # # this function compatible with comparison_old.py
     # def play(self):
     #     # Clean up existing comparison directory
@@ -219,14 +288,12 @@ class ARCSolver:
     #                 else:
     #                     pass
 
+
         
     def temp_solve(self):
         spacing1 = " " * 4
         spacing2 = " " * 8
         spacing3 = " " * 12
-        spacing4 = " " * 16
-
-
 
         print("Start")
         print("Inter-TASK Analysis")
@@ -514,6 +581,8 @@ class ARCSolver:
         # for pair_idx in range(num_pairs):
         #     print(f"\n=== Processing PAIR {pair_idx} ===")
 
+
+
     # def temp_solve2(self):
     #     print("=== Starting Intra-TASK Analysis ===")
         
@@ -766,6 +835,7 @@ class ARCSolver:
                     continue
 
         print(f"\nCompleted all {total_comparisons} comparisons!")
+
 
     
 

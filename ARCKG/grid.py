@@ -29,22 +29,22 @@ class GRID(GridComponent) :
     # def grid_color(self, grid):
     #     return sorted(list(set([grid[i][j] for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] != 13])))
     def grid_color(self, colorgrid):
-        color = {0: False, 
-                 1: False, 
-                 2: False, 
-                 3: False, 
-                 4: False, 
-                 5: False, 
-                 6: False, 
-                 7: False, 
-                 8: False, 
-                 9: False 
+        color = {"0": False, 
+                 "1": False, 
+                 "2": False, 
+                 "3": False, 
+                 "4": False, 
+                 "5": False, 
+                 "6": False, 
+                 "7": False, 
+                 "8": False, 
+                 "9": False 
                  }
         for i in range(len(colorgrid)):
             for j in range(len(colorgrid[0])):
                 if colorgrid[i][j] != 13:
-                    if color[colorgrid[i][j]] == False:
-                        color[colorgrid[i][j]] = True
+                    if color[str(colorgrid[i][j])] == False:
+                        color[str(colorgrid[i][j])] = True
         return color
 
     def measure_shape(self, object):
@@ -222,7 +222,7 @@ class GRID(GridComponent) :
         self.property['color'] = self.color
 
         # area
-        self.property['area'] = {color: sum(1 for row in self.colorgrid for cell in row if cell == color) for color in self.color}
+        self.property['area'] = {int(color): sum(1 for row in self.colorgrid for cell in row if cell == int(color)) for color in self.color}
         self.property['area'].update({'total': sum(self.property['area'].values())})
 
         # symmetry
