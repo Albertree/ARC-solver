@@ -1,0 +1,12 @@
+{
+    "id": "rule_id",
+    "name": "rule_name",
+    "description": "rule_description",
+    "conditions": {
+    },
+    "actions": {
+        "type": "name",
+        "value": "value"
+
+    }
+}
