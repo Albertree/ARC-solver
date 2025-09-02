@@ -1,5 +1,5 @@
 from .grid import GRID
-from DSL.layer_utils import merge_layers
+from DSL.my_layer_DSL import merge_layers
 
 class TF_GRID(GRID):
     def __init__(self, accumulated_layers, t, p, g):
@@ -26,3 +26,6 @@ class TF_GRID(GRID):
                 trimmed_grid[i][j] = merged_grid[30 + i][30 + j]
         
         return trimmed_grid 
+
+    def __repr__(self):
+        return f"TF_GRID(id={self.id}, type={self.type}, parent={self.parent}, raw_data={self.raw_data})"

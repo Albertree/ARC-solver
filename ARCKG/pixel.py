@@ -18,12 +18,12 @@ class PIXEL(GridComponent):
         self.colorgrid = [[pixel[0]]]
         self.colcoord = [pixel]
         
-        self.view = self.colorgrid
-        
         self.color = pixel[0][0]
         self.coordinate = pixel[0][1]
         self.row_index = pixel[0][1][0]
         self.col_index = pixel[0][1][1]
+
+        self.view = [[self.color]]
 
         # self.property['colorgrid'] = self.colorgrid
         # self.property['colcoord'] = self.colcoord

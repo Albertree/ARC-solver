@@ -1,4 +1,4 @@
-from .arc_types import *
+from DSL.hodel_arc_types import *
 
 def identity(
     x: Any

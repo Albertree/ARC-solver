@@ -706,17 +706,33 @@ def compare_nested_json(comp1, comp2, path=""):
     
     return result
 
-def compare(comp1, comp2, path=""):
-    raw_result = compare_nested_json(comp1, comp2, path)
-    processed_result = get_comparison_data(raw_result)
-    
-    return processed_result
+def compare(comp1, comp2, save=True):
+    id1 = get_component_full_id(comp1)
+    id2 = get_component_full_id(comp2)
+    path =""
 
-def compare_from_ids(id1, id2):
-    comp1 = load_json_file(id_to_json_path(id1))
-    comp2 = load_json_file(id_to_json_path(id2))
+    raw_result = compare_nested_json(comp1.property, comp2.property, path)
+    processed_result = get_comparison_data(raw_result)
+
+    final_data = {
+        "id1": str(id1),
+        "id2": str(id2),
+        "result": processed_result
+    }
+
+    if save:
+        save_comparison_result(final_data, id_pair_to_comparison_path(id1, id2))
+        print(f"Combined comparison data saved to: {id_pair_to_comparison_path(id1, id2)}")
+
+        return final_data
+
+    return final_data
+
+# def compare_from_ids(id1, id2):
+#     comp1 = load_json_file(id_to_json_path(id1))
+#     comp2 = load_json_file(id_to_json_path(id2))
     
-    return compare(comp1, comp2)
+#     return compare(comp1, comp2)
 
 
 
@@ -782,21 +798,30 @@ def id_pair_to_comparison_path(id1, id2):
     else:
         raise ValueError("Invalid type. Check the type.")
 
+
+def get_component_full_id(component):
+    if component.type == "task":
+        return (component.hex_code, None, None, None, None, component.type)
+    elif component.type == "pair":
+        return (component.parent.hex_code, component.id, None, None, None, component.type)
+    elif component.type == "grid":
+        return (component.parent[0].parent.hex_code, component.parent[0].id, component.id, None, None, component.type)
+    elif component.type == "object":
+        return (component.parent[0].parent[0].parent.hex_code, component.parent[0].parent[0].id, component.parent[0].id, component.id, None, component.type)
+    elif component.type == "pixel":
+        return (component.parent[0].parent[0].parent.hex_code,component.parent[0].parent[0].id, component.parent[0].id, None, component.id, component.type)
+    else:
+        raise ValueError("Invalid component type")
+
 def load_json_file(json_path):
     if not os.path.exists(json_path):
         raise FileNotFoundError(f"File not found: {json_path}")
     with open(json_path, "r") as f:
         return json.load(f)
 
-def save_comparison_result(comparison_result, output_path, id1=None, id2=None):
-    final_data = {
-        "id1": str(id1),
-        "id2": str(id2),
-        "result": comparison_result
-    }
-    
+def save_comparison_result(data, output_path):
     with open(output_path, 'w') as f:
-        json.dump(final_data, f, indent=2, default=str)
+        json.dump(data, f, indent=2, default=str)
     
     print(f"Combined comparison data saved to: {output_path}")
 
@@ -805,7 +830,7 @@ if __name__ == "__main__":
     # comparing from memory (.json)
 
     TASK_HEX_CODE = "08ed6ac7"
-    ARCManager.from_hex_code(TASK_HEX_CODE)
+    task = ARCManager.from_hex_code(TASK_HEX_CODE)
 
     pnum = (0, 0)
     gnum = (0, 1)
@@ -813,16 +838,32 @@ if __name__ == "__main__":
     xnum = (9, 0)
     typ = "grid"
     
-    id1 = (TASK_HEX_CODE, pnum[0], gnum[0], onum[0], xnum[0], typ)
-    id2 = (TASK_HEX_CODE, pnum[1], gnum[1], onum[1], xnum[1], typ)
-    
-    # Use the new function that returns processed result
-    result = compare_from_ids(id1, id2)
-    
-    # Print the processed result
+    input_grid = task.example_pairs[pnum[0]].input_grid
+    output_grid = task.example_pairs[pnum[1]].output_grid
+
+    object1 = input_grid.objects[onum[0]]
+    object2 = output_grid.objects[onum[1]]
+
+    pixel1 = input_grid.pixels[xnum[0]]
+    pixel2 = output_grid.pixels[xnum[1]]
+
+    if typ == "grid":
+        comp1 = input_grid
+        comp2 = output_grid
+    elif typ == "object":
+        comp1 = object1
+        comp2 = object2
+    elif typ == "pixel":
+        comp1 = pixel1
+        comp2 = pixel2
+    else:
+        raise ValueError(f"Invalid type: {typ}")
+
+ 
+    comparison_result = compare(comp1, comp2, save=False)
+
     print("=== Processed Comparison Result ===")
-    pprint(result)
-    
-    # Save to JSON file
-    output_path = f"comparison_result_{TASK_HEX_CODE}_{typ}.json"
-    save_comparison_result(result, output_path, id1, id2)
+    pprint(comparison_result)
+
+    with open(f"comparison_result_{TASK_HEX_CODE}_{typ}.json", "w") as f:
+        json.dump(comparison_result, f, indent=2, default=str)

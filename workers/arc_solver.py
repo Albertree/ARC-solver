@@ -8,6 +8,13 @@ from comparison import *
 from .solver_utils import *
 from pprint import pprint
 
+from DSL.my_apply_DSL import *
+from DSL.my_DSL import *
+from DSL.my_selection import *
+from DSL.my_layer_DSL import *
+from DSL.my_transformation_DSL import *
+
+
 class ARCSolver:
     def __init__(self, task: TASK):
         self.task = task
@@ -125,9 +132,15 @@ class ARCSolver:
         with open(file_path_ast, "w") as f:
             json.dump(ast_dict, f, indent=4) 
 
+    def try_DSL(self):
+        input_grid = self.task.example_pairs[0].input_grid
+        grid = apply_DSL(input_grid, make_grid, 10, 10, 1)
+        grid = apply_DSL(grid, coloring, [(0, 0), (1, 1), (2, 2)], 7)
+        printcg(grid.view)
+        breakpoint()
+
 
     def test(self):
-
 
 
         for pair_idx, pair in enumerate(self.task.example_pairs):
@@ -137,13 +150,8 @@ class ARCSolver:
                 print(f"Intra-PAIR Analysis (P1, P2, P3)")
                 print(f"Inter-GRID Analysis (P1)")
 
-                id1 = get_component_full_id(pair.input_grid)
-                id2 = get_component_full_id(pair.output_grid)
-                comparison_save_path = id_pair_to_comparison_path(id1, id2)
+                comparison_result = compare(pair.input_grid, pair.output_grid, save=True)
 
-                comparison_result = compare(pair.input_grid.property, pair.output_grid.property)
-                save_comparison_result(comparison_result, comparison_save_path, id1, id2)
-                
                 print(f"1 GRID comparison is completed!")
 
                 # make rule from grid comparison result
@@ -157,16 +165,12 @@ class ARCSolver:
                 print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
                 for obj_i in pair.input_grid.objects:
                     for obj_o in pair.output_grid.objects:
-                        id1 = get_component_full_id(obj_i)
-                        id2 = get_component_full_id(obj_o)
-                        comparison_save_path = id_pair_to_comparison_path(id1, id2)
-                        
-                        comparison_result = compare(obj_i.property, obj_o.property)
-                        save_comparison_result(comparison_result, comparison_save_path, id1, id2)
+                        comparison_result = compare(obj_i, obj_o, save=True)
 
                 print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
 
                 # make rules from object comparison result
+
 
                 # make program using object comparison result
                 
@@ -176,16 +180,12 @@ class ARCSolver:
                 print(f"Comparing {len(pair.input_grid.pixels)} pixels in input grid and {len(pair.output_grid.pixels)} pixels in output grid")
                 for pix_i in pair.input_grid.pixels:
                     for pix_o in pair.output_grid.pixels:
-                        id1 = get_component_full_id(pix_i)
-                        id2 = get_component_full_id(pix_o)
-                        comparison_save_path = id_pair_to_comparison_path(id1, id2)
-
-                        comparison_result = compare(pix_i.property, pix_o.property)
-                        save_comparison_result(comparison_result, comparison_save_path, id1, id2)
-
+                        comparison_result = compare(pix_i, pix_o, save=True)
+                        
                 print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
 
                 # make rules from pixel comparison result
+
 
                 # make level-1 program using grid, object, pixel comparison result
                 
@@ -533,55 +533,6 @@ class ARCSolver:
         print()
 
 
-
-        # pair_program = []
-        # pair_count = self.task.example_pair_count
-        
-        # # Collect all pair programs
-        # for pair in self.task.example_pairs:
-        #     pair_program.append(pair.program)
-        
-        # # Check if there's at least one pair with no program
-        # has_empty_program = any(len(program) == 0 for program in pair_program)
-        
-        # # Check if there's no common program across all pairs
-        # if pair_count > 0:
-        #     # Find common programs across all pairs
-        #     common_programs = set(pair_program[0]) if pair_program[0] else set()
-        #     for program in pair_program[1:]:
-        #         if program:
-        #             common_programs = common_programs.intersection(set(program))
-        #         else:
-        #             common_programs = set()  # If any pair has no program, no common programs
-        # else:
-        #     common_programs = set()
-        
-        # has_no_common_program = len(common_programs) == 0
-        
-        # # Print comparison messages for all pair combinations
-        # for p in range(pair_count):
-        #     for pp in range(p+1, pair_count):
-        #         print(f"Comparing {self.task.example_pairs[p]} and {self.task.example_pairs[pp]}")
-        
-        # # Check conditions and print appropriate message
-        # if has_empty_program or has_no_common_program:
-        #     print("    No program or No common program -> Do deeper analysis of PAIR to make program") 
-        #     # T1 보다 깊게 들어가려면 Intra-PAIR Analysis를 특정 레벨 완료해야 함. 
-        #     # -> 현재 가진 속성으로 만든 가설, 규칙, 프로그램은 모두 다음페어에서 동작하지 않는 것을 보이는 것이 필요. 
-        # print()
-
-        # print("Intra-PAIR Analysis (P1, P2, P3)") # Input/Output을 비교하여 다른 점 (DIFF)를 중심으로 프로그램을 만드는 것이 목표
-        
-        # num_pairs = self.task.example_pair_count
-        # current_program = None
-        # successful_program = None
-        # memory = {}  # Store successful analysis results
-        
-        # # Main loop: Process each PAIR
-        # for pair_idx in range(num_pairs):
-        #     print(f"\n=== Processing PAIR {pair_idx} ===")
-
-
     def object_mapping(self):
         def color_text_no_bg(index, text):
             COLORS = {
@@ -646,11 +597,10 @@ class ARCSolver:
                 print(f"Comparison {comparison_count}/{total_comparisons} - Object {i} vs Object {j}")
                 
                 visualize_objects_side_by_side(obj1, obj2)
-                comparison = compare(obj1.property, obj2.property)
-                # breakpoint()
+                comparison = compare(obj1, obj2, save=True)
 
-                score = int(comparison["score"].split("/")[0])
-                total_checks = int(comparison["score"].split("/")[1])
+                score = int(comparison["result"]["score"].split("/")[0])
+                total_checks = int(comparison["result"]["score"].split("/")[1])
                 
                 print(f"Score: {score}/{total_checks}")
                 
@@ -659,8 +609,7 @@ class ARCSolver:
                     print(f"OBJECT COMPARISON SUMMARY [score: {score}/{total_checks}]")
                     print()
                     
-                    # pprint(comparison)
-                    print(comparison["category"])
+                    pprint(comparison["result"]["category"])
                     
                     # print()
                     print("Controls: [Enter] = Next comparison | [q] = Quit")

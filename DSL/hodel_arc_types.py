@@ -9,6 +9,7 @@ from typing import (
     Iterable
 )
 
+
 Boolean = bool
 Integer = int
 IntegerTuple = Tuple[Integer, Integer]

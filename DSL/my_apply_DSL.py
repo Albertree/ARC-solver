@@ -2,22 +2,21 @@ from DSL.my_transformation_DSL import *
 from ARCKG.tf_grid import TF_GRID
 from DSL.my_selection import SELECTION
 from basics.utils import printcg
-from DSL.my_layer_DSL import *
+from DSL.my_layer_DSL import merge_layers, paste_sub_array, make_selection_layer, make_mask, make_edit_space, make_layer
 
-
-def check_args(main_grid, func, *args):
-    if func == make_grid:
-        return None, *args[0:]
-    elif func == coloring:
-        selection = SELECTION(args[0], main_grid)
-        return selection, *args[1:]
+# def check_args(main_grid, func, *args):
+#     if func == make_grid:
+#         return None, *args[0:]
+#     elif func == coloring:
+#         selection = SELECTION(args[0], main_grid)
+#         return selection, *args[1:]
     
-    elif func == color_switch:
-        selection = SELECTION(args[0], main_grid)
+#     elif func == color_switch:
+#         selection = SELECTION(args[0], main_grid)
 
-        return selection, *args[1:]
-    else:
-        return args
+#         return selection, *args[1:]
+#     else:
+#         return args
     
 def apply_DSL(main_grid, func, *args, **kwargs):
 

@@ -1,6 +1,6 @@
 {
-  "comp1": "ID: ('08ed6ac7', 0, 0, 1, 9, 'pixel')",
-  "comp2": "ID: ('08ed6ac7', 0, 1, 2, 0, 'pixel')",
+  "id1": "('08ed6ac7', 0, 0, None, 9, 'pixel')",
+  "id2": "('08ed6ac7', 0, 1, None, 0, 'pixel')",
   "result": {
     "type": "DIFF",
     "score": "1/2",
@@ -8,21 +8,27 @@
       "color": {
         "type": "COMM",
         "score": "1/1",
-        "category": {}
+        "category": {},
+        "comp1": 0,
+        "comp2": 0
       },
       "coordinate": {
         "type": "DIFF",
         "score": "1/2",
         "category": {
-          "row_index": {
-            "type": "DIFF",
-            "score": "0/1",
-            "category": {}
-          },
           "col_index": {
             "type": "COMM",
             "score": "1/1",
-            "category": {}
+            "category": {},
+            "comp1": 0,
+            "comp2": 0
+          },
+          "row_index": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": 1,
+            "comp2": 0
           }
         }
       }
