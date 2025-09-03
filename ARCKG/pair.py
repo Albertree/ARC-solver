@@ -77,7 +77,54 @@ class PAIR(ARCKGComponent):
         if not os.path.exists(pair_edge_path):
             os.makedirs(pair_edge_path)
         
+        # Update integrated ARCKG JSON
+        # self.update_integrated_arckg_json()
+    
+    def update_integrated_arckg_json(self):
+        """Update the integrated ARCKG JSON with pair information"""
+        import os
+        import json
         
+        arckg_file = f'memory/TASK_nodes/ARCKG_{self.parent.hex_code}.json'
+        
+        # Check if integrated ARCKG file exists
+        if not os.path.exists(arckg_file):
+            return
+        
+        try:
+            with open(arckg_file, 'r') as f:
+                integrated_arckg = json.load(f)
+            
+            # Find and update the pair data
+            pair_id_str = f"({self.parent.hex_code}, {self.id}, None, None, None, 'pair')"
+            
+            # Check if pair already exists
+            pair_exists = False
+            if str(self.id) in integrated_arckg["PAIR_nodes"]:
+                pair_data = integrated_arckg["PAIR_nodes"][str(self.id)]
+                if pair_data["id"] == pair_id_str:
+                    # Update existing pair
+                    pair_data["property"] = self.property
+                    pair_exists = True
+            
+            # If pair doesn't exist, add it
+            if not pair_exists:
+                pair_data = {
+                    "id": pair_id_str,
+                    "type": "PAIR",
+                    "data": {},
+                    "property": self.property,
+                    "GRID_edges": {},
+                    "GRID_nodes": {}
+                }
+                integrated_arckg["PAIR_nodes"][str(self.id)] = pair_data
+            
+            # Save updated integrated ARCKG JSON
+            with open(arckg_file, 'w') as f:
+                json.dump(integrated_arckg, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error updating integrated ARCKG JSON: {e}")
     
     def __repr__(self):
         return f"PAIR({self.id}th {self.type} of TASK({self.parent.hex_code}))"

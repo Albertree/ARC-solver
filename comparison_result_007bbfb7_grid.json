@@ -1,6 +1,6 @@
 {
-  "id1": "('007bbfb7', 0, 0, None, None, 'grid')",
-  "id2": "('007bbfb7', 0, 1, None, None, 'grid')",
+  "id1": "007bbfb7.PAIR_nodes.0.GRID_nodes.0",
+  "id2": "007bbfb7.PAIR_nodes.0.GRID_nodes.1",
   "result": {
     "type": "DIFF",
     "score": "2/4",

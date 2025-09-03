@@ -111,6 +111,105 @@ class TASK(ARCKGComponent):
         if not os.path.exists(task_edge_path):
             os.makedirs(task_edge_path)
         
+        # Create integrated ARCKG JSON
+        # self.create_integrated_arckg_json()
+    
+    def create_integrated_arckg_json(self):
+        """Create integrated ARCKG JSON file with all components"""
+        import os
+        import json
+        
+        # Initialize the integrated structure
+        integrated_arckg = {
+            "id": self.hex_code,
+            "type": "TASK",
+            "data": {},
+            "property": self.property,
+            "PAIR_edges": {},
+            "PAIR_nodes": {}
+        }
+        
+        # Add pairs
+        for i, pair in enumerate(self.example_pairs + self.test_pairs):
+            pair_data = {
+                "id": f"{self.hex_code}.PAIR_nodes.{i}",
+                "type": "PAIR",
+                "data": {},
+                "property": pair.property,
+                "GRID_edges": {},
+                "GRID_nodes": {}
+            }
+            
+            # Add grids for each pair
+            if hasattr(pair, 'input_grid') and pair.input_grid:
+                grid_data = self._create_grid_data(pair.input_grid, pair.id, 0, f"{self.hex_code}.PAIR_nodes.{i}")
+                pair_data["GRID_nodes"]["0"] = grid_data
+            
+            if hasattr(pair, 'output_grid') and pair.output_grid:
+                grid_data = self._create_grid_data(pair.output_grid, pair.id, 1, f"{self.hex_code}.PAIR_nodes.{i}")
+                pair_data["GRID_nodes"]["1"] = grid_data
+            
+            integrated_arckg["PAIR_nodes"][str(i)] = pair_data
+        
+        # Save integrated ARCKG JSON
+        arcgk_path = f'memory/TASK_nodes/'
+        if not os.path.exists(arcgk_path):
+            os.makedirs(arcgk_path)
+        
+        arcgk_file = f'{arcgk_path}/ARCKG_{self.hex_code}.json'
+        with open(arcgk_file, 'w') as f:
+            json.dump(integrated_arckg, f, indent=2)
+    
+    def _create_grid_data(self, grid, pair_id, grid_id, pair_path):
+        """Create grid data structure for integrated ARCKG"""
+        grid_data = {
+            "id": f"{pair_path}.GRID_nodes.{grid_id}",
+            "type": "GRID",
+            "data": {},
+            "property": grid.property,
+            "OBJECT_edges": {},
+            "OBJECT_nodes": {},
+            "PIXEL_edges": {},
+            "PIXEL_nodes": {}
+        }
+        
+        # Add objects
+        if hasattr(grid, 'objects') and grid.objects:
+            for obj in grid.objects:
+                obj_data = {
+                    "id": f"{pair_path}.GRID_nodes.{grid_id}.OBJECT_nodes.{obj.id}",
+                    "type": "OBJECT",
+                    "data": {},
+                    "property": obj.property,
+                    "PIXEL_edges": {},
+                    "PIXEL_nodes": {}
+                }
+                
+                # Add pixels for each object
+                if hasattr(obj, 'pixels') and obj.pixels:
+                    for pixel in obj.pixels:
+                        pixel_data = {
+                            "id": f"{pair_path}.GRID_nodes.{grid_id}.OBJECT_nodes.{obj.id}.PIXEL_nodes.{pixel.id}",
+                            "type": "PIXEL",
+                            "data": {},
+                            "property": pixel.property
+                        }
+                        obj_data["PIXEL_nodes"][str(pixel.id)] = pixel_data
+                
+                grid_data["OBJECT_nodes"][str(obj.id)] = obj_data
+        
+        # Add pixels directly under grid
+        if hasattr(grid, 'pixels') and grid.pixels:
+            for pixel in grid.pixels:
+                pixel_data = {
+                    "id": f"{pair_path}.GRID_nodes.{grid_id}.PIXEL_nodes.{pixel.id}",
+                    "type": "PIXEL",
+                    "data": {},
+                    "property": pixel.property
+                }
+                grid_data["PIXEL_nodes"][str(pixel.id)] = pixel_data
+        
+        return grid_data
 
     def __repr__(self):
         return f"TASK(id={self.id}, type={self.type}, hex_code={self.hex_code}, example_pairs={len(self.example_pairs)}, test_pairs={len(self.test_pairs)})"

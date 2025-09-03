@@ -1,132 +1,130 @@
 import json
+import os
 from collections import deque
 from pprint import pprint
 
-# def bfs_traverse_comparison_tree(comparison_result):
-#     if "result" in comparison_result:
-#         comparison_result = comparison_result["result"]
-    
-#     visited_nodes = []
-#     queue = deque([("result", comparison_result, [])])
-    
-#     while queue:
-#         node_name, node_data, path = queue.popleft()
-#         current_path = path + [node_name]
-        
-#         # Record the current node
-#         visited_nodes.append({
-#             "name": node_name,
-#             "path": current_path,
-#             "type": node_data.get("type", "unknown"),
-#             "score": node_data.get("score", "unknown"),
-#             "category": node_data.get("category", {}),
-#             "data": node_data
-#         })
-        
-#         # If this node has subcategories, add them to the queue
-#         if "category" in node_data and node_data["category"]:
-#             for sub_name, sub_data in node_data["category"].items():
-#                 queue.append((sub_name, sub_data, current_path))
-    
-#     return visited_nodes
+def extract_comparison_level(id):
+    """Extract comparison level from id string with priority order: PIXEL > OBJECT > GRID > PAIR > TASK"""
+    if "PIXEL" in id:
+        return "PIXEL"
+    elif "OBJECT" in id:
+        return "OBJECT"
+    elif "GRID" in id:
+        return "GRID"
+    elif "PAIR" in id:
+        return "PAIR"
+    elif "TASK" in id:
+        return "TASK"
+    else:
+        return "UNKNOWN"
 
-# def dfs_traverse_comparison_tree(comparison_result):
-#     if "result" in comparison_result:
-#         comparison_result = comparison_result["result"]
-    
-#     visited_nodes = []
-    
-#     def dfs_recursive(node_name, node_data, path):
-#         current_path = path + [node_name]
-        
-#         # Visit current node first (preorder)
-#         visited_nodes.append({
-#             "name": node_name,
-#             "path": current_path,
-#             "type": node_data.get("type", "unknown"),
-#             "score": node_data.get("score", "unknown"),
-#             "category": node_data.get("category", {}),
-#             "data": node_data
-#         })
-        
-#         # Visit children recursively
-#         if "category" in node_data and node_data["category"]:
-#             for sub_name, sub_data in node_data["category"].items():
-#                 dfs_recursive(sub_name, sub_data, current_path)
-    
-#     dfs_recursive("result", comparison_result, [])
-#     return visited_nodes
-
-# Generate rules for DIFF type - focusing on what needs to change
-def rule_generator_diff(comparison_result):
+def load_matching_rules(comparison_level, category_key):
+    """Load rule basket JSON files that match the comparison level and category"""
+    rule_basket_dir = "rule_basket"
     rules = []
-    rule_template = {
-        "condition": {
-            "name": "name", # category
-            "type": "type" # DIFF/COMM
-        },
-        "action": {
-            "name": "", # DSL name
-            "args": {} # DSL parameters
-        }
-    }
-    comparison_type = comparison_result["id1"].split(", '")[-1].split("')")[0]  # will be the same with comparison_result["id2"]
-    comp1_id = comparison_result["id1"].split(", ")
-    comp2_id = comparison_result["id2"].split(", ")
-
-    data = comparison_result["result"]["category"]
-
-    # grid comparison result -> rule
-    if comparison_type == "grid":
-        # if size is DIFF -> make_grid with the comp2 size
-        if data["size"]["type"] == "DIFF":
-            rule = rule_template.copy()
-            rule["condition"]["name"] = "size"
-            rule["condition"]["type"] = "DIFF"
-            rule["action"]["name"] = "make_grid"
-            rule["action"]["args"] = {
-                "1": data["size"]["category"]["height"]["comp2"],
-                "2": data["size"]["category"]["width"]["comp2"], 
-                "3": 13
-            }
-            rules.append(rule)
-
-        # if color is DIFF -> append comp1 and comp2 color to add_color/remove_color variable(list)
-        # if color is DIFF -> assert output_grid color satisfies comp2 color
-        if data["color"]["type"] == "DIFF":
-            for key, value in data["color"]["category"].items():
-                rule = rule_template.copy()
-                rule["condition"]["name"] = "color"
-                rule["condition"]["type"] = "DIFF"
-                rule["action"]["name"] = "add_color"
-                rule["action"]["args"] = {
-                    "1": key
-                }
-                rules.append(rule)
-            
-            for key, value in data["color"]["category"].items():
-                rule = rule_template.copy()
-                rule["condition"]["name"] = "color"
-                rule["condition"]["type"] = "DIFF"
-                rule["action"]["name"] = "remove_color"
-                rule["action"]["args"] = {
-                    "1": key
-                }
-                rules.append(rule)
-
-        # if area is DIFF -> assert output_grid area satisfies comp2 area # TODO: 아직 어떤 규칙이 필요한지 모르겠음
-        if data["area"]["type"] == "DIFF":
-            rule = rule_template.copy()
-            rules.append(rule)
-        
-        # if symmetry is DIFF -> assert output_grid symmetry satisfies comp2 symmetry # TODO: 아직 어떤 규칙이 필요한지 모르겠음
-        if data["symmetry"]["type"] == "DIFF":
-            rule = rule_template.copy()
-            rules.append(rule)
-
-    breakpoint()
+    
+    if not os.path.exists(rule_basket_dir):
+        return rules
+    
+    for filename in os.listdir(rule_basket_dir):
+        if filename.endswith('.json'):
+            # Extract the part before first underscore (comparison level) and second part (category)
+            parts = filename.split('_')
+            if len(parts) >= 2:
+                file_level = parts[0]
+                file_category = parts[1]
+                
+                # Check if both comparison level and category match
+                if file_level == comparison_level and file_category == category_key:
+                    filepath = os.path.join(rule_basket_dir, filename)
+                    try:
+                        with open(filepath, 'r') as f:
+                            rule_data = json.load(f)
+                            if 'rules' in rule_data:
+                                rules.extend(rule_data['rules'])
+                    except Exception as e:
+                        print(f"Error loading {filepath}: {e}")
+    
     return rules
 
+def evaluate_rule_condition(condition, comparison_result):
+    """Evaluate a rule condition against comparison result"""
+    if isinstance(condition, dict):
+        if 'operator' in condition:
+            if condition['operator'] == '==':
+                operand1 = get_nested_value(comparison_result, condition['operand1'])
+                operand2 = condition['operand2']
+                return operand1 == operand2
+            elif condition['operator'] == 'AND':
+                return (evaluate_rule_condition(condition['operand1'], comparison_result) and 
+                       evaluate_rule_condition(condition['operand2'], comparison_result))
+            elif condition['operator'] == 'OR':
+                return (evaluate_rule_condition(condition['operand1'], comparison_result) or 
+                       evaluate_rule_condition(condition['operand2'], comparison_result))
+    return False
+
+def get_nested_value(data, path):
+    """Get nested value from data using dot notation path"""
+    keys = path.split('.')
+    current = data
+    
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        elif isinstance(current, list) and key.isdigit():
+            current = current[int(key)]
+        else:
+            return None
+    
+    return current
+
+def get_matching_actions(comparison_result):
+    """Get matching actions from rule basket based on comparison result"""
+    actions = []
+    
+    # Get comparison level from id
+    comparison_level = extract_comparison_level(comparison_result["id1"])
+    
+    # Check if result and category exist
+    if "result" not in comparison_result or "category" not in comparison_result["result"]:
+        return actions
+    
+    # Loop through each category in comparison result
+    for category_key in comparison_result["result"]["category"].keys():
+        # Load matching rules for this comparison level and category
+        rules = load_matching_rules(comparison_level, category_key)
+        
+        # Check each rule
+        for rule in rules:
+            if 'condition' in rule and 'action' in rule:
+                # Evaluate the condition
+                if evaluate_rule_condition(rule['condition'], comparison_result):
+                    # Condition matches, add the action
+                    action = rule['action'].copy()
+                    
+                    # Process action arguments to replace placeholders with actual values
+                    if 'args' in action:
+                        processed_args = {}
+                        for key, value in action['args'].items():
+                            if isinstance(value, str) and value.startswith('result.'):
+                                # Replace placeholder with actual value
+                                actual_value = get_nested_value(comparison_result, value)
+                                if actual_value is not None:
+                                    processed_args[key] = actual_value
+                                else:
+                                    processed_args[key] = value
+                            else:
+                                processed_args[key] = value
+                        action['args'] = processed_args
+                    
+                    actions.append(action)
+    
+    return actions
+
+# Legacy function name for backward compatibility
+def rule_generator_diff(comparison_result):
+    """Legacy function name - use get_matching_actions instead"""
+    return get_matching_actions(comparison_result)
 
 if __name__ == "__main__":
     from managers.arc_manager import ARCManager
@@ -165,14 +163,16 @@ if __name__ == "__main__":
  
     comparison_result = compare(comp1, comp2, save=False)
 
-    print("=== Processed Comparison Result ===")
-    pprint(comparison_result)
+    # print("=== Processed Comparison Result ===")
+    # pprint(comparison_result)
     
     with open(f"comparison_result_{TASK_HEX_CODE}_{typ}.json", "w") as f:
         json.dump(comparison_result, f, indent=2, default=str)
     
-    rules = rule_generator_diff(comparison_result)
-    pprint(rules)
-    print(len(rules))
+    actions = get_matching_actions(comparison_result)
+    pprint(actions)
+    print(len(actions))
+
+    
     
     

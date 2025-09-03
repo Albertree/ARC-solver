@@ -97,6 +97,105 @@ class PIXEL(GridComponent):
                             pixel_o_edge_path += f'PIXEL_edges'
                             if not os.path.exists(pixel_o_edge_path):
                                 os.makedirs(pixel_o_edge_path)
+        
+        # Update integrated ARCKG JSON
+        # self.update_integrated_arckg_json()
+    
+    def update_integrated_arckg_json(self):
+        """Update the integrated ARCKG JSON with pixel information"""
+        import os
+        import json
+        
+        # Get task hex code from parent hierarchy
+        grid = self.parent[0] if self.parent else None
+        if not grid or not hasattr(grid, 'parent') or not grid.parent:
+            return
+            
+        pair = grid.parent[0] if isinstance(grid.parent, list) else grid.parent
+        if not pair or not hasattr(pair, 'parent') or not pair.parent:
+            return
+            
+        task = pair.parent
+        if not task:
+            return
+            
+        arckg_file = f'memory/TASK_nodes/ARCKG_{task.hex_code}.json'
+        
+        # Check if integrated ARCKG file exists
+        if not os.path.exists(arckg_file):
+            return
+        
+        try:
+            with open(arckg_file, 'r') as f:
+                integrated_arckg = json.load(f)
+            
+            # Find the pair, grid, and pixel data
+            pair_id_str = f"({task.hex_code}, {pair.id}, None, None, None, 'pair')"
+            grid_id_str = f"('{task.hex_code}', {pair.id}, {grid.id}, None, None, 'grid')"
+            
+            # Find the pair
+            if str(pair.id) in integrated_arckg["PAIR_nodes"]:
+                pair_data = integrated_arckg["PAIR_nodes"][str(pair.id)]
+                if pair_data["id"] == pair_id_str:
+                    # Find the grid
+                    if str(grid.id) in pair_data["GRID_nodes"]:
+                        grid_data = pair_data["GRID_nodes"][str(grid.id)]
+                        if grid_data["id"] == grid_id_str:
+                            # Add pixel to grid's PIXEL_nodes
+                            pixel_id_str = f"('{task.hex_code}', {pair.id}, {grid.id}, None, {self.id}, 'pixel')"
+                            
+                            # Check if pixel already exists
+                            pixel_exists = False
+                            if str(self.id) in grid_data["PIXEL_nodes"]:
+                                pixel_data = grid_data["PIXEL_nodes"][str(self.id)]
+                                if pixel_data["id"] == pixel_id_str:
+                                    # Update existing pixel
+                                    pixel_data["property"] = self.property
+                                    pixel_exists = True
+                            
+                            # If pixel doesn't exist in grid, add it
+                            if not pixel_exists:
+                                pixel_data = {
+                                    "id": pixel_id_str,
+                                    "type": "PIXEL",
+                                    "data": {},
+                                    "property": self.property
+                                }
+                                grid_data["PIXEL_nodes"][str(self.id)] = pixel_data
+                            
+                            # Also add pixel to object if it exists
+                            if hasattr(grid, 'objects') and grid.objects:
+                                for obj in grid.objects:
+                                    if hasattr(obj, 'pixels') and obj.pixels and self in obj.pixels:
+                                        if str(obj.id) in grid_data["OBJECT_nodes"]:
+                                            obj_data = grid_data["OBJECT_nodes"][str(obj.id)]
+                                            obj_pixel_id_str = f"('{task.hex_code}', {pair.id}, {grid.id}, {obj.id}, {self.id}, 'pixel')"
+                                            
+                                            # Check if pixel already exists in object
+                                            obj_pixel_exists = False
+                                            if str(self.id) in obj_data["PIXEL_nodes"]:
+                                                obj_pixel_data = obj_data["PIXEL_nodes"][str(self.id)]
+                                                if obj_pixel_data["id"] == obj_pixel_id_str:
+                                                    # Update existing pixel
+                                                    obj_pixel_data["property"] = self.property
+                                                    obj_pixel_exists = True
+                                            
+                                            # If pixel doesn't exist in object, add it
+                                            if not obj_pixel_exists:
+                                                obj_pixel_data = {
+                                                    "id": obj_pixel_id_str,
+                                                    "type": "PIXEL",
+                                                    "data": {},
+                                                    "property": self.property
+                                                }
+                                                obj_data["PIXEL_nodes"][str(self.id)] = obj_pixel_data
+            
+            # Save updated integrated ARCKG JSON
+            with open(arckg_file, 'w') as f:
+                json.dump(integrated_arckg, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error updating integrated ARCKG JSON: {e}")
 
     def __repr__(self):
         return f"PIXEL({self.color}, {self.coordinate})"

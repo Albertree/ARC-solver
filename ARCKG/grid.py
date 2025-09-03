@@ -42,7 +42,7 @@ class GRID(GridComponent) :
                  }
         for i in range(len(colorgrid)):
             for j in range(len(colorgrid[0])):
-                if colorgrid[i][j] != 13:
+                if colorgrid[i][j] != 13 and colorgrid[i][j] != 12:
                     if color[str(colorgrid[i][j])] == False:
                         color[str(colorgrid[i][j])] = True
         return color
@@ -292,6 +292,62 @@ class GRID(GridComponent) :
         grid_edge_path += f'GRID_edges'
         if not os.path.exists(grid_edge_path):
             os.makedirs(grid_edge_path)
+        
+        # Update integrated ARCKG JSON
+        # self.update_integrated_arckg_json()
+    
+    def update_integrated_arckg_json(self):
+        """Update the integrated ARCKG JSON with grid information"""
+        import os
+        import json
+        
+        arckg_file = f'memory/TASK_nodes/ARCKG_{self.parent[0].parent.hex_code}.json'
+        
+        # Check if integrated ARCKG file exists
+        if not os.path.exists(arckg_file):
+            return
+        
+        try:
+            with open(arckg_file, 'r') as f:
+                integrated_arckg = json.load(f)
+            
+            # Find the pair and grid data
+            pair_id_str = f"({self.parent[0].parent.hex_code}, {self.parent[0].id}, None, None, None, 'pair')"
+            grid_id_str = f"('{self.parent[0].parent.hex_code}', {self.parent[0].id}, {self.id}, None, None, 'grid')"
+            
+            # Find the pair
+            if str(self.parent[0].id) in integrated_arckg["PAIR_nodes"]:
+                pair_data = integrated_arckg["PAIR_nodes"][str(self.parent[0].id)]
+                if pair_data["id"] == pair_id_str:
+                    # Check if grid already exists
+                    grid_exists = False
+                    if str(self.id) in pair_data["GRID_nodes"]:
+                        grid_data = pair_data["GRID_nodes"][str(self.id)]
+                        if grid_data["id"] == grid_id_str:
+                            # Update existing grid
+                            grid_data["property"] = self.property
+                            grid_exists = True
+                    
+                    # If grid doesn't exist, add it
+                    if not grid_exists:
+                        grid_data = {
+                            "id": grid_id_str,
+                            "type": "GRID",
+                            "data": {},
+                            "property": self.property,
+                            "OBJECT_edges": {},
+                            "OBJECT_nodes": {},
+                            "PIXEL_edges": {},
+                            "PIXEL_nodes": {}
+                        }
+                        pair_data["GRID_nodes"][str(self.id)] = grid_data
+            
+            # Save updated integrated ARCKG JSON
+            with open(arckg_file, 'w') as f:
+                json.dump(integrated_arckg, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error updating integrated ARCKG JSON: {e}")
 
 
     def __repr__(self):

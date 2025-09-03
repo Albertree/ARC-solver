@@ -7,6 +7,7 @@ import json
 from comparison import * 
 from .solver_utils import *
 from pprint import pprint
+from make_rule import get_matching_actions
 
 from DSL.my_apply_DSL import *
 from DSL.my_DSL import *
@@ -35,7 +36,7 @@ class ARCSolver:
     
 
     def _generate_level_1_program(self, pair, pair_index: int):
-        """Solve a single input/output grid pair"""
+        """Solve a single input/output grid pair using rule-based approach"""
         input_grid = pair.input_grid
         output_grid = pair.output_grid
         
@@ -46,31 +47,116 @@ class ARCSolver:
         tfg_counter = 0
         current_grid_var = f"tfg{tfg_counter}"
         
-        if input_grid.size != output_grid.size:
-            most_frequent_color = input_grid.get_most_frequent_color()
-            tfg_counter += 1
-            next_grid_var = f"tfg{tfg_counter}"
-            program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, {output_grid.height}, {output_grid.width}, {most_frequent_color})")
-            current_grid_var = next_grid_var
-            input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
-        else:
-            input_raw_data_for_comparison = input_grid.raw_data
-
-        for r in range(output_grid.height):
-            for c in range(output_grid.width):
-                input_color = input_raw_data_for_comparison[r][c] if r < len(input_raw_data_for_comparison) and c < len(input_raw_data_for_comparison[0]) else input_grid.get_most_frequent_color()
+        # Use rule-based approach to generate actions
+        from comparison import compare
+        comparison_result = compare(input_grid, output_grid, save=False)
+        actions = get_matching_actions(comparison_result)
+        
+        # Apply actions from rule basket
+        for action in actions:
+            if 'name' in action and 'args' in action:
+                action_name = action['name']
+                action_args = action['args']
                 
-                if input_color != output_grid.raw_data[r][c]:
-                    tfg_counter += 1
-                    next_grid_var = f"tfg{tfg_counter}"
-                    program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, [({r}, {c})], {output_grid.raw_data[r][c]})")
-                    current_grid_var = next_grid_var
+                # Build args string for DSL call
+                args_list = []
+                for key, value in action_args.items():
+                    args_list.append(str(value))
+                
+                args_str = ", ".join(args_list)
+                
+                # Generate DSL call with proper tfg counter
+                tfg_counter += 1
+                next_grid_var = f"tfg{tfg_counter}"
+                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})")
+                current_grid_var = next_grid_var
+        
+        # Fallback to original logic if no rules matched
+        if not actions:
+            if input_grid.size != output_grid.size:
+                most_frequent_color = input_grid.get_most_frequent_color()
+                tfg_counter += 1
+                next_grid_var = f"tfg{tfg_counter}"
+                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, {output_grid.height}, {output_grid.width}, {most_frequent_color})")
+                current_grid_var = next_grid_var
+                input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
+            else:
+                input_raw_data_for_comparison = input_grid.raw_data
+
+            for r in range(output_grid.height):
+                for c in range(output_grid.width):
+                    input_color = input_raw_data_for_comparison[r][c] if r < len(input_raw_data_for_comparison) and c < len(input_raw_data_for_comparison[0]) else input_grid.get_most_frequent_color()
+                    
+                    if input_color != output_grid.raw_data[r][c]:
+                        tfg_counter += 1
+                        next_grid_var = f"tfg{tfg_counter}"
+                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, [({r}, {c})], {output_grid.raw_data[r][c]})")
+                        current_grid_var = next_grid_var
 
         program.append(f"    output_grid = {current_grid_var}")
         program.append(f"    return output_grid")
 
         self._save_program(program, pair_index)
 
+        return program
+
+    def _generate_rule_based_program(self, pair, pair_index: int, rules):
+        """Generate a program using the found rules."""
+        input_grid = pair.input_grid
+        output_grid = pair.output_grid
+        
+        program = [
+            'def solve(input_grid):',
+            '    tfg0 = input_grid',
+        ]
+        tfg_counter = 0
+        current_grid_var = f"tfg{tfg_counter}"
+        
+        # Apply actions from rule basket
+        for action in rules:
+            if 'name' in action and 'args' in action:
+                action_name = action['name']
+                action_args = action['args']
+                
+                # Build args string for DSL call
+                args_list = []
+                for key, value in action_args.items():
+                    args_list.append(str(value))
+                
+                args_str = ", ".join(args_list)
+                
+                # Generate DSL call with proper tfg counter
+                tfg_counter += 1
+                next_grid_var = f"tfg{tfg_counter}"
+                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})")
+                current_grid_var = next_grid_var
+        
+        # Fallback to original logic if no rules matched
+        if not rules:
+            if input_grid.size != output_grid.size:
+                most_frequent_color = input_grid.get_most_frequent_color()
+                tfg_counter += 1
+                next_grid_var = f"tfg{tfg_counter}"
+                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, {output_grid.height}, {output_grid.width}, {most_frequent_color})")
+                current_grid_var = next_grid_var
+                input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
+            else:
+                input_raw_data_for_comparison = input_grid.raw_data
+
+            for r in range(output_grid.height):
+                for c in range(output_grid.width):
+                    input_color = input_raw_data_for_comparison[r][c] if r < len(input_raw_data_for_comparison) and c < len(input_raw_data_for_comparison[0]) else input_grid.get_most_frequent_color()
+                    
+                    if input_color != output_grid.raw_data[r][c]:
+                        tfg_counter += 1
+                        next_grid_var = f"tfg{tfg_counter}"
+                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, [({r}, {c})], {output_grid.raw_data[r][c]})")
+                        current_grid_var = next_grid_var
+
+        program.append(f"    output_grid = {current_grid_var}")
+        program.append(f"    return output_grid")
+
+        self._save_program(program, pair_index)
         return program
 
     def ast_to_dict(self, node):
@@ -141,8 +227,6 @@ class ARCSolver:
 
 
     def test(self):
-
-
         for pair_idx, pair in enumerate(self.task.example_pairs):
             if is_empty_program(pair.program):
                 # no prgrogram in PAIR -> Do deeper analysis of a PAIR to make program
@@ -155,34 +239,73 @@ class ARCSolver:
                 print(f"1 GRID comparison is completed!")
 
                 # make rule from grid comparison result
+                rules = get_matching_actions(comparison_result)
+                pprint(rules)
                 
+                # Generate rule-based program using the rules
+                if rules:
+                    print(f"Found {len(rules)} matching rules, generating program...")
+                    program = self._generate_rule_based_program(pair, pair_idx, rules)
+                    self._save_program(program, pair_idx)
+                    print(f"Rule-based program generated and saved for pair {pair_idx}")
+                else:
+                    print("No matching rules found, using fallback logic...")
+                    # Fallback to original level 1 program generation
+                    program = self._generate_level_1_program(pair, pair_idx)
+                    print(f"Fallback program generated and saved for pair {pair_idx}")
+                
+                # Get the saved program file path and execute it
+                program_file_path = f"result_code/{self.task_hex_code}/level-1/{self.task_hex_code}_{pair_idx}_lv1.py"
+                
+                print(f"Program file path: {program_file_path}")
+                
+                if os.path.exists(program_file_path):
+                    print(f"Executing saved program: {program_file_path}")
+                    code_result = self.execute_program(program_file_path, pair.input_grid)
+                    print(f"Program execution result: {code_result}")
+                else:
+                    print(f"Program file not found: {program_file_path}")
+                    print(f"Current working directory: {os.getcwd()}")
+                    print(f"Available files in result_code/{self.task_hex_code}/level-1/:")
+                    level1_dir = f"result_code/{self.task_hex_code}/level-1"
+                    if os.path.exists(level1_dir):
+                        for f in os.listdir(level1_dir):
+                            print(f"  - {f}")
+                    else:
+                        print(f"  Directory {level1_dir} does not exist")
+           
+
+                printcg(code_result.view)
+                # self.validate_program()
+
+                break
                 
                 # make program using grid comparison result
                 
-                # cannot -> go deeper (object comparison in PAIR)
-                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
-                print("Inter-OBJECT Analysis (P2)")
-                print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
-                for obj_i in pair.input_grid.objects:
-                    for obj_o in pair.output_grid.objects:
-                        comparison_result = compare(obj_i, obj_o, save=True)
+                # # cannot -> go deeper (object comparison in PAIR)
+                # print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
+                # print("Inter-OBJECT Analysis (P2)")
+                # print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                # for obj_i in pair.input_grid.objects:
+                #     for obj_o in pair.output_grid.objects:
+                #         comparison_result = compare(obj_i, obj_o, save=True)
 
-                print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
+                # print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
 
-                # make rules from object comparison result
+                # # make rules from object comparison result
 
 
-                # make program using object comparison result
+                # # make program using object comparison result
                 
-                # cannot -> go deeper (pixel comparison in PAIR)
-                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
-                print("Inter-PIXEL Analysis (P3)")
-                print(f"Comparing {len(pair.input_grid.pixels)} pixels in input grid and {len(pair.output_grid.pixels)} pixels in output grid")
-                for pix_i in pair.input_grid.pixels:
-                    for pix_o in pair.output_grid.pixels:
-                        comparison_result = compare(pix_i, pix_o, save=True)
+                # # cannot -> go deeper (pixel comparison in PAIR)
+                # print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
+                # print("Inter-PIXEL Analysis (P3)")
+                # print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                # for pix_i in pair.input_grid.pixels:
+                #     for pix_o in pair.output_grid.pixels:
+                #         comparison_result = compare(pix_i, pix_o, save=True)
                         
-                print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
+                # print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
 
                 # make rules from pixel comparison result
 
@@ -190,7 +313,155 @@ class ARCSolver:
                 # make level-1 program using grid, object, pixel comparison result
                 
 
+    def validate_program(self):
+        """Apply programs from level-1 folder and return outputs"""
+        result_code_dir = os.path.join(os.path.dirname(__file__), "..", "result_code")
+        if not os.path.exists(result_code_dir):
+            return []
+        
+        task_dir = os.path.join(result_code_dir, self.task_hex_code)
+        if not os.path.exists(task_dir):
+            return []
+        
+        level1_dir = os.path.join(task_dir, "level-1")
+        if not os.path.exists(level1_dir):
+            return []
+        
+        py_files = [f for f in os.listdir(level1_dir) 
+                   if f.endswith(".py") and not f.startswith("__")]
+        
+        if not py_files:
+            return []
+        
+        outputs = []
+        
+        for filename in sorted(py_files):
+            try:
+                parts = filename.replace(".py", "").split("_")
+                if len(parts) >= 2:
+                    pair_number = int(parts[1])
+                else:
+                    continue
+                
+                if pair_number >= len(self.task.example_pairs):
+                    continue
+                
+                pair = self.task.example_pairs[pair_number]
+                input_grid = pair.input_grid
+                
+                output = self._execute_program(os.path.join(level1_dir, filename), input_grid)
+                
+                if output is not None:
+                    outputs.append({
+                        'filename': filename,
+                        'pair_number': pair_number,
+                        'input_grid': input_grid,
+                        'output': output
+                    })
+                    
+            except Exception as e:
+                pass
 
+        return outputs
+    
+    def execute_program(self, program_path, input_grid):
+        """Execute a program file and return the generated output"""
+        # Read the program file
+        with open(program_path, 'r') as f:
+            program_code = f.read()
+        
+        print(f"Original program code:")
+        print(program_code)
+        
+        # Add import statements and wrap the code
+        wrapped_code = f"""
+from DSL.my_apply_DSL import apply_DSL
+from DSL.my_transformation_DSL import coloring, make_grid
+from DSL.my_selection import SELECTION
+
+{program_code}
+"""
+        
+        print(f"Wrapped code:")
+        print(wrapped_code)
+        
+        # Execute the wrapped code
+        exec_globals = {
+            'input_grid': input_grid,
+            'apply_DSL': apply_DSL,
+            'coloring': coloring,
+            'make_grid': make_grid,
+            'SELECTION': SELECTION
+        }
+        
+        print(f"Before exec - exec_globals keys: {list(exec_globals.keys())}")
+        
+        exec(wrapped_code, exec_globals)
+        
+        print(f"After exec - exec_globals keys: {list(exec_globals.keys())}")
+        
+        # Try to get solve function and call it directly
+        if 'solve' in exec_globals:
+            print(f"Found solve function, calling it...")
+            result = exec_globals['solve'](input_grid)
+            print(f"Solve function returned: {result}")
+            return result
+        elif 'output_grid' in exec_globals:
+            print(f"Found output_grid directly: {exec_globals['output_grid']}")
+            return exec_globals['output_grid']
+        else:
+            print(f"No solve function or output_grid found in exec_globals")
+            print(f"Available keys: {list(exec_globals.keys())}")
+            return None
+    
+    def _compare_results(self, input_grid, expected_output, generated_output, filename):
+        """Compare expected vs generated output"""
+        try:
+            # Extract grid data for comparison
+            if hasattr(generated_output, 'trimmed_grid'):
+                generated_data = generated_output.trimmed_grid
+            elif hasattr(generated_output, 'raw_data'):
+                generated_data = generated_output.raw_data
+            else:
+                generated_data = generated_output
+            
+            expected_data = expected_output.raw_data
+            
+            # Check if sizes match
+            if len(generated_data) != len(expected_data) or \
+               (len(generated_data) > 0 and len(generated_data[0]) != len(expected_data[0])):
+                print(f"❌ Size mismatch: Expected {len(expected_data)}x{len(expected_data[0]) if expected_data else 0}, "
+                      f"Got {len(generated_data)}x{len(generated_data[0]) if generated_data else 0}")
+                return
+            
+            # Check if contents match
+            matches = 0
+            total_cells = len(expected_data) * len(expected_data[0])
+            
+            for r in range(len(expected_data)):
+                for c in range(len(expected_data[0])):
+                    if r < len(generated_data) and c < len(generated_data[0]):
+                        if generated_data[r][c] == expected_data[r][c]:
+                            matches += 1
+            
+            accuracy = (matches / total_cells) * 100 if total_cells > 0 else 0
+            
+            if accuracy == 100:
+                print(f"✅ Perfect match! Accuracy: {accuracy:.1f}%")
+            elif accuracy >= 80:
+                print(f"🟡 Good match! Accuracy: {accuracy:.1f}%")
+            else:
+                print(f"❌ Poor match! Accuracy: {accuracy:.1f}%")
+            
+            # Show grid comparison if accuracy is not perfect
+            if accuracy < 100:
+                from basics.utils import printcg
+                print("Grid comparison:")
+                printcg([input_grid.raw_data, expected_data, generated_data], 
+                       titles=["Input", "Expected", "Generated"])
+                
+        except Exception as e:
+            print(f"❌ Comparison error: {e}")
 
 
     # # this function compatible with comparison_old.py

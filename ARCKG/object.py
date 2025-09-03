@@ -296,6 +296,65 @@ class OBJECT(GridComponent):
         object_edge_path += f'OBJECT_edges'
         if not os.path.exists(object_edge_path):
             os.makedirs(object_edge_path)
+        
+        # Update integrated ARCKG JSON
+        # self.update_integrated_arckg_json()
+    
+    def update_integrated_arckg_json(self):
+        """Update the integrated ARCKG JSON with object information"""
+        import os
+        import json
+        
+        arckg_file = f'memory/TASK_nodes/ARCKG_{self.parent[0].parent[0].parent.hex_code}.json'
+        
+        # Check if integrated ARCKG file exists
+        if not os.path.exists(arckg_file):
+            return
+        
+        try:
+            with open(arckg_file, 'r') as f:
+                integrated_arckg = json.load(f)
+            
+            # Find the pair, grid, and object data
+            pair_id_str = f"({self.parent[0].parent[0].parent.hex_code}, {self.parent[0].parent[0].id}, None, None, None, 'pair')"
+            grid_id_str = f"('{self.parent[0].parent[0].parent.hex_code}', {self.parent[0].parent[0].id}, {self.parent[0].id}, None, None, 'grid')"
+            object_id_str = f"('{self.parent[0].parent[0].parent.hex_code}', {self.parent[0].parent[0].id}, {self.parent[0].id}, {self.id}, None, 'object')"
+            
+            # Find the pair
+            if str(self.parent[0].parent[0].id) in integrated_arckg["PAIR_nodes"]:
+                pair_data = integrated_arckg["PAIR_nodes"][str(self.parent[0].parent[0].id)]
+                if pair_data["id"] == pair_id_str:
+                    # Find the grid
+                    if str(self.parent[0].id) in pair_data["GRID_nodes"]:
+                        grid_data = pair_data["GRID_nodes"][str(self.parent[0].id)]
+                        if grid_data["id"] == grid_id_str:
+                            # Check if object already exists
+                            object_exists = False
+                            if str(self.id) in grid_data["OBJECT_nodes"]:
+                                obj_data = grid_data["OBJECT_nodes"][str(self.id)]
+                                if obj_data["id"] == object_id_str:
+                                    # Update existing object
+                                    obj_data["property"] = self.property
+                                    object_exists = True
+                            
+                            # If object doesn't exist, add it
+                            if not object_exists:
+                                obj_data = {
+                                    "id": object_id_str,
+                                    "type": "OBJECT",
+                                    "data": {},
+                                    "property": self.property,
+                                    "PIXEL_edges": {},
+                                    "PIXEL_nodes": {}
+                                }
+                                grid_data["OBJECT_nodes"][str(self.id)] = obj_data
+            
+            # Save updated integrated ARCKG JSON
+            with open(arckg_file, 'w') as f:
+                json.dump(integrated_arckg, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error updating integrated ARCKG JSON: {e}")
 
     def __repr__(self):
         color_str = ', '.join([str(c) for c in self.color if self.color[c] == True])
