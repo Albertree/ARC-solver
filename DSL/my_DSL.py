@@ -49,8 +49,11 @@ def get_color(obj):
              }
 
     for i in range(len(obj)):
-        if color[obj[i][0]] == False:
-            color[obj[i][0]] = True
+        color_value = obj[i][0]
+        # Only process colors in the 0-9 range, ignore others
+        if 0 <= color_value <= 9:
+            if color[color_value] == False:
+                color[color_value] = True
         # color.add(obj[i][0])
         # color.update({obj[i][1][0]: True})
     return color

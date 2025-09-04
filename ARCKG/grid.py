@@ -154,10 +154,6 @@ class GRID(GridComponent) :
                     return False
         return True
     
-    def update_childs(self):
-        # Your implementation here
-        pass
-    
     def get_most_frequent_color(self):
         colors = {}
         for r in range(self.height):
@@ -232,8 +228,6 @@ class GRID(GridComponent) :
             'diag_symm': self.diag_symm,
             'anti_symm': self.anti_symm
         }
-
-        # breakpoint()
 
 
     @staticmethod
@@ -354,5 +348,5 @@ class GRID(GridComponent) :
         grid_type = "input" if self.id==0 else "output"
         pair_id = self.parent[0].id
         task_id = self.parent[0].parent.hex_code
-        return f"GRID({grid_type} grid of PAIR({pair_id}th pair of TASK({task_id})))"
+        return f"TF_GRID({grid_type} of PAIR({pair_id}th pair of TASK({task_id})))"
         

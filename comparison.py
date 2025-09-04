@@ -895,7 +895,7 @@ def get_component_full_id(component):
         return component.hex_code
     elif component.type == "pair":
         return f"{component.parent.hex_code}.PAIR_nodes.{component.id}"
-    elif component.type == "grid":
+    elif component.type == "grid" or component.type == "tfgrid":
         return f"{component.parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].id}.GRID_nodes.{component.id}"
     elif component.type == "object":
         return f"{component.parent[0].parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].parent[0].id}.GRID_nodes.{component.parent[0].id}.OBJECT_nodes.{component.id}"

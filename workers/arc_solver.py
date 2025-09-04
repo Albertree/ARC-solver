@@ -8,6 +8,7 @@ from comparison import *
 from .solver_utils import *
 from pprint import pprint
 from make_rule import get_matching_actions
+from program import ProgramManager
 
 from DSL.my_apply_DSL import *
 from DSL.my_DSL import *
@@ -20,203 +21,20 @@ class ARCSolver:
     def __init__(self, task: TASK):
         self.task = task
         self.task_hex_code = task.hex_code
+        self.program_manager = ProgramManager(task)
         # self.programs = []  # Store programs for each pair
 
     def solve(self):
         for i, pair in enumerate(self.task.example_pairs):
             print(f"Processing example pair {i} for task {self.task_hex_code}")
-            lv1_program = self._generate_level_1_program(pair, i)
+            lv1_program = self.program_manager.generate_program(pair, i)
+            self.program_manager.save_program(lv1_program, i, "GRID")
             # lv2_program = self._generate_level_2_program(lv1_program, pair, i)
             # lv3_program = self._generate_level_3_program(lv2_program, pair, i)
         
-        print(f"Level 1 programs generated for task {self.task_hex_code} in 'solver/result_code'")
+        print(f"Level 1 programs generated for task {self.task_hex_code} in 'result_code'")
         for line in lv1_program:
             print(line)
-
-    
-
-    def _generate_level_1_program(self, pair, pair_index: int):
-        """Solve a single input/output grid pair using rule-based approach"""
-        input_grid = pair.input_grid
-        output_grid = pair.output_grid
-        
-        program = [
-            'def solve(input_grid):',
-            '    tfg0 = input_grid',
-        ]
-        tfg_counter = 0
-        current_grid_var = f"tfg{tfg_counter}"
-        
-        # Use rule-based approach to generate actions
-        from comparison import compare
-        comparison_result = compare(input_grid, output_grid, save=False)
-        actions = get_matching_actions(comparison_result)
-        
-        # Apply actions from rule basket
-        for action in actions:
-            if 'name' in action and 'args' in action:
-                action_name = action['name']
-                action_args = action['args']
-                
-                # Build args string for DSL call
-                args_list = []
-                for key, value in action_args.items():
-                    args_list.append(str(value))
-                
-                args_str = ", ".join(args_list)
-                
-                # Generate DSL call with proper tfg counter
-                tfg_counter += 1
-                next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})")
-                current_grid_var = next_grid_var
-        
-        # Fallback to original logic if no rules matched
-        if not actions:
-            if input_grid.size != output_grid.size:
-                most_frequent_color = input_grid.get_most_frequent_color()
-                tfg_counter += 1
-                next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, {output_grid.height}, {output_grid.width}, {most_frequent_color})")
-                current_grid_var = next_grid_var
-                input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
-            else:
-                input_raw_data_for_comparison = input_grid.raw_data
-
-            for r in range(output_grid.height):
-                for c in range(output_grid.width):
-                    input_color = input_raw_data_for_comparison[r][c] if r < len(input_raw_data_for_comparison) and c < len(input_raw_data_for_comparison[0]) else input_grid.get_most_frequent_color()
-                    
-                    if input_color != output_grid.raw_data[r][c]:
-                        tfg_counter += 1
-                        next_grid_var = f"tfg{tfg_counter}"
-                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, [({r}, {c})], {output_grid.raw_data[r][c]})")
-                        current_grid_var = next_grid_var
-
-        program.append(f"    output_grid = {current_grid_var}")
-        program.append(f"    return output_grid")
-
-        self._save_program(program, pair_index)
-
-        return program
-
-    def _generate_rule_based_program(self, pair, pair_index: int, rules):
-        """Generate a program using the found rules."""
-        input_grid = pair.input_grid
-        output_grid = pair.output_grid
-        
-        program = [
-            'def solve(input_grid):',
-            '    tfg0 = input_grid',
-        ]
-        tfg_counter = 0
-        current_grid_var = f"tfg{tfg_counter}"
-        
-        # Apply actions from rule basket
-        for action in rules:
-            if 'name' in action and 'args' in action:
-                action_name = action['name']
-                action_args = action['args']
-                
-                # Build args string for DSL call
-                args_list = []
-                for key, value in action_args.items():
-                    args_list.append(str(value))
-                
-                args_str = ", ".join(args_list)
-                
-                # Generate DSL call with proper tfg counter
-                tfg_counter += 1
-                next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})")
-                current_grid_var = next_grid_var
-        
-        # Fallback to original logic if no rules matched
-        if not rules:
-            if input_grid.size != output_grid.size:
-                most_frequent_color = input_grid.get_most_frequent_color()
-                tfg_counter += 1
-                next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, {output_grid.height}, {output_grid.width}, {most_frequent_color})")
-                current_grid_var = next_grid_var
-                input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
-            else:
-                input_raw_data_for_comparison = input_grid.raw_data
-
-            for r in range(output_grid.height):
-                for c in range(output_grid.width):
-                    input_color = input_raw_data_for_comparison[r][c] if r < len(input_raw_data_for_comparison) and c < len(input_raw_data_for_comparison[0]) else input_grid.get_most_frequent_color()
-                    
-                    if input_color != output_grid.raw_data[r][c]:
-                        tfg_counter += 1
-                        next_grid_var = f"tfg{tfg_counter}"
-                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, [({r}, {c})], {output_grid.raw_data[r][c]})")
-                        current_grid_var = next_grid_var
-
-        program.append(f"    output_grid = {current_grid_var}")
-        program.append(f"    return output_grid")
-
-        self._save_program(program, pair_index)
-        return program
-
-    def ast_to_dict(self, node):
-        """Recursively convert an AST node to a dictionary."""
-        if not isinstance(node, ast.AST):
-            if isinstance(node, list):
-                return [self.ast_to_dict(n) for n in node]
-            return node
-        
-        fields = {
-            'node_type': node.__class__.__name__
-        }
-        for field, value in ast.iter_fields(node):
-            fields[field] = self.ast_to_dict(value)
-        return fields
-
-    def _save_program(self, program, pair_index: int):
-        """Save the generated program for a specific pair"""
-        original_code = "\n".join(program)
-        
-        # Level 1
-        level1_dir = os.path.join(os.path.dirname(__file__), "..", "result_code", self.task_hex_code, "level-1")
-        self._save_code_and_ast(level1_dir, f"{self.task_hex_code}_{pair_index}_lv1", original_code)
-
-        # # Level 2 - Commented out
-        # optimizer_lv2 = ProgramOptimizer(original_code)
-        # optimized_lv2 = {
-        #     "color": optimizer_lv2.optimize_by_color(),
-        #     "row": optimizer_lv2.optimize_by_row(),
-        #     "col": optimizer_lv2.optimize_by_column()
-        # }
-        # level2_dir = os.path.join(os.path.dirname(__file__), "..", "result_code", self.task_hex_code, "level-2")
-        # for opt_type, code in optimized_lv2.items():
-        #     self._save_code_and_ast(level2_dir, f"{self.task_hex_code}_{pair_index}_lv2-{opt_type}", code)
-
-        # # Level 3 - Commented out
-        # level3_dir = os.path.join(os.path.dirname(__file__), "..", "result_code", self.task_hex_code, "level-3")
-        # for opt_type, code in optimized_lv2.items():
-        #     optimizer_lv3 = ProgramOptimizer(code, self.task.example_pairs[pair_index].input_grid)
-        #     optimized_code_lv3 = optimizer_lv3.optimize_with_objects(code)
-        #     self._save_code_and_ast(level3_dir, f"{self.task_hex_code}_{pair_index}_lv3-{opt_type}", optimized_code_lv3)
-
-
-    def _save_code_and_ast(self, output_dir, base_filename, code):
-        """Helper to save both the .py and .json AST file."""
-        # Save the Python code
-        os.makedirs(output_dir, exist_ok=True)
-        file_path_code = os.path.join(output_dir, f"{base_filename}.py")
-        with open(file_path_code, "w") as f:
-            f.write(code)
-            
-        # Generate and save the AST
-        tree = ast.parse(code)
-        ast_dict = self.ast_to_dict(tree)
-        
-        output_dir_ast = os.path.join(output_dir, "ast")
-        os.makedirs(output_dir_ast, exist_ok=True)
-        file_path_ast = os.path.join(output_dir_ast, f"{base_filename}.json")
-        with open(file_path_ast, "w") as f:
-            json.dump(ast_dict, f, indent=4) 
 
     def try_DSL(self):
         input_grid = self.task.example_pairs[0].input_grid
@@ -225,10 +43,9 @@ class ARCSolver:
         printcg(grid.view)
         breakpoint()
 
-
     def test(self):
         for pair_idx, pair in enumerate(self.task.example_pairs):
-            if is_empty_program(pair.program):
+            if len(pair.program) == 0:
                 # no prgrogram in PAIR -> Do deeper analysis of a PAIR to make program
                 print(f"PAIR {pair_idx} has no program -> Do deeper analysis of a PAIR to make program")
                 print(f"Intra-PAIR Analysis (P1, P2, P3)")
@@ -241,661 +58,147 @@ class ARCSolver:
                 # make rule from grid comparison result
                 rules = get_matching_actions(comparison_result)
                 pprint(rules)
-                
-                # Generate rule-based program using the rules
-                if rules:
-                    print(f"Found {len(rules)} matching rules, generating program...")
-                    program = self._generate_rule_based_program(pair, pair_idx, rules)
-                    self._save_program(program, pair_idx)
-                    print(f"Rule-based program generated and saved for pair {pair_idx}")
-                else:
-                    print("No matching rules found, using fallback logic...")
-                    # Fallback to original level 1 program generation
-                    program = self._generate_level_1_program(pair, pair_idx)
-                    print(f"Fallback program generated and saved for pair {pair_idx}")
-                
-                # Get the saved program file path and execute it
-                program_file_path = f"result_code/{self.task_hex_code}/level-1/{self.task_hex_code}_{pair_idx}_lv1.py"
-                
-                print(f"Program file path: {program_file_path}")
-                
-                if os.path.exists(program_file_path):
-                    print(f"Executing saved program: {program_file_path}")
-                    code_result = self.execute_program(program_file_path, pair.input_grid)
-                    print(f"Program execution result: {code_result}")
-                else:
-                    print(f"Program file not found: {program_file_path}")
-                    print(f"Current working directory: {os.getcwd()}")
-                    print(f"Available files in result_code/{self.task_hex_code}/level-1/:")
-                    level1_dir = f"result_code/{self.task_hex_code}/level-1"
-                    if os.path.exists(level1_dir):
-                        for f in os.listdir(level1_dir):
-                            print(f"  - {f}")
-                    else:
-                        print(f"  Directory {level1_dir} does not exist")
-           
-
-                printcg(code_result.view)
-                # self.validate_program()
-
-                break
+                print("^^^ above is selected matching rules ^^^")
+                breakpoint()
                 
                 # make program using grid comparison result
+                if rules:
+                    program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
+                    self.program_manager.save_program(program, pair_idx, "GRID")
+                    print(f"Rule-based program generated and saved for pair {pair_idx}")
+
+                    pprint(program)
+                    print("^^^ above is program ^^^")
+                    breakpoint()
+                    
+                    # Execute the saved program
+                    print(f"Executing saved program for pair {pair_idx}")
+                    code_result = self.program_manager.execute_saved_program(pair_idx, "GRID")
+
+                    printcg(code_result.view)
+                    print("^^^ above is code_result ^^^")
+                    breakpoint()
+
+
+                    if code_result.view == pair.output_grid.view:
+                        print(f"^^^ program can solve the PAIR {pair_idx} ^^^")
+                    else:
+                        print(f"^^^ program cannot even solve the current PAIR -> need deeper analysis in OBJECT level^^^")
+                    breakpoint()
+
+
+                    comparison_result = compare(code_result, pair.output_grid, save=False)
+                    path = id_pair_to_comparison_path(get_component_full_id(code_result), get_component_full_id(pair.output_grid))
+                    path = f"{self.task_hex_code}_PAIR_{pair_idx}-GRID-level_TFG{pair_idx}.json"
+                    
+                    save_comparison_result(comparison_result, path)
+                    print("^^^ above is comparison result of code_result and output_grid ^^^")
+                    breakpoint()
+
+                else:
+                    print("No matching rules found, using fallback logic...")
+
                 
-                # # cannot -> go deeper (object comparison in PAIR)
-                # print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
-                # print("Inter-OBJECT Analysis (P2)")
-                # print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
-                # for obj_i in pair.input_grid.objects:
-                #     for obj_o in pair.output_grid.objects:
-                #         comparison_result = compare(obj_i, obj_o, save=True)
+                # cannot -> go deeper (object comparison in PAIR)
+                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
+                print("Inter-OBJECT Analysis (P2)")
+                print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                for obj_i in pair.input_grid.objects:
+                    for obj_o in pair.output_grid.objects:
+                        comparison_result = compare(obj_i, obj_o, save=True)
 
-                # print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
+                print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
 
-                # # make rules from object comparison result
+                # make rules from object comparison result
+
+                breakpoint()
 
 
-                # # make program using object comparison result
+                # make program using object comparison result
                 
-                # # cannot -> go deeper (pixel comparison in PAIR)
-                # print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
-                # print("Inter-PIXEL Analysis (P3)")
-                # print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
-                # for pix_i in pair.input_grid.pixels:
-                #     for pix_o in pair.output_grid.pixels:
-                #         comparison_result = compare(pix_i, pix_o, save=True)
+                # cannot -> go deeper (pixel comparison in PAIR)
+                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
+                print("Inter-PIXEL Analysis (P3)")
+                print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                for pix_i in pair.input_grid.pixels:
+                    for pix_o in pair.output_grid.pixels:
+                        comparison_result = compare(pix_i, pix_o, save=True)
                         
-                # print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
+                print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
 
                 # make rules from pixel comparison result
 
+                breakpoint()
 
-                # make level-1 program using grid, object, pixel comparison result
-                
 
-    def validate_program(self):
-        """Apply programs from level-1 folder and return outputs"""
-        result_code_dir = os.path.join(os.path.dirname(__file__), "..", "result_code")
-        if not os.path.exists(result_code_dir):
-            return []
-        
-        task_dir = os.path.join(result_code_dir, self.task_hex_code)
-        if not os.path.exists(task_dir):
-            return []
-        
-        level1_dir = os.path.join(task_dir, "level-1")
-        if not os.path.exists(level1_dir):
-            return []
-        
-        py_files = [f for f in os.listdir(level1_dir) 
-                   if f.endswith(".py") and not f.startswith("__")]
-        
-        if not py_files:
-            return []
-        
-        outputs = []
-        
-        for filename in sorted(py_files):
-            try:
-                parts = filename.replace(".py", "").split("_")
-                if len(parts) >= 2:
-                    pair_number = int(parts[1])
-                else:
-                    continue
-                
-                if pair_number >= len(self.task.example_pairs):
-                    continue
-                
-                pair = self.task.example_pairs[pair_number]
-                input_grid = pair.input_grid
-                
-                output = self._execute_program(os.path.join(level1_dir, filename), input_grid)
-                
-                if output is not None:
-                    outputs.append({
-                        'filename': filename,
-                        'pair_number': pair_number,
-                        'input_grid': input_grid,
-                        'output': output
-                    })
-                    
-            except Exception as e:
-                pass
-
-        return outputs
-    
-    def execute_program(self, program_path, input_grid):
-        """Execute a program file and return the generated output"""
-        # Read the program file
-        with open(program_path, 'r') as f:
-            program_code = f.read()
-        
-        print(f"Original program code:")
-        print(program_code)
-        
-        # Add import statements and wrap the code
-        wrapped_code = f"""
-from DSL.my_apply_DSL import apply_DSL
-from DSL.my_transformation_DSL import coloring, make_grid
-from DSL.my_selection import SELECTION
-
-{program_code}
-"""
-        
-        print(f"Wrapped code:")
-        print(wrapped_code)
-        
-        # Execute the wrapped code
-        exec_globals = {
-            'input_grid': input_grid,
-            'apply_DSL': apply_DSL,
-            'coloring': coloring,
-            'make_grid': make_grid,
-            'SELECTION': SELECTION
-        }
-        
-        print(f"Before exec - exec_globals keys: {list(exec_globals.keys())}")
-        
-        exec(wrapped_code, exec_globals)
-        
-        print(f"After exec - exec_globals keys: {list(exec_globals.keys())}")
-        
-        # Try to get solve function and call it directly
-        if 'solve' in exec_globals:
-            print(f"Found solve function, calling it...")
-            result = exec_globals['solve'](input_grid)
-            print(f"Solve function returned: {result}")
-            return result
-        elif 'output_grid' in exec_globals:
-            print(f"Found output_grid directly: {exec_globals['output_grid']}")
-            return exec_globals['output_grid']
-        else:
-            print(f"No solve function or output_grid found in exec_globals")
-            print(f"Available keys: {list(exec_globals.keys())}")
-            return None
-    
-    def _compare_results(self, input_grid, expected_output, generated_output, filename):
-        """Compare expected vs generated output"""
-        try:
-            # Extract grid data for comparison
-            if hasattr(generated_output, 'trimmed_grid'):
-                generated_data = generated_output.trimmed_grid
-            elif hasattr(generated_output, 'raw_data'):
-                generated_data = generated_output.raw_data
-            else:
-                generated_data = generated_output
+                # make GRID level program using grid, object, pixel comparison result
             
-            expected_data = expected_output.raw_data
-            
-            # Check if sizes match
-            if len(generated_data) != len(expected_data) or \
-               (len(generated_data) > 0 and len(generated_data[0]) != len(expected_data[0])):
-                print(f"❌ Size mismatch: Expected {len(expected_data)}x{len(expected_data[0]) if expected_data else 0}, "
-                      f"Got {len(generated_data)}x{len(generated_data[0]) if generated_data else 0}")
-                return
-            
-            # Check if contents match
-            matches = 0
-            total_cells = len(expected_data) * len(expected_data[0])
-            
-            for r in range(len(expected_data)):
-                for c in range(len(expected_data[0])):
-                    if r < len(generated_data) and c < len(generated_data[0]):
-                        if generated_data[r][c] == expected_data[r][c]:
-                            matches += 1
-            
-            accuracy = (matches / total_cells) * 100 if total_cells > 0 else 0
-            
-            if accuracy == 100:
-                print(f"✅ Perfect match! Accuracy: {accuracy:.1f}%")
-            elif accuracy >= 80:
-                print(f"🟡 Good match! Accuracy: {accuracy:.1f}%")
-            else:
-                print(f"❌ Poor match! Accuracy: {accuracy:.1f}%")
-            
-            # Show grid comparison if accuracy is not perfect
-            if accuracy < 100:
-                from basics.utils import printcg
-                print("Grid comparison:")
-                printcg([input_grid.raw_data, expected_data, generated_data], 
-                       titles=["Input", "Expected", "Generated"])
-                
-        except Exception as e:
-            print(f"❌ Comparison error: {e}")
-
-
-    # # this function compatible with comparison_old.py
-    # def play(self):
-    #     # Clean up existing comparison directory
-    #     comparison_base_path = "comparison"
-    #     if os.path.exists(comparison_base_path):
-    #         import shutil
-    #         shutil.rmtree(comparison_base_path)
-    #         print(f"Cleaned up existing comparison directory: {comparison_base_path}")
-        
-    #     for i, pair in enumerate(self.task.childs):
-    #         pair_id = i
-
-    #         # grid comparison #########################################################
-    #         grid1 = pair.childs[0]
-    #         grid2 = pair.childs[1]
-
-    #         g_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/GRID"
-    #         if not os.path.exists(g_path):
-    #             os.makedirs(g_path)
-            
-    #         print(f"Comparing {grid1.__repr__()} and {grid2.__repr__()}")
-    #         comparison_receipt = compare(grid1, grid2)
-    #         comm_count = count_comm_categories(comparison_receipt)
-
-    #         with open(f"{g_path}/G_1_{comm_count}.json", "w") as f:
-    #             json.dump(comparison_receipt, f, indent=2)
-
-
-    #         # object comparison #########################################################
-    #         o_group1 = grid1.objects
-    #         o_group2 = grid2.objects
-    #         total_o_comparisons = len(o_group1) * len(o_group2)
-    #         o_comparison_count = 0
-
-    #         o_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/OBJECT"
-    #         if not os.path.exists(o_path):
-    #             os.makedirs(o_path)
-
-    #         for i, obj1 in enumerate(o_group1):
-    #             for j, obj2 in enumerate(o_group2):
-    #                 o_comparison_count += 1
-    #                 print(f"Comparing {obj1.__repr__()} and {obj2.__repr__()} ({o_comparison_count}/{total_o_comparisons})")
-    #                 comparison_receipt = compare(obj1, obj2)
-    #                 comm_count = count_comm_categories(comparison_receipt)
-
-    #                 if comm_count >= 5:
-    #                     with open(f"{o_path}/O_{o_comparison_count}_{comm_count}.json", "w") as f:
-    #                         json.dump(comparison_receipt, f, indent=2)
-    #                 else:
-    #                     pass
-
-
-    #         # pixel comparison #########################################################
-    #         x_group1 = grid1.pixels
-    #         x_group2 = grid2.pixels
-    #         total_x_comparisons = len(x_group1) * len(x_group2)
-    #         x_comparison_count = 0
-
-    #         x_path = f"comparison/TASK_nodes/TASK_{self.task_hex_code}/PAIR_edges/PAIR_{pair_id}/PIXEL"
-    #         if not os.path.exists(x_path):
-    #             os.makedirs(x_path)
-
-    #         for i, pix1 in enumerate(x_group1):
-    #             for j, pix2 in enumerate(x_group2):
-    #                 x_comparison_count += 1
-    #                 print(f"Comparing {pix1.__repr__()} and {pix2.__repr__()} ({x_comparison_count}/{total_x_comparisons})")
-    #                 comparison_receipt = compare(pix1, pix2)
-    #                 comm_count = count_comm_categories(comparison_receipt)
-
-    #                 if comm_count >= 1:
-    #                     # Create score-based subfolder
-    #                     score_path = os.path.join(x_path, str(comm_count))
-    #                     if not os.path.exists(score_path):
-    #                         os.makedirs(score_path)
-                        
-    #                     # For score 1, create additional subfolders based on color and coordinate results
-    #                     if comm_count == 1:
-    #                         # Check color and coordinate results
-    #                         color_result = "COMM" if comparison_receipt["category"]["color"]["color"]["type"] == "COMM" else "DIFF"
-    #                         coordinate_result = "COMM" if comparison_receipt["category"]["coordinate"]["row"]["type"] == "COMM" and comparison_receipt["category"]["coordinate"]["col"]["type"] == "COMM" else "DIFF"
-                            
-    #                         # Create subfolder name based on results
-    #                         subfolder_name = f"color_{color_result}_coord_{coordinate_result}"
-    #                         final_path = os.path.join(score_path, subfolder_name)
-    #                     else:
-    #                         final_path = score_path
-                        
-    #                     if not os.path.exists(final_path):
-    #                         os.makedirs(final_path)
-                        
-    #                     with open(f"{final_path}/X_{x_comparison_count}_{comm_count}.json", "w") as f:
-    #                         json.dump(comparison_receipt, f, indent=2)
-    #                 else:
-    #                     pass
-
 
         
     def temp_solve(self):
-        spacing1 = " " * 4
-        spacing2 = " " * 8
-        spacing3 = " " * 12
-
-        print("Start")
-        print("Inter-TASK Analysis")
-        for _ in range(1):
-            print("    nothing")
-        print()
-
-        print("Intra-TASK Analysis (T1, T2, T3, T4)") # 특징, 객체, 변화 존재 여부의 공통성(COMM) 중심으로 공통적인 부분을 찾는 것이 목표
-        print("Intra-TASK Inter-PAIR Analysis (T1)")
+        """Temporary solve method for testing"""
         for pair_idx, pair in enumerate(self.task.example_pairs):
-            if is_empty_program(pair.program):
-                print(f"{spacing1}PAIR {pair_idx} has no program -> Do deeper analysis of a PAIR to make program")
-                print(f"{spacing2}Intra-PAIR Analysis (P1, P2, P3)")
-                print(f"{spacing2}Inter-GRID Analysis (P1)")
-                print(f"{spacing3}Comparing {pair.input_grid.__repr__()} and {pair.output_grid.__repr__()}")
-                print(f"{spacing3}GRID-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
-                print(f"{spacing3}Applying deep GRID knowledge to program...")
-                print(f"{spacing3}Not enough information to make program -> Do deeper analysis of a PAIR to make program")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Inter-OBJECT Analysis (P2)")
-                print(f"{spacing3}Comparing {len(pair.childs[0].objects)} objects in input grid and {len(pair.childs[1].objects)} objects in output grid")
-                print(f"{spacing3}Total {len(pair.childs[0].objects) * len(pair.childs[1].objects)} object comparisons")
-                for obj_idx_i, obj_i in enumerate(pair.childs[0].objects):
-                    for obj_idx_o, obj_o in enumerate(pair.childs[1].objects):
-                        print(f"{spacing3}Comparing OBJECT {obj_idx_i.__repr__()} and {obj_idx_o.__repr__()}")
-                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, Method: DIFF ...")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Completed OBJECT Comparisons, Analyzing the comparison results...")
-                print(f"{spacing2}Prioritizing based on symbolic distance...")
-                print(f"{spacing2}Generating a program...")
-                print(f"{spacing2}Program generated!")
-                print(f"{spacing2}Validating the program...")
-                print(f"{spacing2}Program is invalid -> Do deeper analysis of a PAIR to make program")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Inter-PIXEL Analysis (P3)")
-                print(f"{spacing3}Comparing {len(pair.childs[0].pixels)} pixels in input grid and {len(pair.childs[1].pixels)} pixels in output grid")
-                print(f"{spacing3}Total {len(pair.childs[0].pixels) * len(pair.childs[1].pixels)} pixel comparisons")
-                for pix_idx_i, pix_i in enumerate(pair.childs[0].pixels):
-                    for pix_idx_o, pix_o in enumerate(pair.childs[1].pixels):
-                        print(f"{spacing3}Comparing PIXEL {pix_idx_i.__repr__()} and {pix_idx_o.__repr__()}")
-                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Completed PIXEL Comparisons, Analyzing the comparison results...")
-                print(f"{spacing2}Prioritizing based on symbolic distance...")
-                print(f"{spacing2}Generating a program...")
-                print(f"{spacing2}Program generated!")
-                print(f"{spacing2}Validating the program on this PAIR...")
-                print(f"{spacing2}Program is valid on this PAIR!")
-                print(f"{spacing2}Validating the program on other PAIRS...")
-                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Intra-GRID Inter-Pixel Analysis (G2)")
-                print(f"{spacing3}Comparing {len(pair.childs[0].pixels)} PIXELs in {pair.input_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[0].pixels) * len(pair.childs[0].pixels)-1} pixel comparisons")
-                for pix_idx_1, pix_1 in enumerate(pair.childs[0].pixels):
-                    for pix_idx_2, pix_2 in enumerate(pair.childs[0].pixels):
-                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
-                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing3}Comparing {len(pair.childs[1].pixels)} PIXELs in {pair.output_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[1].pixels) * len(pair.childs[1].pixels)-1} pixel comparisons")
-                for pix_idx_1, pix_1 in enumerate(pair.childs[1].pixels):
-                    for pix_idx_2, pix_2 in enumerate(pair.childs[1].pixels):
-                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
-                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Completed PIXEL Comparisons, Analyzing the comparison results...")
-                print(f"{spacing2}Grouping based on Commonalities...")
-                print(f"{spacing2}Generating a program...")
-                print(f"{spacing2}Program generated!")
-                print(f"{spacing2}Validating the program on this PAIR...")
-                print(f"{spacing2}Program is valid on this PAIR!")
-                print(f"{spacing2}Validating the program on other PAIRS...")
-                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Intra-GRID Inter-Object Analysis (G1)")
-                print(f"{spacing3}Comparing {len(pair.childs[0].objects)} OBJECTs in {pair.input_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[0].objects) * len(pair.childs[0].objects)-1} object comparisons")
-                for obj_idx_1, obj_1 in enumerate(pair.childs[0].objects):
-                    for obj_idx_2, obj_2 in enumerate(pair.childs[0].objects):
-                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} and {obj_2.__repr__()}.")
-                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing3}Comparing {len(pair.childs[1].objects)} OBJECTs in {pair.output_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[1].objects) * len(pair.childs[1].objects)-1} object comparisons")
-                for obj_idx_1, obj_1 in enumerate(pair.childs[1].objects):
-                    for obj_idx_2, obj_2 in enumerate(pair.childs[1].objects):
-                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} and {obj_2.__repr__()}.")
-                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Completed OBJECT Comparisons, Analyzing the comparison results...")
-                print(f"{spacing2}Grouping based on Commonalities...")
-                print(f"{spacing2}Generating a program...")
-                print(f"{spacing2}Program generated!")
-                print(f"{spacing2}Validating the program on this PAIR...")
-                print(f"{spacing2}Program is valid on this PAIR!")
-                print(f"{spacing2}Validating the program on other PAIRS...")
-                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Intra-OBJECT Inter-Pixel Analysis (O1)")
-                print(f"{spacing3}Comparing PIXELs in OBJECTs in {pair.input_grid.__repr__()}.")
-                for obj in pair.childs[0].objects:
-                    print(f"{spacing3}Comparing {len(obj.pixels)} PIXELs in {obj.__repr__()}.")
-                    print(f"{spacing3}Total {len(obj.pixels) * len(obj.pixels)-1} pixel comparisons")
-                    for pix_idx_1, pix_1 in enumerate(obj.pixels):
-                        for pix_idx_2, pix_2 in enumerate(obj.pixels):
-                            print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
-                            print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
-                print(f"{spacing2}Completed Inter-PIXEL Comparisons in all OBJECTs in input grid, Analyzing the comparison results...")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing3}Comparing PIXELs in OBJECTs in {pair.output_grid.__repr__()}.")
-                for obj in pair.childs[1].objects:
-                    print(f"{spacing3}Comparing {len(obj.pixels)} PIXELs in {obj.__repr__()}.")
-                    print(f"{spacing3}Total {len(obj.pixels) * len(obj.pixels)-1} pixel comparisons")
-                    for pix_idx_1, pix_1 in enumerate(obj.pixels):
-                        for pix_idx_2, pix_2 in enumerate(obj.pixels):
-                            print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} and {pix_2.__repr__()}.")
-                            print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
-                print(f"{spacing2}Completed Inter-PIXEL Comparisons in all OBJECTs in output grid, Analyzing the comparison results...")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Analyzing the comparison results...")
-                print(f"{spacing2}Prioritizing based on symbolic distance...")
-                print(f"{spacing2}Searching for meaningful relations...")
-                print(f"{spacing2}Generating a program...")
-                print(f"{spacing2}Program generated!")
-                print(f"{spacing2}Validating the program on this PAIR...")
-                print(f"{spacing2}Program is valid on this PAIR!")
-                print(f"{spacing2}Validating the program on other PAIRS...")
-                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
-                print()
-                input("Press Enter to continue...")                
-
-                print("----------------------------------------------------")
-                print(f"With Current level of Intra-PAIR Analysis, we cannot make a program that works on other PAIRs.")
-                print(f"Need to see other PAIRs more deeply to make a program that works on other PAIRs.")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing1}Inter-PAIR Analysis (T1, T2, T3, T4)")
-                print(f"{spacing2}Inter-PAIR GRID Analysis (T2)")
-                next_pair_idx = pair_idx + 1
-                if next_pair_idx >= self.task.example_pair_count:
-                    next_pair_idx = 0
-                    break
-                next_pair = self.task.example_pairs[next_pair_idx]
-                print(f"{spacing3}Comparing {pair.input_grid.__repr__()} and {next_pair.input_grid.__repr__()}")
-                print(f"{spacing3}GRID-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
-                print(f"{spacing3}Comparing {pair.output_grid.__repr__()} and {next_pair.output_grid.__repr__()}")
-                print(f"{spacing3}GRID-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
-                print(f"{spacing3}Applying deep GRID knowledge to program...")
-                print(f"{spacing3}Program generated!")
-                print(f"{spacing3}Validating the program on this PAIR...")
-                print(f"{spacing3}Program is valid on this PAIR!")
-                print(f"{spacing3}Validating the program on other PAIRS...")
-                print(f"{spacing3}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Inter-PAIR OBJECT Analysis (T3)")
-                print(f"{spacing3}Comparing {len(pair.childs[0].objects)} OBJECTs in {pair.input_grid.__repr__()} with {len(next_pair.childs[0].objects)} OBJECTs in {next_pair.input_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[0].objects) * len(next_pair.childs[0].objects)} object comparisons")
-                for obj_idx_1, obj_1 in enumerate(pair.childs[0].objects):
-                    for obj_idx_2, obj_2 in enumerate(next_pair.childs[0].objects):
-                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} in {pair.input_grid.__repr__()} and {obj_2.__repr__()} in {next_pair.input_grid.__repr__()}.")
-                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing3}Comparing {len(pair.childs[1].objects)} OBJECTs in {pair.output_grid.__repr__()} with {len(next_pair.childs[1].objects)} OBJECTs in {next_pair.output_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[1].objects) * len(next_pair.childs[1].objects)} object comparisons")
-                for obj_idx_1, obj_1 in enumerate(pair.childs[1].objects):
-                    for obj_idx_2, obj_2 in enumerate(next_pair.childs[1].objects):
-                        print(f"{spacing3}Comparing OBJECT {obj_1.__repr__()} in {pair.output_grid.__repr__()} and {obj_2.__repr__()} in {next_pair.output_grid.__repr__()}.")
-                        print(f"{spacing3}OBJECT-level comparison result is Size: COMM, Color: DIFF, AREA: DIFF, Symmetry: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Completed OBJECT Comparisons, Analyzing the comparison results...")
-                print(f"{spacing2}Searching for meaningful commonalities...")
-                print(f"{spacing2}Generating a program...")
-                print(f"{spacing2}Program generated!")
-                print(f"{spacing2}Validating the program on this PAIR...")
-                print(f"{spacing2}Program is valid on this PAIR!")
-                print(f"{spacing2}Validating the program on other PAIRS...")
-                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Inter-PAIR PIXEL Analysis (T4)")
-                print(f"{spacing3}Comparing {len(pair.childs[0].pixels)} PIXELs in {pair.input_grid.__repr__()} with {len(next_pair.childs[0].pixels)} PIXELs in {next_pair.input_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[0].pixels) * len(next_pair.childs[0].pixels)} pixel comparisons")
-                for pix_idx_1, pix_1 in enumerate(pair.childs[0].pixels):
-                    for pix_idx_2, pix_2 in enumerate(next_pair.childs[0].pixels):
-                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} in {pair.input_grid.__repr__()} and {pix_2.__repr__()} in {next_pair.input_grid.__repr__()}.")
-                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing3}Comparing {len(pair.childs[1].pixels)} PIXELs in {pair.output_grid.__repr__()} with {len(next_pair.childs[1].pixels)} PIXELs in {next_pair.output_grid.__repr__()}.")
-                print(f"{spacing3}Total {len(pair.childs[1].pixels) * len(next_pair.childs[1].pixels)} pixel comparisons")
-                for pix_idx_1, pix_1 in enumerate(pair.childs[1].pixels):
-                    for pix_idx_2, pix_2 in enumerate(next_pair.childs[1].pixels):
-                        print(f"{spacing3}Comparing PIXEL {pix_1.__repr__()} in {pair.output_grid.__repr__()} and {pix_2.__repr__()} in {next_pair.output_grid.__repr__()}.")
-                        print(f"{spacing3}PIXEL-level comparison result is Color: COMM, Coordinate: DIFF")
-                print()
-                input("Press Enter to continue...")
-                print(f"{spacing2}Completed PIXEL Comparisons, Analyzing the comparison results...")
-                print(f"{spacing2}Searching for meaningful commonalities...")
-                print(f"{spacing2}Generating a program...")
-                print(f"{spacing2}Program generated!")
-                print(f"{spacing2}Validating the program on this PAIR...")
-                print(f"{spacing2}Program is valid on this PAIR!")
-                print(f"{spacing2}Validating the program on other PAIRS...")
-                print(f"{spacing2}Program is valid on NONE in {self.task.example_pair_count - 1} PAIRs -> Apply Abstraction to generalize the program")
-                print()
-                input("Press Enter to continue...")
-
-                print("----------------------------------------------------")
-                print(f"With Current level of Intra-TASK Analysis, we cannot make a program that works on other PAIRs.")
-                print(f"Need to inspect deeper with the comparison results to find meaningful commonalities.")
-                print(f"Reveiwing all the collected comparison results...")
-                print()
-                input("Press Enter to continue...")
-                print(f"Start Deeper Analysis of a PAIR")
-                print("@@@")
-
-                break
+            print(f"Processing pair {pair_idx}")
+            
+            # Generate and save program
+            program = self.program_manager.generate_and_save_program(pair, pair_idx, level="GRID")
+            
+            # Execute the program
+            result = self.program_manager.execute_saved_program(pair_idx, "GRID")
+            
+            if result:
+                print(f"Pair {pair_idx} result:")
+                printcg(result.view)
             else:
-                pass
-        print()
-
+                print(f"Failed to execute program for pair {pair_idx}")
 
     def object_mapping(self):
         def color_text_no_bg(index, text):
-            COLORS = {
-                0: (0, 0, 0),         # black
-                1: (0, 116, 217),     # blue
-                2: (255, 65, 54),     # red
-                3: (46, 204, 64),     # green
-                4: (255, 220, 0),     # yellow
-                5: (170, 170, 170),   # gray
-                6: (240, 18, 190),    # pink
-                7: (255, 133, 27),    # orange
-                8: (127, 219, 255),   # light blue
-                9: (135, 12, 37),     # dark red
-                10: (128, 0, 128),    # purple
-                11: (0, 128, 128),    # teal
-                12: (101, 67, 33),    # brown
-                13: (214, 255, 255),  # white
-                14: (79, 79, 79)      # dark gray
-            }
-            r, g, b = COLORS[index]
-            return f"\033[38;2;{r};{g};{b}m{text}\033[0m"
-
+            colors = [
+                '\033[91m',  # Red
+                '\033[92m',  # Green
+                '\033[93m',  # Yellow
+                '\033[94m',  # Blue
+                '\033[95m',  # Magenta
+                '\033[96m',  # Cyan
+                '\033[97m',  # White
+            ]
+            reset = '\033[0m'
+            color = colors[index % len(colors)]
+            return f"{color}{text}{reset}"
 
         def visualize_objects_side_by_side(obj1, obj2):
-            print("\nOBJECT COMPARISON")
-            max_height = max(len(obj1.view), len(obj2.view))
-            max_width1 = max(len(row) for row in obj1.view) if obj1.view else 0
-            max_width2 = max(len(row) for row in obj2.view) if obj2.view else 0
+            print("=" * 60)
+            print(f"{color_text_no_bg(0, 'Object 1')} vs {color_text_no_bg(1, 'Object 2')}")
+            print("=" * 60)
             
-            print("Object 1          |  Object 2")
-            print("-" * 60)
-            for i in range(max_height):
-                if i < len(obj1.view):
-                    row1 = obj1.view[i]
-                    colored1 = ''.join([color_text_no_bg(val, "██") for val in row1])
-                else:
-                    colored1 = ' ' * (max_width1 * 2)  # Empty row with proper width
-                
-                if i < len(obj2.view):
-                    row2 = obj2.view[i]
-                    colored2 = ''.join([color_text_no_bg(val, "██") for val in row2])
-                else:
-                    colored2 = ' ' * (max_width2 * 2)  # Empty row with proper width
-                
-                obj1_width = max_width1 * 2
-                print(f"{colored1:<{obj1_width}} | {colored2}")
+            # Print object 1
+            print(f"{color_text_no_bg(0, 'Object 1:')}")
+            printcg(obj1.view)
             print()
 
+            # Print object 2
+            print(f"{color_text_no_bg(1, 'Object 2:')}")
+            printcg(obj2.view)
+            print()
+            
+            # Print comparison
+            print(f"{color_text_no_bg(2, 'Comparison:')}")
+            if obj1.raw_data == obj2.raw_data:
+                print(f"{color_text_no_bg(2, '✓ Objects are identical')}")
+            else:
+                print(f"{color_text_no_bg(2, '✗ Objects are different')}")
+            print("=" * 60)
 
-        task = self.task
-        pair = task.example_pairs[0]
-        comp1 = pair.input_grid
-        comp2 = pair.output_grid
-
-        total_comparisons = len(comp1.objects) * len(comp2.objects)
-        comparison_count = 0
-
-        for i, obj1 in enumerate(comp1.objects):
-            for j, obj2 in enumerate(comp2.objects):
-                comparison_count += 1
-                print("\033[2J\033[H", end='', flush=True)
-                print(f"Comparison {comparison_count}/{total_comparisons} - Object {i} vs Object {j}")
-                
-                visualize_objects_side_by_side(obj1, obj2)
-                comparison = compare(obj1, obj2, save=True)
-
-                score = int(comparison["result"]["score"].split("/")[0])
-                total_checks = int(comparison["result"]["score"].split("/")[1])
-                
-                print(f"Score: {score}/{total_checks}")
-                
-                if score > 4:
-                    print("\n" + "-" * 70)
-                    print(f"OBJECT COMPARISON SUMMARY [score: {score}/{total_checks}]")
-                    print()
-                    
-                    pprint(comparison["result"]["category"])
-                    
-                    # print()
-                    print("Controls: [Enter] = Next comparison | [q] = Quit")
-                    user_input = input().strip().lower()
-                    
-                    if user_input == 'q':
-                        print("Exiting...")
-                        exit()
-                else:
-                    continue
-
-        print(f"\nCompleted all {total_comparisons} comparisons!")
-
-
-    
-
-
-        
+        # Example usage
+        if self.task.example_pairs:
+            pair = self.task.example_pairs[0]
+            input_grid = pair.input_grid
+            output_grid = pair.output_grid
+            
+            # Extract objects from grids (this would need to be implemented based on your object extraction logic)
+            # For now, just show the grids
+            print("Input Grid:")
+            printcg(input_grid.view)
+            print("\nOutput Grid:")
+            printcg(output_grid.view)

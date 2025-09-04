@@ -275,7 +275,7 @@ class OBJECT(GridComponent):
         object_dict = self.property
         object_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
         object_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        object_path += f'GRID_nodes/GRID_{self.parent[0].id}/'
+        object_path += f'GRID_nodes/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
         object_path += f'OBJECT_nodes/OBJECT_{self.id}/'
         if not os.path.exists(object_path):
             os.makedirs(object_path)
@@ -292,7 +292,7 @@ class OBJECT(GridComponent):
         # OBJECT_edge
         object_edge_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
         object_edge_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        object_edge_path += f'GRID_nodes/GRID_{self.parent[0].id}/'
+        object_edge_path += f'GRID_nodes/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
         object_edge_path += f'OBJECT_edges'
         if not os.path.exists(object_edge_path):
             os.makedirs(object_edge_path)

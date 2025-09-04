@@ -1,5 +1,5 @@
 from DSL.my_transformation_DSL import *
-from ARCKG.tf_grid import TF_GRID
+from ARCKG.tf_grid import TF_GRID, TF_GRIDInfo
 from DSL.my_selection import SELECTION
 from basics.utils import printcg
 from DSL.my_layer_DSL import merge_layers, paste_sub_array, make_selection_layer, make_mask, make_edit_space, make_layer
@@ -62,12 +62,19 @@ def apply_DSL(main_grid, func, *args, **kwargs):
         mask = make_mask(frame_size[0], frame_size[1])
     
     # Crop the layer using list comprehension
-    # trimmed_grid = make_trimmed_grid(merged_layer, mask)
+    trimmed_grid = TF_GRID.make_trimmed_grid(merged_layer, mask)
     # trimmed_grid = [row[30:30+window_size[1]] for row in merged_layer[30:30+window_size[0]]]
     
-    result = TF_GRID(accumulated_layers, main_grid.id, main_grid.id, 2)
-    result.update_property()
-    result.update_childs()
+    # 새로운 TF_GRID ID 생성
+    new_tf_grid_id = TF_GRID.get_next_id()
+    
+    tfg_grid_info = TF_GRIDInfo(
+        id = new_tf_grid_id,
+        type = "tfgrid",
+        raw_data = trimmed_grid
+    )
+
+    result = TF_GRID.from_json(tfg_grid_info, accumulated_layers, main_grid.parent)
 
     # printcg(result.view) ################## UNCOMMENT THIS TO SEE THE RESULT ##################
     return result
