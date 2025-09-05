@@ -36,12 +36,12 @@ class ARCSolver:
         for line in lv1_program:
             print(line)
 
-    def try_DSL(self):
-        input_grid = self.task.example_pairs[0].input_grid
-        grid = apply_DSL(input_grid, make_grid, 10, 10, 1)
-        grid = apply_DSL(grid, coloring, [(0, 0), (1, 1), (2, 2)], 7)
-        printcg(grid.view)
-        breakpoint()
+    # def try_DSL(self):
+    #     input_grid = self.task.example_pairs[0].input_grid
+    #     grid = apply_DSL(input_grid, make_grid, 10, 10, 1)
+    #     grid = apply_DSL(grid, coloring, [(0, 0), (1, 1), (2, 2)], 7)
+    #     printcg(grid.view)
+    #     breakpoint()
 
     def test(self):
         for pair_idx, pair in enumerate(self.task.example_pairs):
