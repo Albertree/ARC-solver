@@ -6,5 +6,5 @@ class Transformation:
         pass
 
     @abstractmethod
-    def execute(self):
+    def execute(self, *args):
         raise NotImplementedError

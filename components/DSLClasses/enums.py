@@ -1,13 +1,13 @@
 from enum import Enum
 
-class DSLType(Enum):
+class DSLType(str,Enum):
     TRANSFORMATION = "transformation"
     PROPERTY = "property"
     RELATION = "relation"
     UTILITY = "utility"
     UNKNOWN = "unknown"
 
-class DSLName(Enum):
+class DSLName(str,Enum):
     MAKE_CANVAS = "make_canvas"
     COLORING = "coloring"
     COLOR_SWITCH = "color_switch"

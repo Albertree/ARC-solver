@@ -1,7 +1,7 @@
-from DSL.AbstractDSL import AbstractDSL
-from DSL.enums import DSLType, DSLName
-from DSL.ParamType import ParamType
-from DSL.transformation.apply_functions import *
+from components.DSL.AbstractDSL import AbstractDSL
+from components.DSL.enums import DSLType, DSLName
+from components.DSL.ParamType import ParamType
+from components.DSL.transformation.apply_functions import *
 
 
 class TransformationDSL(AbstractDSL) :
@@ -55,13 +55,6 @@ class MakeCanvasDSL(TransformationDSL) :
             [ParamType.INT, ParamType.INT, ParamType.COLOR], 
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 3 parameters:")
-        print("1. height    (1 - 30)")
-        print("2. width     (1 - 30)")
-        print("3. color     (0 - 9 | 13)")
-        super().read_input_args()
-
 
 class ColoringDSL(TransformationDSL) :
     def __init__(self,apply_function=coloring):
@@ -70,12 +63,6 @@ class ColoringDSL(TransformationDSL) :
             ["selection", "color"], 
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.COLOR], 
             apply_function)
-
-    def read_input_args(self):
-        print("Provide 2 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. color     (0 - 9)")
-        super().read_input_args()
 
 
 class ColorSwitchDSL(TransformationDSL) :
@@ -86,12 +73,6 @@ class ColorSwitchDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.COLOR, ParamType.COLOR], 
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 3 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. color1    (0 - 9)")
-        print("3. color2    (0 - 9)")
-        super().read_input_args()
 
 
 class RotateDSL(TransformationDSL) :
@@ -102,13 +83,6 @@ class RotateDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.ROTATE_DIRECTION, ParamType.INT, ParamType.LIST_OF_COORD_TUPLES], 
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 4 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. direction (cw | ccw)")
-        print("3. iteration (0 - N)")
-        print("4. pivot     (list of coordinate tuples)")
-        super().read_input_args()
 
 
 class PointFlipDSL(TransformationDSL) :
@@ -119,11 +93,6 @@ class PointFlipDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.LIST_OF_COORD_TUPLES],
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 2 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. pivot     (list of coordinate tuples)")
-        super().read_input_args()
 
 
 class LineFlipDSL(TransformationDSL) :
@@ -134,12 +103,6 @@ class LineFlipDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.LINE_FLIP_DIRECTION, ParamType.LIST_OF_COORD_TUPLES],
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 3 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. direction (hori | verti | diag | anti)")
-        print("3. pivot     (list of coordinate tuples)")
-        super().read_input_args()
 
 
 class MoveDSL(TransformationDSL) :
@@ -150,13 +113,6 @@ class MoveDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.EIGHT_DIRECTION, ParamType.INT],
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 3 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. direction (1,0) | (0,1) | (-1,0) | (0,-1) | (1,1) | (-1,-1) | (-1,1) | (1,-1)")
-        print("3. distance  (integer)")
-        super().read_input_args()
-
 
 class TeleportDSL(TransformationDSL) :
     def __init__(self,apply_function=teleport):
@@ -166,12 +122,6 @@ class TeleportDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.LIST_OF_COORD_TUPLES, ParamType.LIST_OF_COORD_TUPLES],
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 3 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. grab      (list of coordinate tuples)")
-        print("3. destination (list of coordinate tuples)")
-        super().read_input_args()
 
 
 class ConnectDSL(TransformationDSL) :
@@ -182,11 +132,6 @@ class ConnectDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.COLOR],
             apply_function) 
 
-    def read_input_args(self):
-        print("Provide 2 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. color     (0 - 9)")
-        super().read_input_args()
 
 
 class StraightLineDSL(TransformationDSL) :
@@ -197,13 +142,6 @@ class StraightLineDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.EIGHT_DIRECTION, ParamType.INT, ParamType.COLOR],
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 4 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. direction (1,0) | (0,1) | (-1,0) | (0,-1) | (1,1) | (-1,-1) | (-1,1) | (1,-1)")
-        print("3. length    (integer)")
-        print("4. color     (0 - 9)")   
-        super().read_input_args()
 
 
 class RectangleDSL(TransformationDSL) :
@@ -214,11 +152,6 @@ class RectangleDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES, ParamType.COLOR],
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 2 parameters:")
-        print("1. selection (list of coordinate tuples)")
-        print("2. color     (0 - 9)")
-        super().read_input_args()
 
 
 class CropDSL(TransformationDSL) :
@@ -229,8 +162,4 @@ class CropDSL(TransformationDSL) :
             [ParamType.LIST_OF_COORD_TUPLES],
             apply_function)
 
-    def read_input_args(self):
-        print("Provide 1 parameter:")
-        print("1. selection (list of coordinate tuples)")
-        super().read_input_args()
 
