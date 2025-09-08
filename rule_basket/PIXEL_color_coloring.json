@@ -1,7 +1,6 @@
 {
-    "id": "color_diff_rule",
-    "name": "add_color_when_diff_detected",
-    "type": "parameterized",
+    "id": "rule_id",
+    "name": "rule_name",
     "parameters": {
         "color_id": {
             "type": "integer",
@@ -16,16 +15,17 @@
         },
         "operator": "AND",
         "operand2": {
-            "operand1": "result.category.color.category.{color_id}.comp2",
+            "operand1": "result.score",
             "operator": "==",
-            "operand2": "True"
+            "operand2": "1/2"
         }
     },
     "action": {
-        "name": "add_added_color",
+        "name": "coloring",
         "args": {
-            "colorlist": "added_color",
-            "color": "{color_id}"
+            "selection": "result.category.coordinate.comp1",
+            "color": "result.category.color.category.{color_id}.comp2"
         }
     }
 }
+

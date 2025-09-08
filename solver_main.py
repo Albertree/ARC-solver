@@ -10,4 +10,3 @@ if __name__ == "__main__":
     solver = ARCSolver(task)
     # solver.try_DSL()
     solver.test() 
-    

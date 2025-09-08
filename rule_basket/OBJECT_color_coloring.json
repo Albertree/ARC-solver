@@ -1,22 +1,31 @@
 {
-    "rules": [
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
+    "id": "rule_id",
+    "name": "rule_name",
+    "parameters": {
+        "color_id": {
+            "type": "integer",
+            "range": [0, 9]
+        }
+    },
+    "condition": {
+        "operand1": {
             "operand1": "result.category.color.type",
             "operator": "==",
             "operand2": "DIFF"
         },
-        "action": {
-            "name": "coloring",
-            "args": {
-                "selection": "result.category.color.category.0.comp1",
-                "color": "result.category.color.category.0.comp2"
-            }
+        "operator": "AND",
+        "operand2": {
+            "operand1": "result.score",
+            "operator": "==",
+            "operand2": "7/8"
+        }
+    },
+    "action": {
+        "name": "coloring",
+        "args": {
+            "selection": "result.category.coordinate.comp1",
+            "color": "result.category.color.category.{color_id}.comp2"
         }
     }
-        
-    ]
-
 }
+

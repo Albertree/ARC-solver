@@ -5,7 +5,6 @@ import ast
 import json
 # from .program_optimizer import ProgramOptimizer
 from comparison import * 
-from .solver_utils import *
 from pprint import pprint
 from make_rule import get_matching_actions
 from program import ProgramManager

@@ -5,3 +5,8 @@ exclude = [
     ".git/**",
     "__pycache__/**"
 ]
+
+[tool.pyright]
+typeCheckingMode = "basic"
+reportMissingImports = false
+reportMissingTypeStubs = false
