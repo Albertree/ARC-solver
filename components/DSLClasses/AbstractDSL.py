@@ -21,6 +21,14 @@ class AbstractDSL:
     def set_args(self, args):
         self.args = args
 
+    def to_dict(self) : 
+        return  {
+            "name" : self.name,
+            "dsl_type" : self.dsl_type,
+            "args" : self.args,
+            "apply_function" : self.apply_function
+        }
+
     def __str__(self):
         return self.name
     

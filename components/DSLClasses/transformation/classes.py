@@ -1,7 +1,7 @@
-from components.DSL.AbstractDSL import AbstractDSL
-from components.DSL.enums import DSLType, DSLName
-from components.DSL.ParamType import ParamType
-from components.DSL.transformation.apply_functions import *
+from ..AbstractDSL import AbstractDSL
+from ..enums import DSLType, DSLName
+from ..ParamType import ParamType
+from apply_functions import *
 
 
 class TransformationDSL(AbstractDSL) :
