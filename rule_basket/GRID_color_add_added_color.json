@@ -1,9 +1,8 @@
 {
     "id": "color_diff_rule",
     "name": "add_color_when_diff_detected",
-    "type": "parameterized",
-    "parameters": {
-        "color_id": {
+    "parameter": {
+        "color_value": {
             "type": "integer",
             "range": [0, 9]
         }
@@ -16,7 +15,7 @@
         },
         "operator": "AND",
         "operand2": {
-            "operand1": "result.category.color.category.{color_id}.comp2",
+            "operand1": "result.category.color.category.{color_value}.comp2",
             "operator": "==",
             "operand2": "True"
         }
@@ -25,7 +24,7 @@
         "name": "add_added_color",
         "args": {
             "colorlist": "added_color",
-            "color": "{color_id}"
+            "color": "{color_value}"
         }
     }
 }

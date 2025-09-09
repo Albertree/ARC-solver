@@ -51,32 +51,18 @@ class ARCSolver:
                 print(f"Inter-GRID Analysis (P1)")
 
                 comparison_result = compare(pair.input_grid, pair.output_grid, save=True)
-
-                print(f"1 GRID comparison is completed!")
-
-                # make rule from grid comparison result
                 rules = get_matching_actions(comparison_result)
-                pprint(rules)
-                print("^^^ above is selected matching rules ^^^")
-                breakpoint()
                 
                 # make program using grid comparison result
                 if rules:
                     program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
-                    self.program_manager.save_program(program, pair_idx, "GRID")
-                    print(f"Rule-based program generated and saved for pair {pair_idx}")
+                    self.program_manager.save_program(program, pair_idx, "GRID")                   
 
-                    pprint(program)
-                    print("^^^ above is program ^^^")
-                    breakpoint()
-                    
-                    # Execute the saved program
-                    print(f"Executing saved program for pair {pair_idx}")
                     code_result = self.program_manager.execute_saved_program(pair_idx, "GRID")
+                    # printcg(code_result.view)
+                    
 
-                    printcg(code_result.view)
-                    print("^^^ above is code_result ^^^")
-                    breakpoint()
+
 
 
                     if code_result.view == pair.output_grid.view:
@@ -84,6 +70,7 @@ class ARCSolver:
                     else:
                         print(f"^^^ program cannot even solve the current PAIR -> need deeper analysis in OBJECT level^^^")
                     breakpoint()
+
 
 
                     comparison_result = compare(code_result, pair.output_grid, save=False)
@@ -94,10 +81,12 @@ class ARCSolver:
                     print("^^^ above is comparison result of code_result and output_grid ^^^")
                     breakpoint()
 
-                else:
-                    print("No matching rules found, using fallback logic...")
 
-                
+
+
+
+
+
                 # cannot -> go deeper (object comparison in PAIR)
                 print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
                 print("Inter-OBJECT Analysis (P2)")
@@ -105,8 +94,17 @@ class ARCSolver:
                 for obj_i in pair.input_grid.objects:
                     for obj_o in pair.output_grid.objects:
                         comparison_result = compare(obj_i, obj_o, save=True)
+                        rules = get_matching_actions(comparison_result)
+    
+                        if rules:
+                            program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
+                            self.program_manager.save_program(program, pair_idx, "OBJECT")
 
-                print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
+                            code_result = self.program_manager.execute_saved_program(pair_idx, "OBJECT")
+                            # printcg(code_result.view)
+
+
+                # print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
 
                 # make rules from object comparison result
 
@@ -115,6 +113,18 @@ class ARCSolver:
 
                 # make program using object comparison result
                 
+
+
+
+
+
+
+
+
+
+
+
+
                 # cannot -> go deeper (pixel comparison in PAIR)
                 print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
                 print("Inter-PIXEL Analysis (P3)")
@@ -122,8 +132,17 @@ class ARCSolver:
                 for pix_i in pair.input_grid.pixels:
                     for pix_o in pair.output_grid.pixels:
                         comparison_result = compare(pix_i, pix_o, save=True)
-                        
-                print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
+                        rules = get_matching_actions(comparison_result)
+                
+                        if rules:
+                            program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
+                            self.program_manager.save_program(program, pair_idx, "PIXEL")
+
+                            code_result = self.program_manager.execute_saved_program(pair_idx, "PIXEL")
+                            # printcg(code_result.view)
+
+
+                # print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
 
                 # make rules from pixel comparison result
 
@@ -134,6 +153,9 @@ class ARCSolver:
             
 
         
+
+
+
     def temp_solve(self):
         """Temporary solve method for testing"""
         for pair_idx, pair in enumerate(self.task.example_pairs):
@@ -147,57 +169,101 @@ class ARCSolver:
             
             if result:
                 print(f"Pair {pair_idx} result:")
-                printcg(result.view)
+                # printcg(result.view)
             else:
                 print(f"Failed to execute program for pair {pair_idx}")
 
+
+
+
+
+
     def object_mapping(self):
         def color_text_no_bg(index, text):
-            colors = [
-                '\033[91m',  # Red
-                '\033[92m',  # Green
-                '\033[93m',  # Yellow
-                '\033[94m',  # Blue
-                '\033[95m',  # Magenta
-                '\033[96m',  # Cyan
-                '\033[97m',  # White
-            ]
-            reset = '\033[0m'
-            color = colors[index % len(colors)]
-            return f"{color}{text}{reset}"
+            COLORS = {
+                0: (0, 0, 0),         # black
+                1: (0, 116, 217),     # blue
+                2: (255, 65, 54),     # red
+                3: (46, 204, 64),     # green
+                4: (255, 220, 0),     # yellow
+                5: (170, 170, 170),   # gray
+                6: (240, 18, 190),    # pink
+                7: (255, 133, 27),    # orange
+                8: (127, 219, 255),   # light blue
+                9: (135, 12, 37),     # dark red
+                10: (128, 0, 128),    # purple
+                11: (0, 128, 128),    # teal
+                12: (101, 67, 33),    # brown
+                13: (214, 255, 255),  # white
+                14: (79, 79, 79)      # dark gray
+            }
+            r, g, b = COLORS[index]
+            return f"\033[38;2;{r};{g};{b}m{text}\033[0m"
+
 
         def visualize_objects_side_by_side(obj1, obj2):
-            print("=" * 60)
-            print(f"{color_text_no_bg(0, 'Object 1')} vs {color_text_no_bg(1, 'Object 2')}")
-            print("=" * 60)
+            print("\nOBJECT COMPARISON")
+            max_height = max(len(obj1.view), len(obj2.view))
+            max_width1 = max(len(row) for row in obj1.view) if obj1.view else 0
+            max_width2 = max(len(row) for row in obj2.view) if obj2.view else 0
             
-            # Print object 1
-            print(f"{color_text_no_bg(0, 'Object 1:')}")
-            printcg(obj1.view)
+            print("Object 1          |  Object 2")
+            print("-" * 60)
+            for i in range(max_height):
+                if i < len(obj1.view):
+                    row1 = obj1.view[i]
+                    colored1 = ''.join([color_text_no_bg(val, "██") for val in row1])
+                else:
+                    colored1 = ' ' * (max_width1 * 2)  # Empty row with proper width
+                
+                if i < len(obj2.view):
+                    row2 = obj2.view[i]
+                    colored2 = ''.join([color_text_no_bg(val, "██") for val in row2])
+                else:
+                    colored2 = ' ' * (max_width2 * 2)  # Empty row with proper width
+                
+                obj1_width = max_width1 * 2
+                print(f"{colored1:<{obj1_width}} | {colored2}")
             print()
 
-            # Print object 2
-            print(f"{color_text_no_bg(1, 'Object 2:')}")
-            printcg(obj2.view)
-            print()
-            
-            # Print comparison
-            print(f"{color_text_no_bg(2, 'Comparison:')}")
-            if obj1.raw_data == obj2.raw_data:
-                print(f"{color_text_no_bg(2, '✓ Objects are identical')}")
-            else:
-                print(f"{color_text_no_bg(2, '✗ Objects are different')}")
-            print("=" * 60)
 
-        # Example usage
-        if self.task.example_pairs:
-            pair = self.task.example_pairs[0]
-            input_grid = pair.input_grid
-            output_grid = pair.output_grid
-            
-            # Extract objects from grids (this would need to be implemented based on your object extraction logic)
-            # For now, just show the grids
-            print("Input Grid:")
-            printcg(input_grid.view)
-            print("\nOutput Grid:")
-            printcg(output_grid.view)
+        task = self.task
+        pair = task.example_pairs[0]
+        comp1 = pair.input_grid
+        comp2 = pair.output_grid
+
+        total_comparisons = len(comp1.objects) * len(comp2.objects)
+        comparison_count = 0
+
+        for i, obj1 in enumerate(comp1.objects):
+            for j, obj2 in enumerate(comp2.objects):
+                comparison_count += 1
+                print("\033[2J\033[H", end='', flush=True)
+                print(f"Comparison {comparison_count}/{total_comparisons} - Object {i} vs Object {j}")
+                
+                visualize_objects_side_by_side(obj1, obj2)
+                comparison = compare(obj1, obj2, save=True)
+
+                score = int(comparison["result"]["score"].split("/")[0])
+                total_checks = int(comparison["result"]["score"].split("/")[1])
+                
+                print(f"Score: {score}/{total_checks}")
+                
+                if score > 4:
+                    print("\n" + "-" * 70)
+                    print(f"OBJECT COMPARISON SUMMARY [score: {score}/{total_checks}]")
+                    print()
+                    
+                    pprint(comparison["result"]["category"])
+                    
+                    # print()
+                    print("Controls: [Enter] = Next comparison | [q] = Quit")
+                    user_input = input().strip().lower()
+                    
+                    if user_input == 'q':
+                        print("Exiting...")
+                        exit()
+                else:
+                    continue
+
+        print(f"\nCompleted all {total_comparisons} comparisons!")

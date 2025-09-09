@@ -632,21 +632,39 @@ def compare_nested_json(comp1, comp2, path=""):
     
     # Handle lists
     if isinstance(comp1, list):
+        # Check if both lists have the same length (dimensions)
         if len(comp1) != len(comp2):
             result["type"] = "DIFF"
+            result["comp1"] = comp1
+            result["comp2"] = comp2
+            result["details"] = {}
             return result
         
-        # Compare each element in the list
-        list_results = []
-        all_common = True
-        for i, (item1, item2) in enumerate(zip(comp1, comp2)):
-            item_result = compare_nested_json(item1, item2, f"{path}[{i}]")
-            list_results.append(item_result)
-            if item_result["type"] == "DIFF":
-                all_common = False
+        # Check if lists are 2D (contain other lists)
+        is_2d = any(isinstance(item, list) for item in comp1) or any(isinstance(item, list) for item in comp2)
         
-        result["type"] = "COMM" if all_common else "DIFF"
-        result["details"] = list_results
+        if is_2d:
+            # For 2D lists, check if each sublist has the same set of elements and same length
+            all_common = True
+            for i, (sublist1, sublist2) in enumerate(zip(comp1, comp2)):
+                if not isinstance(sublist1, list) or not isinstance(sublist2, list):
+                    all_common = False
+                    break
+                if set(sublist1) != set(sublist2) or len(sublist1) != len(sublist2):
+                    all_common = False
+                    break
+            
+            result["type"] = "COMM" if all_common else "DIFF"
+        else:
+            # For 1D lists, check if both lists have the same set of elements
+            if set(comp1) == set(comp2):
+                result["type"] = "COMM"
+            else:
+                result["type"] = "DIFF"
+        
+        result["comp1"] = comp1
+        result["comp2"] = comp2
+        result["details"] = {}
         return result
     
     # Handle dictionaries
@@ -722,7 +740,7 @@ def compare(comp1, comp2, save=True):
 
     if save:
         save_comparison_result(final_data, id_pair_to_comparison_path(id1, id2))
-        print(f"Combined comparison data saved to: {id_pair_to_comparison_path(id1, id2)}")
+        # print(f"Combined comparison data saved to: {id_pair_to_comparison_path(id1, id2)}")
 
         return final_data
 
@@ -891,16 +909,37 @@ def id_pair_to_comparison_path(id1, id2):
 
 
 def get_component_full_id(component):
+    """Generate consistent dot-separated ID for all component types"""
     if component.type == "task":
         return component.hex_code
     elif component.type == "pair":
-        return f"{component.parent.hex_code}.PAIR_nodes.{component.id}"
+        # Handle tuple id format for pairs
+        if isinstance(component.id, tuple) and len(component.id) >= 6:
+            pair_num = component.id[1]  # Extract pair number from tuple
+        else:
+            pair_num = component.id
+        return f"{component.parent.hex_code}.PAIR_nodes.{pair_num}"
     elif component.type == "grid" or component.type == "tfgrid":
-        return f"{component.parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].id}.GRID_nodes.{component.id}"
+        # Handle tuple id format for grids
+        if isinstance(component.id, tuple) and len(component.id) >= 6:
+            grid_num = component.id[2]  # Extract grid number from tuple
+        else:
+            grid_num = component.id
+        return f"{component.parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].id}.GRID_nodes.{grid_num}"
     elif component.type == "object":
-        return f"{component.parent[0].parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].parent[0].id}.GRID_nodes.{component.parent[0].id}.OBJECT_nodes.{component.id}"
+        # Handle tuple id format for objects
+        if isinstance(component.id, tuple) and len(component.id) >= 6:
+            obj_num = component.id[3]  # Extract object number from tuple
+        else:
+            obj_num = component.id
+        return f"{component.parent[0].parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].parent[0].id}.GRID_nodes.{component.parent[0].id}.OBJECT_nodes.{obj_num}"
     elif component.type == "pixel":
-        return f"{component.parent[0].parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].parent[0].id}.GRID_nodes.{component.parent[0].id}.PIXEL_nodes.{component.id}"
+        # Handle tuple id format for pixels
+        if isinstance(component.id, tuple) and len(component.id) >= 6:
+            pixel_num = component.id[4]  # Extract pixel number from tuple
+        else:
+            pixel_num = component.id
+        return f"{component.parent[0].parent[0].parent.hex_code}.PAIR_nodes.{component.parent[0].parent[0].id}.GRID_nodes.{component.parent[0].id}.PIXEL_nodes.{pixel_num}"
     else:
         raise ValueError(f"Invalid component type: {component.type}")
 
@@ -914,7 +953,7 @@ def save_comparison_result(data, output_path):
     with open(output_path, 'w') as f:
         json.dump(data, f, indent=2, default=str)
     
-    print(f"Combined comparison data saved to: {output_path}")
+    print(f"Comparison result saved to: {output_path}")
 
             
 if __name__ == "__main__":

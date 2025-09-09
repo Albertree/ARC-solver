@@ -208,10 +208,8 @@ class OBJECT(GridComponent):
 
 
         self.property['color'] = self.color
-        self.property['coordinate'] = {
-            'row_index': self.pos[0],
-            'col_index': self.pos[1]
-        }
+        self.property['coordinate'] = self.coordinate
+        
         self.property['pos'] = {
             'left_top': {
                 'row_index': self.pos[0],

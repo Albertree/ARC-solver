@@ -1,12 +1,7 @@
 {
     "id": "rule_id",
     "name": "rule_name",
-    "parameters": {
-        "color_id": {
-            "type": "integer",
-            "range": [0, 9]
-        }
-    },
+    "parameter": {},
     "condition": {
         "operand1": {
             "operand1": "result.category.color.type",
@@ -23,9 +18,8 @@
     "action": {
         "name": "coloring",
         "args": {
-            "selection": "result.category.coordinate.comp1",
-            "color": "result.category.color.category.{color_id}.comp2"
+            "selection": "result.category.coordinate",
+            "color": "result.category.color.comp2"
         }
     }
 }
-

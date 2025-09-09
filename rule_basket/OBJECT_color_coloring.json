@@ -1,8 +1,8 @@
 {
     "id": "rule_id",
     "name": "rule_name",
-    "parameters": {
-        "color_id": {
+    "parameter": {
+        "color_value": {
             "type": "integer",
             "range": [0, 9]
         }
@@ -15,16 +15,24 @@
         },
         "operator": "AND",
         "operand2": {
-            "operand1": "result.score",
-            "operator": "==",
-            "operand2": "7/8"
+            "operand1": {
+                "operand1": "result.category.method.category.univalued.comp2",
+                "operator": "==",
+                "operand2": "True"
+            },
+            "operator": "AND",
+            "operand2": {
+                "operand1": "result.score",
+                "operator": "==",
+                "operand2": "7/8"
+            }
         }
     },
     "action": {
         "name": "coloring",
         "args": {
             "selection": "result.category.coordinate.comp1",
-            "color": "result.category.color.category.{color_id}.comp2"
+            "color": "result.category.color.category.{color_value}.comp2"
         }
     }
 }

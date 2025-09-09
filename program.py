@@ -110,18 +110,23 @@ class ProgramManager:
             if 'name' in action and 'args' in action:
                 action_name = action['name']
                 action_args = action['args']
-                
+            
                 # Build args string for DSL call
                 args_list = []
                 for key, value in action_args.items():
-                    args_list.append(str(value))
+                    if isinstance(value, tuple):
+                        # Handle tuple arguments (e.g., selection coordinates)
+                        args_list.append(str(value))
+                    else:
+                        args_list.append(str(value))
                 
                 args_str = ", ".join(args_list)
                 
                 # Generate DSL call with proper tfg counter
                 tfg_counter += 1
                 next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})")
+                dsl_call = f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})"
+                program.append(dsl_call)
                 current_grid_var = next_grid_var
         
         # Fallback to original logic if no rules matched
@@ -193,8 +198,6 @@ class ProgramManager:
         with open(program_path, 'r') as f:
             program_code = f.read()
         
-        print(f"Original program code:")
-        print(program_code)
         
         # Add import statements and wrap the code
         wrapped_code = f"""
@@ -205,8 +208,6 @@ from DSL.my_selection import SELECTION
 {program_code}
 """
         
-        print(f"Wrapped code:")
-        print(wrapped_code)
         
         # Execute the wrapped code
         exec_globals = {
@@ -217,11 +218,9 @@ from DSL.my_selection import SELECTION
             'SELECTION': SELECTION
         }
         
-        print(f"Before exec - exec_globals keys: {list(exec_globals.keys())}")
         
         exec(wrapped_code, exec_globals)
         
-        print(f"After exec - exec_globals keys: {list(exec_globals.keys())}")
         
         # Try to get solve function and call it directly
         if 'solve' in exec_globals:
