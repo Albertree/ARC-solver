@@ -16,13 +16,12 @@ from comparison import compare
 from make_rule import get_matching_actions
 from DSL.my_apply_DSL import apply_DSL
 from DSL.my_transformation_DSL import coloring, make_grid
+from DSL.my_util_DSL import add_added_color, add_removed_color
 from DSL.my_selection import SELECTION
 
 
 class ProgramManager:    
-    def __init__(self, task: TASK, base_output_dir: str = "generated_codes"):
-        self.task = task
-        self.task_hex_code = task.hex_code
+    def __init__(self, base_output_dir: str = "generated_codes"):
         self.base_output_dir = base_output_dir
         
     # ==================== PROGRAM GENERATION ====================
@@ -51,12 +50,12 @@ class ProgramManager:
                 action_name = action['name']
                 action_args = action['args']
                 
-                # Build args string for DSL call
-                args_list = []
+                # Build kwargs string for DSL call
+                kwargs_list = []
                 for key, value in action_args.items():
                     if isinstance(value, tuple):
                         # Handle tuple arguments (e.g., selection coordinates)
-                        args_list.append(str(value))
+                        kwargs_list.append(f"{key}={str(value)}")
                     elif isinstance(value, dict):
                         # Special handling for PIXEL level coordinate
                         if key == 'selection' and 'category' in value and 'col_index' in value['category'] and 'row_index' in value['category']:
@@ -79,27 +78,27 @@ class ProgramManager:
                             else:
                                 row_val = row_index
                             
-                            # Create coordinate tuple in list format
-                            coordinate = f"[({col_val}, {row_val})]"
-                            args_list.append(coordinate)
+                            # Create coordinate tuple in list format (row, col)
+                            coordinate = f"[({row_val}, {col_val})]"
+                            kwargs_list.append(f"{key}={coordinate}")
                         else:
                             # Handle other dict values - extract the actual usable value
                             if 'comp2' in value:
-                                args_list.append(str(value['comp2']))
+                                kwargs_list.append(f"{key}={str(value['comp2'])}")
                             elif 'comp1' in value:
-                                args_list.append(str(value['comp1']))
+                                kwargs_list.append(f"{key}={str(value['comp1'])}")
                             else:
                                 # If no comp1/comp2, use the dict as is
-                                args_list.append(str(value))
+                                kwargs_list.append(f"{key}={str(value)}")
                     else:
-                        args_list.append(str(value))
+                        kwargs_list.append(f"{key}={str(value)}")
                 
-                args_str = ", ".join(args_list)
+                kwargs_str = ", ".join(kwargs_list)
                 
                 # Generate DSL call with proper tfg counter
                 tfg_counter += 1
                 next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})")
+                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {kwargs_str})")
                 current_grid_var = next_grid_var
         
         # Fallback to original logic if no rules matched
@@ -108,7 +107,7 @@ class ProgramManager:
                 most_frequent_color = input_grid.get_most_frequent_color()
                 tfg_counter += 1
                 next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, {output_grid.height}, {output_grid.width}, {most_frequent_color})")
+                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, height={output_grid.height}, width={output_grid.width}, color_to_fill={most_frequent_color})")
                 current_grid_var = next_grid_var
                 input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
             else:
@@ -121,7 +120,7 @@ class ProgramManager:
                     if input_color != output_grid.raw_data[r][c]:
                         tfg_counter += 1
                         next_grid_var = f"tfg{tfg_counter}"
-                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, [({r}, {c})], {output_grid.raw_data[r][c]})")
+                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, selection=[({r}, {c})], color={output_grid.raw_data[r][c]})")
                         current_grid_var = next_grid_var
 
         program.append(f"    output_grid = {current_grid_var}")
@@ -129,21 +128,48 @@ class ProgramManager:
         
         return program
 
-    def generate_program_with_rules(self, pair, pair_index: int, rules: List[Dict]) -> List[str]:
+    def generate_program_with_rules(self, pair, pair_index: int, rules: List[Dict], base_program: List[str] = None) -> List[str]:
         # Reset TF_GRID ID counter for new pair
         TF_GRID.reset_id_counter()
         
         input_grid = pair.input_grid
         output_grid = pair.output_grid
         
-        program = [
-            'def solve(input_grid):',
-            '    added_color = []',
-            '    removed_color = []',
-            '    tfg0 = input_grid',
-        ]
-        tfg_counter = 0
-        current_grid_var = f"tfg{tfg_counter}"
+        # If base_program is provided, start from it
+        if base_program:
+            # Remove the last two lines (output_grid = tfgX and return output_grid) from base_program
+            program = base_program.copy()
+            if len(program) >= 2:
+                # Check if the last two lines are output_grid and return statements
+                if (program[-2].strip().startswith('output_grid = tfg') and 
+                    program[-1].strip() == 'return output_grid'):
+                    program = program[:-2]  # Remove last two lines
+            
+            tfg_counter = 0
+            current_grid_var = f"tfg{tfg_counter}"
+            
+            # Find the highest tfg counter in the base program
+            for line in program:
+                if 'tfg' in line and '=' in line:
+                    # Extract tfg number from lines like "tfg1 = apply_DSL(...)"
+                    parts = line.split('tfg')
+                    if len(parts) > 1:
+                        num_part = parts[1].split()[0]
+                        if num_part.isdigit():
+                            tfg_counter = max(tfg_counter, int(num_part))
+            
+            # Set current_grid_var to the last tfg variable
+            current_grid_var = f"tfg{tfg_counter}"
+        else:
+            # Start with fresh program
+            program = [
+                'def solve(input_grid):',
+                '    added_color = []',
+                '    removed_color = []',
+                '    tfg0 = input_grid',
+            ]
+            tfg_counter = 0
+            current_grid_var = f"tfg{tfg_counter}"
         
         # Apply actions from rule basket
         for action in rules:
@@ -151,65 +177,57 @@ class ProgramManager:
                 action_name = action['name']
                 action_args = action['args']
             
-                # Build args string for DSL call
-                args_list = []
+                # Build kwargs string for DSL call
+                kwargs_list = []
                 
-                # Special handling for GRID color rules
-                if action_name in ['add_added_color', 'add_removed_color']:
-                    # For GRID color rules, order should be: colorlist, color
-                    colorlist = action_args.get('colorlist', '')
-                    color = action_args.get('color', 0)
-                    args_list.append(colorlist)
-                    args_list.append(str(color))
-                else:
-                    # For other rules, process normally
-                    for key, value in action_args.items():
-                        if isinstance(value, tuple):
-                            # Handle tuple arguments (e.g., selection coordinates)
-                            args_list.append(str(value))
-                        elif isinstance(value, dict):
-                            # Special handling for PIXEL level coordinate
-                            if key == 'selection' and 'category' in value and 'col_index' in value['category'] and 'row_index' in value['category']:
-                                # Extract col_index and row_index from PIXEL coordinate structure
-                                col_index = value['category']['col_index']
-                                row_index = value['category']['row_index']
-                                
-                                # Get the actual coordinate values
-                                if isinstance(col_index, dict) and 'comp1' in col_index:
-                                    col_val = col_index['comp1']
-                                elif isinstance(col_index, dict) and 'comp2' in col_index:
-                                    col_val = col_index['comp2']
-                                else:
-                                    col_val = col_index
-                                    
-                                if isinstance(row_index, dict) and 'comp1' in row_index:
-                                    row_val = row_index['comp1']
-                                elif isinstance(row_index, dict) and 'comp2' in row_index:
-                                    row_val = row_index['comp2']
-                                else:
-                                    row_val = row_index
-                                
-                                # Create coordinate tuple in list format
-                                coordinate = f"[({col_val}, {row_val})]"
-                                args_list.append(coordinate)
+                # Process all arguments as kwargs
+                for key, value in action_args.items():
+                    if isinstance(value, tuple):
+                        # Handle tuple arguments (e.g., selection coordinates)
+                        kwargs_list.append(f"{key}={str(value)}")
+                    elif isinstance(value, dict):
+                        # Special handling for PIXEL level coordinate
+                        if key == 'selection' and 'category' in value and 'col_index' in value['category'] and 'row_index' in value['category']:
+                            # Extract col_index and row_index from PIXEL coordinate structure
+                            col_index = value['category']['col_index']
+                            row_index = value['category']['row_index']
+                            
+                            # Get the actual coordinate values
+                            if isinstance(col_index, dict) and 'comp1' in col_index:
+                                col_val = col_index['comp1']
+                            elif isinstance(col_index, dict) and 'comp2' in col_index:
+                                col_val = col_index['comp2']
                             else:
-                                # Handle other dict values - extract the actual usable value
-                                if 'comp2' in value:
-                                    args_list.append(str(value['comp2']))
-                                elif 'comp1' in value:
-                                    args_list.append(str(value['comp1']))
-                                else:
-                                    # If no comp1/comp2, use the dict as is
-                                    args_list.append(str(value))
+                                col_val = col_index
+                                
+                            if isinstance(row_index, dict) and 'comp1' in row_index:
+                                row_val = row_index['comp1']
+                            elif isinstance(row_index, dict) and 'comp2' in row_index:
+                                row_val = row_index['comp2']
+                            else:
+                                row_val = row_index
+                            
+                            # Create coordinate tuple in list format (row, col)
+                            coordinate = f"[({row_val}, {col_val})]"
+                            kwargs_list.append(f"{key}={coordinate}")
                         else:
-                            args_list.append(str(value))
+                            # Handle other dict values - extract the actual usable value
+                            if 'comp2' in value:
+                                kwargs_list.append(f"{key}={str(value['comp2'])}")
+                            elif 'comp1' in value:
+                                kwargs_list.append(f"{key}={str(value['comp1'])}")
+                            else:
+                                # If no comp1/comp2, use the dict as is
+                                kwargs_list.append(f"{key}={str(value)}")
+                    else:
+                        kwargs_list.append(f"{key}={str(value)}")
                 
-                args_str = ", ".join(args_list)
+                kwargs_str = ", ".join(kwargs_list)
                 
                 # Generate DSL call with proper tfg counter
                 tfg_counter += 1
                 next_grid_var = f"tfg{tfg_counter}"
-                dsl_call = f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {args_str})"
+                dsl_call = f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {kwargs_str})"
                 program.append(dsl_call)
                 current_grid_var = next_grid_var
         
@@ -219,7 +237,7 @@ class ProgramManager:
                 most_frequent_color = input_grid.get_most_frequent_color()
                 tfg_counter += 1
                 next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, {output_grid.height}, {output_grid.width}, {most_frequent_color})")
+                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, height={output_grid.height}, width={output_grid.width}, color_to_fill={most_frequent_color})")
                 current_grid_var = next_grid_var
                 input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
             else:
@@ -232,7 +250,7 @@ class ProgramManager:
                     if input_color != output_grid.raw_data[r][c]:
                         tfg_counter += 1
                         next_grid_var = f"tfg{tfg_counter}"
-                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, [({r}, {c})], {output_grid.raw_data[r][c]})")
+                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, selection=[({r}, {c})], color={output_grid.raw_data[r][c]})")
                         current_grid_var = next_grid_var
 
         program.append(f"    output_grid = {current_grid_var}")
@@ -248,13 +266,13 @@ class ProgramManager:
 
     # ==================== PROGRAM SAVING ====================
     
-    def save_program(self, program: List[str], pair_index: int, level: str = "GRID") -> None:
+    def save_program(self, program: List[str], pair_index: int, level: str = "GRID", task_hex_code: str = None) -> None:
         """Save the generated program for a specific pair."""
         original_code = "\n".join(program)
         
         # Create level directory
-        level_dir = os.path.join(self.base_output_dir, self.task_hex_code, level)
-        self.save_code_and_ast(level_dir, f"{self.task_hex_code}_{pair_index}_{level.lower()}", original_code)
+        level_dir = os.path.join(self.base_output_dir, task_hex_code, level)
+        self.save_code_and_ast(level_dir, f"{task_hex_code}_{pair_index}_{level.lower()}", original_code)
 
     def save_code_and_ast(self, output_dir: str, base_filename: str, code: str) -> None:
         """Save both the Python code and its AST representation."""
@@ -288,6 +306,7 @@ class ProgramManager:
 from DSL.my_apply_DSL import apply_DSL
 from DSL.my_transformation_DSL import coloring, make_grid
 from DSL.my_selection import SELECTION
+from DSL.my_util_DSL import add_added_color, add_removed_color
 
 {program_code}
 """
@@ -299,6 +318,8 @@ from DSL.my_selection import SELECTION
             'apply_DSL': apply_DSL,
             'coloring': coloring,
             'make_grid': make_grid,
+            'add_added_color': add_added_color,
+            'add_removed_color': add_removed_color,
             'SELECTION': SELECTION
         }
         
@@ -315,12 +336,15 @@ from DSL.my_selection import SELECTION
         else:
             return None
 
-    def execute_saved_program(self, pair_index: int, level: str = "GRID") -> Optional[GRID]:
-        if not self.program_exists(pair_index, level):
+    def execute_saved_program(self, pair_index: int, level: str = "GRID", task_hex_code: str = None) -> Optional[GRID]:
+        if not self.program_exists(pair_index, level, task_hex_code):
             return None
         
-        pair = self.task.example_pairs[pair_index]
-        program_path = self.get_program_file_path(pair_index, level)
+        # Load task to get the pair
+        from managers.arc_manager import ARCManager
+        task = ARCManager.from_hex_code(task_hex_code)
+        pair = task.example_pairs[pair_index]
+        program_path = self.get_program_file_path(pair_index, level, task_hex_code)
         return self.execute_program(program_path, pair.input_grid)
 
     # ==================== PROGRAM VALIDATION ====================
@@ -378,22 +402,22 @@ from DSL.my_selection import SELECTION
 
     # ==================== UTILITY METHODS ====================
     
-    def get_program_file_path(self, pair_index: int, level: str = "GRID") -> str:
+    def get_program_file_path(self, pair_index: int, level: str = "GRID", task_hex_code: str = None) -> str:
         """Get the file path for a program at a specific level and pair index."""
         return os.path.join(
             self.base_output_dir, 
-            self.task_hex_code, 
+            task_hex_code, 
             level, 
-            f"{self.task_hex_code}_{pair_index}_{level.lower()}.py"
+            f"{task_hex_code}_{pair_index}_{level.lower()}.py"
         )
 
-    def program_exists(self, pair_index: int, level: str = "GRID") -> bool:
+    def program_exists(self, pair_index: int, level: str = "GRID", task_hex_code: str = None) -> bool:
         """Check if a program file exists for a specific pair and level."""
-        return os.path.exists(self.get_program_file_path(pair_index, level))
+        return os.path.exists(self.get_program_file_path(pair_index, level, task_hex_code))
 
-    def load_program(self, pair_index: int, level: str = "GRID") -> Optional[str]:
+    def load_program(self, pair_index: int, level: str = "GRID", task_hex_code: str = None) -> Optional[str]:
         """Load a program file for a specific pair and level."""
-        file_path = self.get_program_file_path(pair_index, level)
+        file_path = self.get_program_file_path(pair_index, level, task_hex_code)
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 return f.read()

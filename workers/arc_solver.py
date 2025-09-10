@@ -1,5 +1,5 @@
 # from ARCKG.grid import GRID
-from ARCKG.task import TASK
+from managers.arc_manager import ARCManager
 import os
 import ast
 import json
@@ -14,26 +14,28 @@ from DSL.my_DSL import *
 from DSL.my_selection import *
 from DSL.my_layer_DSL import *
 from DSL.my_transformation_DSL import *
+from basics.utils import printcg
 
 
 class ARCSolver:
-    def __init__(self, task: TASK):
-        self.task = task
-        self.task_hex_code = task.hex_code
-        self.program_manager = ProgramManager(task)
+    def __init__(self, task_hex_code: str):
+        self.task = ARCManager.from_hex_code(task_hex_code)
+        self.task_hex_code = task_hex_code
+        self.program_manager = ProgramManager()
         # self.programs = []  # Store programs for each pair
 
     def solve(self):
         for i, pair in enumerate(self.task.example_pairs):
             print(f"Processing example pair {i} for task {self.task_hex_code}")
             lv1_program = self.program_manager.generate_program(pair, i)
-            self.program_manager.save_program(lv1_program, i, "GRID")
+            self.program_manager.save_program(lv1_program, i, "GRID", self.task_hex_code)
             # lv2_program = self._generate_level_2_program(lv1_program, pair, i)
             # lv3_program = self._generate_level_3_program(lv2_program, pair, i)
         
         print(f"Level 1 programs generated for task {self.task_hex_code} in 'result_code'")
-        for line in lv1_program:
-            print(line)
+        if lv1_program:
+            for line in lv1_program:
+                print(line)
 
     # def try_DSL(self):
     #     input_grid = self.task.example_pairs[0].input_grid
@@ -48,22 +50,43 @@ class ARCSolver:
                 # no prgrogram in PAIR -> Do deeper analysis of a PAIR to make program
                 print(f"PAIR {pair_idx} has no program -> Do deeper analysis of a PAIR to make program")
 
+                # ==================== GRID LEVEL ====================
+                print(f"\n=== GRID Level Program Generation ===")
                 comparison_result = compare(pair.input_grid, pair.output_grid, save=True)
                 rules = get_matching_actions(comparison_result)
                 
-                # make program using grid comparison result
+                # Generate GRID program
                 if rules:
-                    program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
-                    self.program_manager.save_program(program, pair_idx, "GRID")                   
+                    grid_program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
+                    self.program_manager.save_program(grid_program, pair_idx, "GRID", self.task_hex_code)
+                    print(f"✅ GRID program generated with {len(rules)} rules")
+                else:
+                    # Create a basic GRID program that just returns input_grid
+                    grid_program = [
+                        'def solve(input_grid):',
+                        '    return input_grid'
+                    ]
+                    self.program_manager.save_program(grid_program, pair_idx, "GRID", self.task_hex_code)
+                    print(f"⚠️ No GRID rules found, created basic program")
 
-                    # code_result = self.program_manager.execute_saved_program(pair_idx, "GRID")
-                    # printcg(code_result.view)
-
-                    # if code_result.view == pair.output_grid.view:
-                    #     print(f"^^^ program can solve the PAIR {pair_idx} ^^^")
-                    # else:
-                    #     print(f"^^^ program cannot even solve the current PAIR -> need deeper analysis in OBJECT level^^^")
-                    # breakpoint()
+                # Execute GRID program to get result for OBJECT level
+                print(f"\n=== GRID Level Program Execution ===")
+                grid_result = self.program_manager.execute_saved_program(pair_idx, "GRID", self.task_hex_code)
+                
+                if grid_result:
+                    print("GRID Program Result:")
+                    printcg(grid_result.view)
+                    print("\nExpected Output:")
+                    printcg(pair.output_grid.view)
+                    
+                    if grid_result.view == pair.output_grid.view:
+                        print(f"✅ GRID program successfully solves PAIR {pair_idx}!")
+                        continue  # Success! Move to next pair
+                    else:
+                        print(f"❌ GRID program cannot solve PAIR {pair_idx} -> proceeding to OBJECT level")
+                else:
+                    print(f"❌ Failed to execute GRID program for PAIR {pair_idx}")
+                    grid_result = pair.input_grid
 
 
 
@@ -75,20 +98,19 @@ class ARCSolver:
                     # print("^^^ above is comparison result of code_result and output_grid ^^^")
                     # breakpoint()
 
-                breakpoint()  # Commented out to allow OBJECT generation to proceed
+                # breakpoint()  # Commented out to allow OBJECT generation to proceed
 
 
 
 
 
-                # cannot -> go deeper (object comparison in PAIR)
-                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
-                print("Inter-OBJECT Analysis (P2)")
-                print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                # ==================== OBJECT LEVEL ====================
+                print(f"\n=== OBJECT Level Program Generation ===")
+                print(f"Comparing {len(grid_result.objects)} objects in GRID result and {len(pair.output_grid.objects)} objects in output grid")
                 
                 # Accumulate all actions from all object comparisons
                 all_object_actions = []
-                for obj_i in pair.input_grid.objects:
+                for obj_i in grid_result.objects:
                     for obj_o in pair.output_grid.objects:
                         comparison_result = compare(obj_i, obj_o, save=True)
                         rules = get_matching_actions(comparison_result)
@@ -96,21 +118,42 @@ class ARCSolver:
                         if rules:
                             all_object_actions.extend(rules)
                 
-                # Generate program with all accumulated actions
+                # Generate OBJECT program starting from GRID program
                 if all_object_actions:
-                    print(f"Found {len(all_object_actions)} total object actions, generating program...")
-                    program = self.program_manager.generate_program_with_rules(pair, pair_idx, all_object_actions)
-                    self.program_manager.save_program(program, pair_idx, "OBJECT")
+                    print(f"Found {len(all_object_actions)} total object actions, generating OBJECT program...")
+                    # Start with GRID program and add OBJECT actions
+                    object_program = self.program_manager.generate_program_with_rules(pair, pair_idx, all_object_actions, base_program=grid_program)
+                    self.program_manager.save_program(object_program, pair_idx, "OBJECT", self.task_hex_code)
+                else:
+                    # No OBJECT actions found, use GRID program as OBJECT program
+                    print(f"⚠️ No OBJECT rules found, using GRID program as OBJECT program")
+                    self.program_manager.save_program(grid_program, pair_idx, "OBJECT", self.task_hex_code)
 
-                    # code_result = self.program_manager.execute_saved_program(pair_idx, "OBJECT")
-                    # printcg(code_result.view)
+                # Execute OBJECT program to get result for PIXEL level
+                print(f"\n=== OBJECT Level Program Execution ===")
+                object_result = self.program_manager.execute_saved_program(pair_idx, "OBJECT", self.task_hex_code)
+                
+                if object_result:
+                    print("OBJECT Program Result:")
+                    printcg(object_result.view)
+                    print("\nExpected Output:")
+                    printcg(pair.output_grid.view)
+                    
+                    if object_result.view == pair.output_grid.view:
+                        print(f"✅ OBJECT program successfully solves PAIR {pair_idx}!")
+                        continue  # Success! Move to next pair
+                    else:
+                        print(f"❌ OBJECT program cannot solve PAIR {pair_idx} -> proceeding to PIXEL level")
+                else:
+                    print(f"❌ Failed to execute OBJECT program for PAIR {pair_idx}")
+                    object_result = grid_result
 
 
                 # print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
 
                 # make rules from object comparison result
 
-                breakpoint()  # Commented out to allow PIXEL generation to proceed
+                # breakpoint()  # Commented out to allow PIXEL generation to proceed
 
 
                 # make program using object comparison result
@@ -123,14 +166,19 @@ class ARCSolver:
 
 
 
-                # cannot -> go deeper (pixel comparison in PAIR)
-                print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
-                print("Inter-PIXEL Analysis (P3)")
-                print(f"Comparing {len(pair.input_grid.pixels)} pixels in input grid and {len(pair.output_grid.pixels)} pixels in output grid")
+                # ==================== PIXEL LEVEL ====================
+                print(f"\n=== PIXEL Level Program Generation ===")
+                print(f"Comparing {len(object_result.pixels)} pixels in OBJECT result and {len(pair.output_grid.pixels)} pixels in output grid")
+                
+                # Debug: Check object_result properties
+                print(f"OBJECT result grid size: {object_result.height}x{object_result.width}")
+                print(f"OBJECT result colorgrid size: {len(object_result.colorgrid)}x{len(object_result.colorgrid[0]) if object_result.colorgrid else 'N/A'}")
+                print(f"Output grid size: {pair.output_grid.height}x{pair.output_grid.width}")
+                print(f"Output grid colorgrid size: {len(pair.output_grid.colorgrid)}x{len(pair.output_grid.colorgrid[0]) if pair.output_grid.colorgrid else 'N/A'}")
                 
                 # Accumulate all actions from all pixel comparisons
                 all_pixel_actions = []
-                for pix_i in pair.input_grid.pixels:
+                for pix_i in object_result.pixels:
                     for pix_o in pair.output_grid.pixels:
                         comparison_result = compare(pix_i, pix_o, save=True)
                         rules = get_matching_actions(comparison_result)
@@ -138,14 +186,48 @@ class ARCSolver:
                         if rules:
                             all_pixel_actions.extend(rules)
                 
-                # Generate program with all accumulated actions
+                # Generate PIXEL program starting from OBJECT program
                 if all_pixel_actions:
-                    print(f"Found {len(all_pixel_actions)} total pixel actions, generating program...")
-                    program = self.program_manager.generate_program_with_rules(pair, pair_idx, all_pixel_actions)
-                    self.program_manager.save_program(program, pair_idx, "PIXEL")
+                    print(f"Found {len(all_pixel_actions)} total pixel actions, generating PIXEL program...")
+                    # Get the OBJECT program to use as base
+                    object_program = self.program_manager.load_program(pair_idx, "OBJECT", self.task_hex_code)
+                    if object_program:
+                        object_program_lines = object_program.split('\n')
+                    else:
+                        object_program_lines = grid_program
+                    # Start with OBJECT program and add PIXEL actions
+                    pixel_program = self.program_manager.generate_program_with_rules(pair, pair_idx, all_pixel_actions, base_program=object_program_lines)
+                    self.program_manager.save_program(pixel_program, pair_idx, "PIXEL", self.task_hex_code)
+                else:
+                    # No PIXEL actions found, use OBJECT program as PIXEL program
+                    print(f"⚠️ No PIXEL rules found, using OBJECT program as PIXEL program")
+                    object_program = self.program_manager.load_program(pair_idx, "OBJECT", self.task_hex_code)
+                    if object_program:
+                        object_program_lines = object_program.split('\n')
+                        self.program_manager.save_program(object_program_lines, pair_idx, "PIXEL", self.task_hex_code)
+                    else:
+                        self.program_manager.save_program(grid_program, pair_idx, "PIXEL", self.task_hex_code)
 
-                    # code_result = self.program_manager.execute_saved_program(pair_idx, "PIXEL")
-                    # printcg(code_result.view)
+                # Execute and verify PIXEL level program
+                print(f"\n=== PIXEL Level Program Execution ===")
+                try:
+                    code_result = self.program_manager.execute_saved_program(pair_idx, "PIXEL", self.task_hex_code)
+                    
+                    if code_result:
+                        print("PIXEL Program Result:")
+                        printcg(code_result.view)
+                        print("\nExpected Output:")
+                        printcg(pair.output_grid.view)
+                        
+                        if code_result.view == pair.output_grid.view:
+                            print(f"✅ PIXEL program successfully solves PAIR {pair_idx}!")
+                        else:
+                            print(f"❌ PIXEL program cannot solve PAIR {pair_idx}")
+                    else:
+                        print(f"❌ Failed to execute PIXEL program for PAIR {pair_idx}")
+                except Exception as e:
+                    print(f"❌ PIXEL program execution failed for PAIR {pair_idx}: {e}")
+                    print("Continuing to next pair...")
 
 
                 # print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")
@@ -273,3 +355,8 @@ class ARCSolver:
                     continue
 
         print(f"\nCompleted all {total_comparisons} comparisons!")
+
+
+if __name__ == "__main__":
+    solver = ARCSolver("007bbfb7")
+    solver.test()

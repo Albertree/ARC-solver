@@ -116,24 +116,37 @@
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 9,
-                                "kind": null
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 9,
-                                "kind": null
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 13,
-                                "kind": null
                             }
                         ],
-                        "keywords": []
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "height",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 9,
+                                    "kind": null
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "width",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 9,
+                                    "kind": null
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color_to_fill",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 12,
+                                    "kind": null
+                                }
+                            }
+                        ]
                     },
                     "type_comment": null
                 },

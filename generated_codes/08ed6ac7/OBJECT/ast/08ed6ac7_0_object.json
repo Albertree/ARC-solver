@@ -112,134 +112,34 @@
                             },
                             {
                                 "node_type": "Name",
-                                "id": "coloring",
+                                "id": "add_added_color",
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
-                            {
-                                "node_type": "List",
-                                "elts": [
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 4,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 7,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 8,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 6,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    }
-                                ],
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 3,
-                                "kind": null
                             }
                         ],
-                        "keywords": []
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 1,
+                                    "kind": null
+                                }
+                            }
+                        ]
                     },
                     "type_comment": null
                 },
@@ -273,188 +173,34 @@
                             },
                             {
                                 "node_type": "Name",
-                                "id": "coloring",
+                                "id": "add_added_color",
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
-                            {
-                                "node_type": "List",
-                                "elts": [
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 4,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 6,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 0,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 8,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 7,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 2,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    }
-                                ],
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 1,
-                                "kind": null
                             }
                         ],
-                        "keywords": []
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 2,
+                                    "kind": null
+                                }
+                            }
+                        ]
                     },
                     "type_comment": null
                 },
@@ -488,80 +234,34 @@
                             },
                             {
                                 "node_type": "Name",
-                                "id": "coloring",
+                                "id": "add_added_color",
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
-                            {
-                                "node_type": "List",
-                                "elts": [
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 7,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 7,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 8,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 7,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 6,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 7,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    }
-                                ],
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 4,
-                                "kind": null
                             }
                         ],
-                        "keywords": []
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 3,
+                                    "kind": null
+                                }
+                            }
+                        ]
                     },
                     "type_comment": null
                 },
@@ -595,170 +295,811 @@
                             },
                             {
                                 "node_type": "Name",
+                                "id": "add_added_color",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            }
+                        ],
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 4,
+                                    "kind": null
+                                }
+                            }
+                        ]
+                    },
+                    "type_comment": null
+                },
+                {
+                    "node_type": "Assign",
+                    "targets": [
+                        {
+                            "node_type": "Name",
+                            "id": "tfg5",
+                            "ctx": {
+                                "node_type": "Store"
+                            }
+                        }
+                    ],
+                    "value": {
+                        "node_type": "Call",
+                        "func": {
+                            "node_type": "Name",
+                            "id": "apply_DSL",
+                            "ctx": {
+                                "node_type": "Load"
+                            }
+                        },
+                        "args": [
+                            {
+                                "node_type": "Name",
+                                "id": "tfg4",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            },
+                            {
+                                "node_type": "Name",
+                                "id": "add_removed_color",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            }
+                        ],
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "removed_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 5,
+                                    "kind": null
+                                }
+                            }
+                        ]
+                    },
+                    "type_comment": null
+                },
+                {
+                    "node_type": "Assign",
+                    "targets": [
+                        {
+                            "node_type": "Name",
+                            "id": "tfg6",
+                            "ctx": {
+                                "node_type": "Store"
+                            }
+                        }
+                    ],
+                    "value": {
+                        "node_type": "Call",
+                        "func": {
+                            "node_type": "Name",
+                            "id": "apply_DSL",
+                            "ctx": {
+                                "node_type": "Load"
+                            }
+                        },
+                        "args": [
+                            {
+                                "node_type": "Name",
+                                "id": "tfg5",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            },
+                            {
+                                "node_type": "Name",
                                 "id": "coloring",
                                 "ctx": {
                                     "node_type": "Load"
                                 }
+                            }
+                        ],
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "selection",
+                                "value": {
+                                    "node_type": "List",
+                                    "elts": [
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 4,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 7,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 8,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 6,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        }
+                                    ],
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
                             },
                             {
-                                "node_type": "List",
-                                "elts": [
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 7,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 3,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 2,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 4,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 6,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 5,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    },
-                                    {
-                                        "node_type": "Tuple",
-                                        "elts": [
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 8,
-                                                "kind": null
-                                            },
-                                            {
-                                                "node_type": "Constant",
-                                                "value": 1,
-                                                "kind": null
-                                            }
-                                        ],
-                                        "ctx": {
-                                            "node_type": "Load"
-                                        }
-                                    }
-                                ],
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 3,
+                                    "kind": null
+                                }
+                            }
+                        ]
+                    },
+                    "type_comment": null
+                },
+                {
+                    "node_type": "Assign",
+                    "targets": [
+                        {
+                            "node_type": "Name",
+                            "id": "tfg7",
+                            "ctx": {
+                                "node_type": "Store"
+                            }
+                        }
+                    ],
+                    "value": {
+                        "node_type": "Call",
+                        "func": {
+                            "node_type": "Name",
+                            "id": "apply_DSL",
+                            "ctx": {
+                                "node_type": "Load"
+                            }
+                        },
+                        "args": [
+                            {
+                                "node_type": "Name",
+                                "id": "tfg6",
                                 "ctx": {
                                     "node_type": "Load"
                                 }
                             },
                             {
-                                "node_type": "Constant",
-                                "value": 2,
-                                "kind": null
+                                "node_type": "Name",
+                                "id": "coloring",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
                             }
                         ],
-                        "keywords": []
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "selection",
+                                "value": {
+                                    "node_type": "List",
+                                    "elts": [
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 4,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 6,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 0,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 8,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 7,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 2,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        }
+                                    ],
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 1,
+                                    "kind": null
+                                }
+                            }
+                        ]
+                    },
+                    "type_comment": null
+                },
+                {
+                    "node_type": "Assign",
+                    "targets": [
+                        {
+                            "node_type": "Name",
+                            "id": "tfg8",
+                            "ctx": {
+                                "node_type": "Store"
+                            }
+                        }
+                    ],
+                    "value": {
+                        "node_type": "Call",
+                        "func": {
+                            "node_type": "Name",
+                            "id": "apply_DSL",
+                            "ctx": {
+                                "node_type": "Load"
+                            }
+                        },
+                        "args": [
+                            {
+                                "node_type": "Name",
+                                "id": "tfg7",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            },
+                            {
+                                "node_type": "Name",
+                                "id": "coloring",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            }
+                        ],
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "selection",
+                                "value": {
+                                    "node_type": "List",
+                                    "elts": [
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 7,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 7,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 8,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 7,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 6,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 7,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        }
+                                    ],
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 4,
+                                    "kind": null
+                                }
+                            }
+                        ]
+                    },
+                    "type_comment": null
+                },
+                {
+                    "node_type": "Assign",
+                    "targets": [
+                        {
+                            "node_type": "Name",
+                            "id": "tfg9",
+                            "ctx": {
+                                "node_type": "Store"
+                            }
+                        }
+                    ],
+                    "value": {
+                        "node_type": "Call",
+                        "func": {
+                            "node_type": "Name",
+                            "id": "apply_DSL",
+                            "ctx": {
+                                "node_type": "Load"
+                            }
+                        },
+                        "args": [
+                            {
+                                "node_type": "Name",
+                                "id": "tfg8",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            },
+                            {
+                                "node_type": "Name",
+                                "id": "coloring",
+                                "ctx": {
+                                    "node_type": "Load"
+                                }
+                            }
+                        ],
+                        "keywords": [
+                            {
+                                "node_type": "keyword",
+                                "arg": "selection",
+                                "value": {
+                                    "node_type": "List",
+                                    "elts": [
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 7,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 3,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 2,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 4,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 6,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 5,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        },
+                                        {
+                                            "node_type": "Tuple",
+                                            "elts": [
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 8,
+                                                    "kind": null
+                                                },
+                                                {
+                                                    "node_type": "Constant",
+                                                    "value": 1,
+                                                    "kind": null
+                                                }
+                                            ],
+                                            "ctx": {
+                                                "node_type": "Load"
+                                            }
+                                        }
+                                    ],
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
+                                }
+                            },
+                            {
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 2,
+                                    "kind": null
+                                }
+                            }
+                        ]
                     },
                     "type_comment": null
                 },
@@ -775,7 +1116,7 @@
                     ],
                     "value": {
                         "node_type": "Name",
-                        "id": "tfg4",
+                        "id": "tfg9",
                         "ctx": {
                             "node_type": "Load"
                         }
@@ -795,7 +1136,8 @@
             ],
             "decorator_list": [],
             "returns": null,
-            "type_comment": null
+            "type_comment": null,
+            "type_params": []
         }
     ],
     "type_ignores": []

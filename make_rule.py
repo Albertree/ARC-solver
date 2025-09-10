@@ -232,7 +232,32 @@ def process_action_args(action_args, param_combo, comparison_result):
             if substituted_value.startswith('result.'):
                 actual_value = get_usable_value_from_comparison_result(comparison_result, substituted_value)
                 if actual_value is not None:
-                    processed_args[key] = actual_value
+                    # Special handling for PIXEL level coordinate
+                    if key == 'selection' and isinstance(actual_value, dict) and 'category' in actual_value and 'col_index' in actual_value['category'] and 'row_index' in actual_value['category']:
+                        # Extract col_index and row_index from PIXEL coordinate structure
+                        col_index = actual_value['category']['col_index']
+                        row_index = actual_value['category']['row_index']
+                        
+                        # Get the actual coordinate values
+                        if isinstance(col_index, dict) and 'comp1' in col_index:
+                            col_val = col_index['comp1']
+                        elif isinstance(col_index, dict) and 'comp2' in col_index:
+                            col_val = col_index['comp2']
+                        else:
+                            col_val = col_index
+                            
+                        if isinstance(row_index, dict) and 'comp1' in row_index:
+                            row_val = row_index['comp1']
+                        elif isinstance(row_index, dict) and 'comp2' in row_index:
+                            row_val = row_index['comp2']
+                        else:
+                            row_val = row_index
+                        
+                        # Create coordinate tuple in list format (row, col)
+                        processed_args[key] = [(row_val, col_val)]
+                        print(f"DEBUG PIXEL: Generated coordinate ({row_val}, {col_val}) from col_index={col_index}, row_index={row_index}")
+                    else:
+                        processed_args[key] = actual_value
                 else:
                     return None
             else:
@@ -251,29 +276,6 @@ def process_action_args(action_args, param_combo, comparison_result):
                     else:
                         # For GRID level, use the parameter value directly
                         processed_args[key] = int(substituted_value)
-                # Special handling for PIXEL level coordinate
-                elif key == 'selection' and isinstance(actual_value, dict) and 'category' in actual_value and 'col_index' in actual_value['category'] and 'row_index' in actual_value['category']:
-                    # Extract col_index and row_index from PIXEL coordinate structure
-                    col_index = actual_value['category']['col_index']
-                    row_index = actual_value['category']['row_index']
-                    
-                    # Get the actual coordinate values
-                    if isinstance(col_index, dict) and 'comp1' in col_index:
-                        col_val = col_index['comp1']
-                    elif isinstance(col_index, dict) and 'comp2' in col_index:
-                        col_val = col_index['comp2']
-                    else:
-                        col_val = col_index
-                        
-                    if isinstance(row_index, dict) and 'comp1' in row_index:
-                        row_val = row_index['comp1']
-                    elif isinstance(row_index, dict) and 'comp2' in row_index:
-                        row_val = row_index['comp2']
-                    else:
-                        row_val = row_index
-                    
-                    # Create coordinate tuple in list format
-                    processed_args[key] = [(col_val, row_val)]
                 else:
                     processed_args[key] = substituted_value
         elif isinstance(value, list):

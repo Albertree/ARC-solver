@@ -213,5 +213,5 @@ memory/
 # Result code
 result_code/
 
-# Comparison
-comparison/
+# Generated codes
+generated_codes/

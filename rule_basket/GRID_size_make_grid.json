@@ -12,7 +12,7 @@
         "args": {
             "height": "result.category.size.category.height.comp2",
             "width": "result.category.size.category.width.comp2",
-            "color_to_fill": 13
+            "color_to_fill": 12
         }
     }
 }

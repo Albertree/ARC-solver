@@ -116,21 +116,30 @@
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
+                            }
+                        ],
+                        "keywords": [
                             {
-                                "node_type": "Name",
-                                "id": "added_color",
-                                "ctx": {
-                                    "node_type": "Load"
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
                                 }
                             },
                             {
-                                "node_type": "Constant",
-                                "value": 1,
-                                "kind": null
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 1,
+                                    "kind": null
+                                }
                             }
-                        ],
-                        "keywords": []
+                        ]
                     },
                     "type_comment": null
                 },
@@ -168,21 +177,30 @@
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
+                            }
+                        ],
+                        "keywords": [
                             {
-                                "node_type": "Name",
-                                "id": "added_color",
-                                "ctx": {
-                                    "node_type": "Load"
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
                                 }
                             },
                             {
-                                "node_type": "Constant",
-                                "value": 2,
-                                "kind": null
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 2,
+                                    "kind": null
+                                }
                             }
-                        ],
-                        "keywords": []
+                        ]
                     },
                     "type_comment": null
                 },
@@ -220,21 +238,30 @@
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
+                            }
+                        ],
+                        "keywords": [
                             {
-                                "node_type": "Name",
-                                "id": "added_color",
-                                "ctx": {
-                                    "node_type": "Load"
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
                                 }
                             },
                             {
-                                "node_type": "Constant",
-                                "value": 3,
-                                "kind": null
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 3,
+                                    "kind": null
+                                }
                             }
-                        ],
-                        "keywords": []
+                        ]
                     },
                     "type_comment": null
                 },
@@ -272,21 +299,30 @@
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
+                            }
+                        ],
+                        "keywords": [
                             {
-                                "node_type": "Name",
-                                "id": "added_color",
-                                "ctx": {
-                                    "node_type": "Load"
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "added_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
                                 }
                             },
                             {
-                                "node_type": "Constant",
-                                "value": 4,
-                                "kind": null
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 4,
+                                    "kind": null
+                                }
                             }
-                        ],
-                        "keywords": []
+                        ]
                     },
                     "type_comment": null
                 },
@@ -324,21 +360,30 @@
                                 "ctx": {
                                     "node_type": "Load"
                                 }
-                            },
+                            }
+                        ],
+                        "keywords": [
                             {
-                                "node_type": "Name",
-                                "id": "removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
+                                "node_type": "keyword",
+                                "arg": "colorlist",
+                                "value": {
+                                    "node_type": "Name",
+                                    "id": "removed_color",
+                                    "ctx": {
+                                        "node_type": "Load"
+                                    }
                                 }
                             },
                             {
-                                "node_type": "Constant",
-                                "value": 5,
-                                "kind": null
+                                "node_type": "keyword",
+                                "arg": "color",
+                                "value": {
+                                    "node_type": "Constant",
+                                    "value": 5,
+                                    "kind": null
+                                }
                             }
-                        ],
-                        "keywords": []
+                        ]
                     },
                     "type_comment": null
                 },
@@ -375,7 +420,8 @@
             ],
             "decorator_list": [],
             "returns": null,
-            "type_comment": null
+            "type_comment": null,
+            "type_params": []
         }
     ],
     "type_ignores": []
