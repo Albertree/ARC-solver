@@ -85,17 +85,25 @@ class ARCSolver:
                 print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
                 print("Inter-OBJECT Analysis (P2)")
                 print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                
+                # Accumulate all actions from all object comparisons
+                all_object_actions = []
                 for obj_i in pair.input_grid.objects:
                     for obj_o in pair.output_grid.objects:
                         comparison_result = compare(obj_i, obj_o, save=True)
                         rules = get_matching_actions(comparison_result)
     
                         if rules:
-                            program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
-                            self.program_manager.save_program(program, pair_idx, "OBJECT")
+                            all_object_actions.extend(rules)
+                
+                # Generate program with all accumulated actions
+                if all_object_actions:
+                    print(f"Found {len(all_object_actions)} total object actions, generating program...")
+                    program = self.program_manager.generate_program_with_rules(pair, pair_idx, all_object_actions)
+                    self.program_manager.save_program(program, pair_idx, "OBJECT")
 
-                            # code_result = self.program_manager.execute_saved_program(pair_idx, "OBJECT")
-                            # printcg(code_result.view)
+                    # code_result = self.program_manager.execute_saved_program(pair_idx, "OBJECT")
+                    # printcg(code_result.view)
 
 
                 # print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
@@ -118,18 +126,26 @@ class ARCSolver:
                 # cannot -> go deeper (pixel comparison in PAIR)
                 print("Not enough information to make program -> Do deeper analysis of a PAIR to make program")
                 print("Inter-PIXEL Analysis (P3)")
-                print(f"Comparing {len(pair.input_grid.objects)} objects in input grid and {len(pair.output_grid.objects)} objects in output grid")
+                print(f"Comparing {len(pair.input_grid.pixels)} pixels in input grid and {len(pair.output_grid.pixels)} pixels in output grid")
+                
+                # Accumulate all actions from all pixel comparisons
+                all_pixel_actions = []
                 for pix_i in pair.input_grid.pixels:
                     for pix_o in pair.output_grid.pixels:
                         comparison_result = compare(pix_i, pix_o, save=True)
                         rules = get_matching_actions(comparison_result)
                 
                         if rules:
-                            program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
-                            self.program_manager.save_program(program, pair_idx, "PIXEL")
+                            all_pixel_actions.extend(rules)
+                
+                # Generate program with all accumulated actions
+                if all_pixel_actions:
+                    print(f"Found {len(all_pixel_actions)} total pixel actions, generating program...")
+                    program = self.program_manager.generate_program_with_rules(pair, pair_idx, all_pixel_actions)
+                    self.program_manager.save_program(program, pair_idx, "PIXEL")
 
-                            # code_result = self.program_manager.execute_saved_program(pair_idx, "PIXEL")
-                            # printcg(code_result.view)
+                    # code_result = self.program_manager.execute_saved_program(pair_idx, "PIXEL")
+                    # printcg(code_result.view)
 
 
                 # print(f"{len(pair.input_grid.pixels) * len(pair.output_grid.pixels)} PIXEL comparisons are completed!")

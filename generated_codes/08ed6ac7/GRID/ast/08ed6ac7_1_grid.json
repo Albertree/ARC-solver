@@ -27,6 +27,46 @@
                     "targets": [
                         {
                             "node_type": "Name",
+                            "id": "added_color",
+                            "ctx": {
+                                "node_type": "Store"
+                            }
+                        }
+                    ],
+                    "value": {
+                        "node_type": "List",
+                        "elts": [],
+                        "ctx": {
+                            "node_type": "Load"
+                        }
+                    },
+                    "type_comment": null
+                },
+                {
+                    "node_type": "Assign",
+                    "targets": [
+                        {
+                            "node_type": "Name",
+                            "id": "removed_color",
+                            "ctx": {
+                                "node_type": "Store"
+                            }
+                        }
+                    ],
+                    "value": {
+                        "node_type": "List",
+                        "elts": [],
+                        "ctx": {
+                            "node_type": "Load"
+                        }
+                    },
+                    "type_comment": null
+                },
+                {
+                    "node_type": "Assign",
+                    "targets": [
+                        {
+                            "node_type": "Name",
                             "id": "tfg0",
                             "ctx": {
                                 "node_type": "Store"
@@ -86,7 +126,7 @@
                             },
                             {
                                 "node_type": "Constant",
-                                "value": 0,
+                                "value": 1,
                                 "kind": null
                             }
                         ],
@@ -138,7 +178,7 @@
                             },
                             {
                                 "node_type": "Constant",
-                                "value": 1,
+                                "value": 2,
                                 "kind": null
                             }
                         ],
@@ -190,7 +230,7 @@
                             },
                             {
                                 "node_type": "Constant",
-                                "value": 2,
+                                "value": 3,
                                 "kind": null
                             }
                         ],
@@ -242,7 +282,7 @@
                             },
                             {
                                 "node_type": "Constant",
-                                "value": 3,
+                                "value": 4,
                                 "kind": null
                             }
                         ],
@@ -280,58 +320,6 @@
                             },
                             {
                                 "node_type": "Name",
-                                "id": "add_added_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "added_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 4,
-                                "kind": null
-                            }
-                        ],
-                        "keywords": []
-                    },
-                    "type_comment": null
-                },
-                {
-                    "node_type": "Assign",
-                    "targets": [
-                        {
-                            "node_type": "Name",
-                            "id": "tfg6",
-                            "ctx": {
-                                "node_type": "Store"
-                            }
-                        }
-                    ],
-                    "value": {
-                        "node_type": "Call",
-                        "func": {
-                            "node_type": "Name",
-                            "id": "apply_DSL",
-                            "ctx": {
-                                "node_type": "Load"
-                            }
-                        },
-                        "args": [
-                            {
-                                "node_type": "Name",
-                                "id": "tfg5",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
                                 "id": "add_removed_color",
                                 "ctx": {
                                     "node_type": "Load"
@@ -359,214 +347,6 @@
                     "targets": [
                         {
                             "node_type": "Name",
-                            "id": "tfg7",
-                            "ctx": {
-                                "node_type": "Store"
-                            }
-                        }
-                    ],
-                    "value": {
-                        "node_type": "Call",
-                        "func": {
-                            "node_type": "Name",
-                            "id": "apply_DSL",
-                            "ctx": {
-                                "node_type": "Load"
-                            }
-                        },
-                        "args": [
-                            {
-                                "node_type": "Name",
-                                "id": "tfg6",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "add_removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 6,
-                                "kind": null
-                            }
-                        ],
-                        "keywords": []
-                    },
-                    "type_comment": null
-                },
-                {
-                    "node_type": "Assign",
-                    "targets": [
-                        {
-                            "node_type": "Name",
-                            "id": "tfg8",
-                            "ctx": {
-                                "node_type": "Store"
-                            }
-                        }
-                    ],
-                    "value": {
-                        "node_type": "Call",
-                        "func": {
-                            "node_type": "Name",
-                            "id": "apply_DSL",
-                            "ctx": {
-                                "node_type": "Load"
-                            }
-                        },
-                        "args": [
-                            {
-                                "node_type": "Name",
-                                "id": "tfg7",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "add_removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 7,
-                                "kind": null
-                            }
-                        ],
-                        "keywords": []
-                    },
-                    "type_comment": null
-                },
-                {
-                    "node_type": "Assign",
-                    "targets": [
-                        {
-                            "node_type": "Name",
-                            "id": "tfg9",
-                            "ctx": {
-                                "node_type": "Store"
-                            }
-                        }
-                    ],
-                    "value": {
-                        "node_type": "Call",
-                        "func": {
-                            "node_type": "Name",
-                            "id": "apply_DSL",
-                            "ctx": {
-                                "node_type": "Load"
-                            }
-                        },
-                        "args": [
-                            {
-                                "node_type": "Name",
-                                "id": "tfg8",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "add_removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 8,
-                                "kind": null
-                            }
-                        ],
-                        "keywords": []
-                    },
-                    "type_comment": null
-                },
-                {
-                    "node_type": "Assign",
-                    "targets": [
-                        {
-                            "node_type": "Name",
-                            "id": "tfg10",
-                            "ctx": {
-                                "node_type": "Store"
-                            }
-                        }
-                    ],
-                    "value": {
-                        "node_type": "Call",
-                        "func": {
-                            "node_type": "Name",
-                            "id": "apply_DSL",
-                            "ctx": {
-                                "node_type": "Load"
-                            }
-                        },
-                        "args": [
-                            {
-                                "node_type": "Name",
-                                "id": "tfg9",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "add_removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Name",
-                                "id": "removed_color",
-                                "ctx": {
-                                    "node_type": "Load"
-                                }
-                            },
-                            {
-                                "node_type": "Constant",
-                                "value": 9,
-                                "kind": null
-                            }
-                        ],
-                        "keywords": []
-                    },
-                    "type_comment": null
-                },
-                {
-                    "node_type": "Assign",
-                    "targets": [
-                        {
-                            "node_type": "Name",
                             "id": "output_grid",
                             "ctx": {
                                 "node_type": "Store"
@@ -575,7 +355,7 @@
                     ],
                     "value": {
                         "node_type": "Name",
-                        "id": "tfg10",
+                        "id": "tfg5",
                         "ctx": {
                             "node_type": "Load"
                         }
@@ -595,8 +375,7 @@
             ],
             "decorator_list": [],
             "returns": null,
-            "type_comment": null,
-            "type_params": []
+            "type_comment": null
         }
     ],
     "type_ignores": []

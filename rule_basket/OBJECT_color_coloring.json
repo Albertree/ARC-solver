@@ -10,22 +10,30 @@
     "condition": {
         "operand1": {
             "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
+                "operand1": {
+                    "operand1": "result.category.color.type",
+                    "operator": "==",
+                    "operand2": "DIFF"
+                },
+                "operator": "AND",
+                "operand2": {
+                    "operand1": "result.score",
+                    "operator": "==",
+                    "operand2": "7/8"
+                }
             },
             "operator": "AND",
             "operand2": {
-                "operand1": "result.score",
-                "operator": "==",
-                "operand2": "7/8"
+                "operand1": "result.category.color.category.{color_value}.comp2",
+                "operator": "!=",
+                "operand2": false
             }
         },
         "operator": "AND",
         "operand2": {
-            "operand1": "result.category.color.category.{color_value}.comp2",
-            "operator": "!=",
-            "operand2": false
+            "operand1": "result.category.method.category.univalued.comp1",
+            "operator": "==",
+            "operand2": true
         }
     },
     "action": {

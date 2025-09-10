@@ -9,15 +9,23 @@
     },
     "condition": {
         "operand1": {
-            "operand1": "result.category.color.type",
-            "operator": "==",
-            "operand2": "DIFF"
+            "operand1": {
+                "operand1": "result.category.color.type",
+                "operator": "==",
+                "operand2": "DIFF"
+            },
+            "operator": "AND",
+            "operand2": {
+                "operand1": "result.category.color.category.{color_value}.comp1",
+                "operator": "==",
+                "operand2": false
+            }
         },
         "operator": "AND",
         "operand2": {
             "operand1": "result.category.color.category.{color_value}.comp2",
             "operator": "==",
-            "operand2": "True"
+            "operand2": true
         }
     },
     "action": {

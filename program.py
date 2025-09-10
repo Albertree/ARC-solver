@@ -54,7 +54,45 @@ class ProgramManager:
                 # Build args string for DSL call
                 args_list = []
                 for key, value in action_args.items():
-                    args_list.append(str(value))
+                    if isinstance(value, tuple):
+                        # Handle tuple arguments (e.g., selection coordinates)
+                        args_list.append(str(value))
+                    elif isinstance(value, dict):
+                        # Special handling for PIXEL level coordinate
+                        if key == 'selection' and 'category' in value and 'col_index' in value['category'] and 'row_index' in value['category']:
+                            # Extract col_index and row_index from PIXEL coordinate structure
+                            col_index = value['category']['col_index']
+                            row_index = value['category']['row_index']
+                            
+                            # Get the actual coordinate values
+                            if isinstance(col_index, dict) and 'comp1' in col_index:
+                                col_val = col_index['comp1']
+                            elif isinstance(col_index, dict) and 'comp2' in col_index:
+                                col_val = col_index['comp2']
+                            else:
+                                col_val = col_index
+                                
+                            if isinstance(row_index, dict) and 'comp1' in row_index:
+                                row_val = row_index['comp1']
+                            elif isinstance(row_index, dict) and 'comp2' in row_index:
+                                row_val = row_index['comp2']
+                            else:
+                                row_val = row_index
+                            
+                            # Create coordinate tuple in list format
+                            coordinate = f"[({col_val}, {row_val})]"
+                            args_list.append(coordinate)
+                        else:
+                            # Handle other dict values - extract the actual usable value
+                            if 'comp2' in value:
+                                args_list.append(str(value['comp2']))
+                            elif 'comp1' in value:
+                                args_list.append(str(value['comp1']))
+                            else:
+                                # If no comp1/comp2, use the dict as is
+                                args_list.append(str(value))
+                    else:
+                        args_list.append(str(value))
                 
                 args_str = ", ".join(args_list)
                 
@@ -100,6 +138,8 @@ class ProgramManager:
         
         program = [
             'def solve(input_grid):',
+            '    added_color = []',
+            '    removed_color = []',
             '    tfg0 = input_grid',
         ]
         tfg_counter = 0
@@ -113,12 +153,56 @@ class ProgramManager:
             
                 # Build args string for DSL call
                 args_list = []
-                for key, value in action_args.items():
-                    if isinstance(value, tuple):
-                        # Handle tuple arguments (e.g., selection coordinates)
-                        args_list.append(str(value))
-                    else:
-                        args_list.append(str(value))
+                
+                # Special handling for GRID color rules
+                if action_name in ['add_added_color', 'add_removed_color']:
+                    # For GRID color rules, order should be: colorlist, color
+                    colorlist = action_args.get('colorlist', '')
+                    color = action_args.get('color', 0)
+                    args_list.append(colorlist)
+                    args_list.append(str(color))
+                else:
+                    # For other rules, process normally
+                    for key, value in action_args.items():
+                        if isinstance(value, tuple):
+                            # Handle tuple arguments (e.g., selection coordinates)
+                            args_list.append(str(value))
+                        elif isinstance(value, dict):
+                            # Special handling for PIXEL level coordinate
+                            if key == 'selection' and 'category' in value and 'col_index' in value['category'] and 'row_index' in value['category']:
+                                # Extract col_index and row_index from PIXEL coordinate structure
+                                col_index = value['category']['col_index']
+                                row_index = value['category']['row_index']
+                                
+                                # Get the actual coordinate values
+                                if isinstance(col_index, dict) and 'comp1' in col_index:
+                                    col_val = col_index['comp1']
+                                elif isinstance(col_index, dict) and 'comp2' in col_index:
+                                    col_val = col_index['comp2']
+                                else:
+                                    col_val = col_index
+                                    
+                                if isinstance(row_index, dict) and 'comp1' in row_index:
+                                    row_val = row_index['comp1']
+                                elif isinstance(row_index, dict) and 'comp2' in row_index:
+                                    row_val = row_index['comp2']
+                                else:
+                                    row_val = row_index
+                                
+                                # Create coordinate tuple in list format
+                                coordinate = f"[({col_val}, {row_val})]"
+                                args_list.append(coordinate)
+                            else:
+                                # Handle other dict values - extract the actual usable value
+                                if 'comp2' in value:
+                                    args_list.append(str(value['comp2']))
+                                elif 'comp1' in value:
+                                    args_list.append(str(value['comp1']))
+                                else:
+                                    # If no comp1/comp2, use the dict as is
+                                    args_list.append(str(value))
+                        else:
+                            args_list.append(str(value))
                 
                 args_str = ", ".join(args_list)
                 

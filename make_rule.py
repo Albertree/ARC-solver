@@ -49,7 +49,7 @@ def load_matching_rules(comparison_level, category_key):
 def evaluate_rule_condition(condition, comparison_result, parameters=None):
     if isinstance(condition, dict):
         if 'operator' in condition:
-            if condition['operator'] == '==':
+            if condition['operator'] in ['==', '!=']:
                 operand1_path = condition['operand1']
                 operand2 = condition['operand2']
                 
@@ -65,27 +65,34 @@ def evaluate_rule_condition(condition, comparison_result, parameters=None):
                         operand2 = True
                     elif operand2 == "False":
                         operand2 = False
+                    elif operand2 is False:
+                        operand2 = False
+                    elif operand2 is True:
+                        operand2 = True
                 elif isinstance(operand1, (int, float)):
                     try:
                         operand2 = type(operand1)(operand2)
                     except (ValueError, TypeError):
                         pass  # Keep operand2 as string if conversion fails
                 
-                result = operand1 == operand2
-                print(f"  Evaluating: {operand1_path} == {operand2}")
-                print(f"  operand1: {operand1} (type: {type(operand1)}), operand2: {operand2} (type: {type(operand2)}), result: {result}")
+                if condition['operator'] == '==':
+                    result = operand1 == operand2
+                else:  # !=
+                    result = operand1 != operand2
+                # print(f"  Evaluating: {operand1_path} {condition['operator']} {operand2}")
+                # print(f"  operand1: {operand1} (type: {type(operand1)}), operand2: {operand2} (type: {type(operand2)}), result: {result}")
                 return result
             elif condition['operator'] == 'AND':
                 left_result = evaluate_rule_condition(condition['operand1'], comparison_result, parameters)
                 right_result = evaluate_rule_condition(condition['operand2'], comparison_result, parameters)
                 result = left_result and right_result
-                print(f"  AND: {left_result} AND {right_result} = {result}")
+                # print(f"  AND: {left_result} AND {right_result} = {result}")
                 return result
             elif condition['operator'] == 'OR':
                 left_result = evaluate_rule_condition(condition['operand1'], comparison_result, parameters)
                 right_result = evaluate_rule_condition(condition['operand2'], comparison_result, parameters)
                 result = left_result or right_result
-                print(f"  OR: {left_result} OR {right_result} = {result}")
+                # print(f"  OR: {left_result} OR {right_result} = {result}")
                 return result
     return False
 
@@ -122,6 +129,43 @@ def get_nested_value(data, path):
             return None
     
     return current
+
+def get_usable_value_from_comparison_result(data, path):
+    """Get a usable value from comparison result, handling dict structures properly"""
+    value = get_nested_value(data, path)
+    
+    if value is None:
+        return None
+    
+    # If the value is a dict (comparison result structure), extract the actual data
+    if isinstance(value, dict):
+        # Priority order: comp2 (output), comp1 (input), then the dict itself
+        if 'comp2' in value:
+            return value['comp2']
+        elif 'comp1' in value:
+            return value['comp1']
+        else:
+            # If no comp1/comp2, return the dict as is
+            return value
+    
+    return value
+
+def find_color_with_true_comp2(data, color_category_path):
+    """Find the color number where comp2 is True in the color category"""
+    color_category = get_nested_value(data, color_category_path)
+    
+    if not isinstance(color_category, dict):
+        return None
+    
+    # Look through all color numbers (0-9) to find one where comp2 is True
+    for color_num in range(10):
+        color_key = str(color_num)
+        if color_key in color_category:
+            color_data = color_category[color_key]
+            if isinstance(color_data, dict) and color_data.get('comp2') is True:
+                return color_num
+    
+    return None
 
 def get_parameters(parameters):
     if isinstance(parameters, list):
@@ -186,13 +230,52 @@ def process_action_args(action_args, param_combo, comparison_result):
             substituted_value = substitute_parameters(value, param_combo)
             
             if substituted_value.startswith('result.'):
-                actual_value = get_nested_value(comparison_result, substituted_value)
+                actual_value = get_usable_value_from_comparison_result(comparison_result, substituted_value)
                 if actual_value is not None:
                     processed_args[key] = actual_value
                 else:
                     return None
             else:
-                processed_args[key] = substituted_value
+                # Special handling for color parameter (only for OBJECT level)
+                if key == 'color' and substituted_value.isdigit():
+                    # Check if this is OBJECT level comparison (has method category)
+                    if 'method' in comparison_result.get('result', {}).get('category', {}):
+                        # If this is a color parameter, try to find the actual color that has comp2=True
+                        color_category_path = "result.category.color.category"
+                        true_color = find_color_with_true_comp2(comparison_result, color_category_path)
+                        if true_color is not None:
+                            processed_args[key] = true_color
+                        else:
+                            # Fallback to the parameter value
+                            processed_args[key] = int(substituted_value)
+                    else:
+                        # For GRID level, use the parameter value directly
+                        processed_args[key] = int(substituted_value)
+                # Special handling for PIXEL level coordinate
+                elif key == 'selection' and isinstance(actual_value, dict) and 'category' in actual_value and 'col_index' in actual_value['category'] and 'row_index' in actual_value['category']:
+                    # Extract col_index and row_index from PIXEL coordinate structure
+                    col_index = actual_value['category']['col_index']
+                    row_index = actual_value['category']['row_index']
+                    
+                    # Get the actual coordinate values
+                    if isinstance(col_index, dict) and 'comp1' in col_index:
+                        col_val = col_index['comp1']
+                    elif isinstance(col_index, dict) and 'comp2' in col_index:
+                        col_val = col_index['comp2']
+                    else:
+                        col_val = col_index
+                        
+                    if isinstance(row_index, dict) and 'comp1' in row_index:
+                        row_val = row_index['comp1']
+                    elif isinstance(row_index, dict) and 'comp2' in row_index:
+                        row_val = row_index['comp2']
+                    else:
+                        row_val = row_index
+                    
+                    # Create coordinate tuple in list format
+                    processed_args[key] = [(col_val, row_val)]
+                else:
+                    processed_args[key] = substituted_value
         elif isinstance(value, list):
             # Handle list of paths (e.g., for selection coordinates)
             processed_list = []
@@ -200,7 +283,7 @@ def process_action_args(action_args, param_combo, comparison_result):
                 if isinstance(item, str):
                     substituted_item = substitute_parameters(item, param_combo)
                     if substituted_item.startswith('result.'):
-                        actual_value = get_nested_value(comparison_result, substituted_item)
+                        actual_value = get_usable_value_from_comparison_result(comparison_result, substituted_item)
                         if actual_value is not None:
                             processed_list.append(actual_value)
                         else:
@@ -226,35 +309,37 @@ def get_matching_actions(comparison_result):
     comparison_level = extract_comparison_level(comparison_result["id1"])
 
     for category_key in comparison_result["result"]["category"].keys():
-        print(comparison_level, category_key)
+        # print(comparison_level, category_key)
         rules = load_matching_rules(comparison_level, category_key)
 
         for rule in rules:
-            print(f"Processing rule: {rule.get('id', 'unknown')}")
-            print(f"Rule condition: {rule.get('condition', {})}")
+            # print(f"Processing rule: {rule.get('id', 'unknown')}")
+            # print(f"Rule condition: {rule.get('condition', {})}")
             
             # Check if rule has parameters (even empty ones)
             if 'parameter' in rule:
                 parameters = rule['parameter']
                 parameter_combinations = generate_parameter_combinations(parameters, comparison_result)
-                print(f"Generated {len(parameter_combinations)} parameter combinations")
+                # print(f"Generated {len(parameter_combinations)} parameter combinations")
 
                 for param_combo in parameter_combinations:
-                    print(f"Testing parameter combo: {param_combo}")
+                    # print(f"Testing parameter combo: {param_combo}")
                     condition_result = evaluate_rule_condition(rule['condition'], comparison_result, param_combo)
-                    print(f"Condition result: {condition_result}")
+                    # print(f"Condition result: {condition_result}")
 
                     if condition_result:
                         action = rule['action'].copy()
                         print(f"Condition matched! Action: {action}")
                         processed_args = process_action_args(action['args'], param_combo, comparison_result)
                         print(f"Processed args: {processed_args}")
+                        print(f"Processed args types: {[(k, type(v)) for k, v in processed_args.items()]}")
                         # breakpoint()
 
                         if processed_args is not None:
                             action['args'] = processed_args
                             action['_parameters'] = param_combo
                             actions.append(action)
+                            print(f"Action added to list. Total actions: {len(actions)}")
             else:
                 print("Rule has no parameter field, skipping...")
 
