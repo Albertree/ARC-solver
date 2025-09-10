@@ -47,8 +47,6 @@ class ARCSolver:
             if len(pair.program) == 0:
                 # no prgrogram in PAIR -> Do deeper analysis of a PAIR to make program
                 print(f"PAIR {pair_idx} has no program -> Do deeper analysis of a PAIR to make program")
-                print(f"Intra-PAIR Analysis (P1, P2, P3)")
-                print(f"Inter-GRID Analysis (P1)")
 
                 comparison_result = compare(pair.input_grid, pair.output_grid, save=True)
                 rules = get_matching_actions(comparison_result)
@@ -58,30 +56,26 @@ class ARCSolver:
                     program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
                     self.program_manager.save_program(program, pair_idx, "GRID")                   
 
-                    code_result = self.program_manager.execute_saved_program(pair_idx, "GRID")
+                    # code_result = self.program_manager.execute_saved_program(pair_idx, "GRID")
                     # printcg(code_result.view)
+
+                    # if code_result.view == pair.output_grid.view:
+                    #     print(f"^^^ program can solve the PAIR {pair_idx} ^^^")
+                    # else:
+                    #     print(f"^^^ program cannot even solve the current PAIR -> need deeper analysis in OBJECT level^^^")
+                    # breakpoint()
+
+
+
+                    # comparison_result = compare(code_result, pair.output_grid, save=False)
+                    # path = id_pair_to_comparison_path(get_component_full_id(code_result), get_component_full_id(pair.output_grid))
+                    # path = f"{self.task_hex_code}_PAIR_{pair_idx}-GRID-level_TFG{pair_idx}.json"
                     
+                    # save_comparison_result(comparison_result, path)
+                    # print("^^^ above is comparison result of code_result and output_grid ^^^")
+                    # breakpoint()
 
-
-
-
-                    if code_result.view == pair.output_grid.view:
-                        print(f"^^^ program can solve the PAIR {pair_idx} ^^^")
-                    else:
-                        print(f"^^^ program cannot even solve the current PAIR -> need deeper analysis in OBJECT level^^^")
-                    breakpoint()
-
-
-
-                    comparison_result = compare(code_result, pair.output_grid, save=False)
-                    path = id_pair_to_comparison_path(get_component_full_id(code_result), get_component_full_id(pair.output_grid))
-                    path = f"{self.task_hex_code}_PAIR_{pair_idx}-GRID-level_TFG{pair_idx}.json"
-                    
-                    save_comparison_result(comparison_result, path)
-                    print("^^^ above is comparison result of code_result and output_grid ^^^")
-                    breakpoint()
-
-
+                breakpoint()  # Commented out to allow OBJECT generation to proceed
 
 
 
@@ -100,7 +94,7 @@ class ARCSolver:
                             program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
                             self.program_manager.save_program(program, pair_idx, "OBJECT")
 
-                            code_result = self.program_manager.execute_saved_program(pair_idx, "OBJECT")
+                            # code_result = self.program_manager.execute_saved_program(pair_idx, "OBJECT")
                             # printcg(code_result.view)
 
 
@@ -108,15 +102,11 @@ class ARCSolver:
 
                 # make rules from object comparison result
 
-                breakpoint()
+                breakpoint()  # Commented out to allow PIXEL generation to proceed
 
 
                 # make program using object comparison result
                 
-
-
-
-
 
 
 
@@ -138,7 +128,7 @@ class ARCSolver:
                             program = self.program_manager.generate_program_with_rules(pair, pair_idx, rules)
                             self.program_manager.save_program(program, pair_idx, "PIXEL")
 
-                            code_result = self.program_manager.execute_saved_program(pair_idx, "PIXEL")
+                            # code_result = self.program_manager.execute_saved_program(pair_idx, "PIXEL")
                             # printcg(code_result.view)
 
 
@@ -146,7 +136,7 @@ class ARCSolver:
 
                 # make rules from pixel comparison result
 
-                breakpoint()
+                # breakpoint()  # Commented out to allow full execution
 
 
                 # make GRID level program using grid, object, pixel comparison result

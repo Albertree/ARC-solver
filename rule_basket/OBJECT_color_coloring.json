@@ -9,16 +9,10 @@
     },
     "condition": {
         "operand1": {
-            "operand1": "result.category.color.type",
-            "operator": "==",
-            "operand2": "DIFF"
-        },
-        "operator": "AND",
-        "operand2": {
             "operand1": {
-                "operand1": "result.category.method.category.univalued.comp2",
+                "operand1": "result.category.color.type",
                 "operator": "==",
-                "operand2": "True"
+                "operand2": "DIFF"
             },
             "operator": "AND",
             "operand2": {
@@ -26,13 +20,19 @@
                 "operator": "==",
                 "operand2": "7/8"
             }
+        },
+        "operator": "AND",
+        "operand2": {
+            "operand1": "result.category.color.category.{color_value}.comp2",
+            "operator": "!=",
+            "operand2": false
         }
     },
     "action": {
         "name": "coloring",
         "args": {
-            "selection": "result.category.coordinate.comp1",
-            "color": "result.category.color.category.{color_value}.comp2"
+            "selection": "result.category.coordinate.comp2",
+            "color": "{color_value}"
         }
     }
 }

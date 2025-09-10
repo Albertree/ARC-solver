@@ -106,9 +106,16 @@ def get_nested_value(data, path):
     keys = path.split('.')
     current = data
     
-    for key in keys:
-        if isinstance(current, dict) and key in current:
-            current = current[key]
+    for i, key in enumerate(keys):
+        if isinstance(current, dict):
+            # Try exact key match first
+            if key in current:
+                current = current[key]
+            # If key is numeric string, try converting to int
+            elif key.isdigit() and int(key) in current:
+                current = current[int(key)]
+            else:
+                return None
         elif isinstance(current, list) and key.isdigit():
             current = current[int(key)]
         else:
@@ -242,7 +249,7 @@ def get_matching_actions(comparison_result):
                         print(f"Condition matched! Action: {action}")
                         processed_args = process_action_args(action['args'], param_combo, comparison_result)
                         print(f"Processed args: {processed_args}")
-                        breakpoint()
+                        # breakpoint()
 
                         if processed_args is not None:
                             action['args'] = processed_args

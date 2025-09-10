@@ -20,7 +20,7 @@ from DSL.my_selection import SELECTION
 
 
 class ProgramManager:    
-    def __init__(self, task: TASK, base_output_dir: str = "result_code"):
+    def __init__(self, task: TASK, base_output_dir: str = "generated_codes"):
         self.task = task
         self.task_hex_code = task.hex_code
         self.base_output_dir = base_output_dir
