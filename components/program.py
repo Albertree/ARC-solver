@@ -18,6 +18,7 @@ from .DSLClasses.transformation.classes import *
 # }
 
 class Program() :
+
     def __init__(self, id) -> None:
         self.id = ""
         self.index = 0
@@ -55,7 +56,6 @@ class Program() :
         popped = self.subprograms[str(idx)]
         self.subprograms[str(idx)] = new_program
         return popped
-    
 
     def execute(self,grid:GRID) -> GRID :
         for subprogram in self.subprograms :
@@ -89,5 +89,6 @@ class Program() :
         self.set_subprogram(self.subprograms[:start_idx]+self.set_subprograms[end_idx:])
         return spliced
 
-
-def main() :
+    @staticmethod
+    def merge(target1,target2) :
+        pass
