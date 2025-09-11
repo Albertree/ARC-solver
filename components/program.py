@@ -18,11 +18,15 @@ from .DSLClasses.transformation.classes import *
 # }
 
 class Program() :
+    id = 1
 
     def __init__(self, id) -> None:
-        self.id = ""
+        self.id = id
+        raise NotImplementedError # should use new_id function for program maintainance.
         self.index = 0
         self.subprograms:list[Program | AbstractDSL] = []
+
+    ### Program property manipulation methods ### 
 
     def set_id(self,id:str) -> None :
         self.id= id
@@ -34,10 +38,26 @@ class Program() :
         index_str = len(subprogram)+1
         self.subprograms[index_str] = subprogram
 
+    def append(self,idx:int,subprograms:list) : 
+        self.subprograms = self.subprograms[:idx]+subprograms+self.subprograms[idx:]
+
+    def replace_subprogram(self, idx:int, new_program) :
+        popped = self.subprograms[str(idx)]
+        self.subprograms[str(idx)] = new_program
+        return popped
+
+    @classmethod
+    def splice(self,new_id:str,start_idx:int, end_idx:int):
+        spliced = Program(new_id)
+        spliced.set_subprogram(self.subprograms[start_idx:end_idx])
+        self.set_subprogram(self.subprograms[:start_idx]+self.set_subprograms[end_idx:])
+        return spliced
+
+    #### class parsing methods ####
+
     def to_dict(self) -> dict:
         dict_output = {"id" : str(self.id)}
-        dict_output.update(self.subprograms_to_dict())
-        
+        dict_output.update(self.subprograms_to_dict())       
 
     def subprograms_to_dict(self) -> dict:
         dict_output = {}
@@ -49,13 +69,7 @@ class Program() :
         
         return dict_output
 
-    def append(self,idx:int,subprograms:list) : 
-        self.subprograms = self.subprograms[:idx]+subprograms+self.subprograms[idx:]
-
-    def replace_subprogram(self, idx:int, new_program) :
-        popped = self.subprograms[str(idx)]
-        self.subprograms[str(idx)] = new_program
-        return popped
+    ### Program application methods ### 
 
     def execute(self,grid:GRID) -> GRID :
         for subprogram in self.subprograms :
@@ -67,6 +81,9 @@ class Program() :
                 raise ValueError
         
         return grid
+
+    
+    ### double underscore methods ### 
 
     def __len__(self) -> int :
         return len(self.subprograms.keys())-1
@@ -82,13 +99,30 @@ class Program() :
         else:
             raise StopIteration
 
-    @classmethod
-    def splice(self,new_id:str,start_idx:int, end_idx:int):
-        spliced = Program(new_id)
-        spliced.set_subprogram(self.subprograms[start_idx:end_idx])
-        self.set_subprogram(self.subprograms[:start_idx]+self.set_subprograms[end_idx:])
-        return spliced
+
+    ### Static methods ###
+
+    @staticmethod
+    def new_id():
+        Program.id +=1
+        return Program.id
 
     @staticmethod
     def merge(target1,target2) :
-        pass
+        # Exception fallback
+        if not (isinstance(target1,Program) and isinstance(target2,Program)) :
+            raise ValueError
+
+        else :
+            new_program = Program(Program.new_id())
+            new_program.set_subprograms(target1.subprograms+target2.subprograms)
+            return new_program
+
+    @staticmethod
+    def compare(target1,target2) : 
+        # Exception fallback
+        if not (isinstance(target1,Program) and isinstance(target2,Program)) :
+            raise ValueError
+        
+        else :
+            pass
