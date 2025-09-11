@@ -5,7 +5,11 @@ from basics.utils import printcg
 
 # basic transformation DSLs
 # 0. make_grid
-def make_grid(grid, height=int, width=int, color_to_fill=int):
+def make_grid(**kwargs):
+    height = kwargs.get('height')
+    width = kwargs.get('width')
+    color_to_fill = kwargs.get('color_to_fill')
+    
     layer = make_layer()
     for i in range(height):
         for j in range(width):
@@ -13,14 +17,21 @@ def make_grid(grid, height=int, width=int, color_to_fill=int):
     return layer
 
 # 1. coloring
-def coloring(grid, selection, color):
+def coloring(**kwargs):
+    selection = kwargs.get('selection')
+    color = kwargs.get('color')
+    
     layer = make_layer()
     for coord in selection.coordinate:
         layer[30 + coord[0]][30 + coord[1]] = color
     return layer
 
 # 2. color_switch
-def color_switch(grid, selection, color1, color2):
+def color_switch(**kwargs):
+    selection = kwargs.get('selection')
+    color1 = kwargs.get('color1')
+    color2 = kwargs.get('color2')
+    
     layer = make_layer()
     for coord in selection.coordinate:
         if selection.colorgrid[coord[0]][coord[1]] == color1:

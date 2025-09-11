@@ -1,34 +1,14 @@
 {
-    "rules": [
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.0.comp2",
-                "operator": "==",
-                "operand2": "False"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "0"
-            }
+    "id": "color_diff_rule",
+    "name": "add_color_when_diff_detected",
+    "parameter": {
+        "color_value": {
+            "type": "integer",
+            "range": [0, 9]
         }
     },
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
+    "condition": {
+        "operand1": {
             "operand1": {
                 "operand1": "result.category.color.type",
                 "operator": "==",
@@ -36,222 +16,23 @@
             },
             "operator": "AND",
             "operand2": {
-                "operand1": "result.category.color.category.1.comp2",
+                "operand1": "result.category.color.category.{color_value}.comp1",
                 "operator": "==",
-                "operand2": "True"
+                "operand2": false
             }
         },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "1"
-            }
+        "operator": "AND",
+        "operand2": {
+            "operand1": "result.category.color.category.{color_value}.comp2",
+            "operator": "==",
+            "operand2": true
         }
     },
-    
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.2.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "2"
-            }
-        }
-    }, 
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.3.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "3"
-            }
-        }
-    },
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.5.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "4"
-            }
-        }
-    },
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.5.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "5"
-            }
-        }
-    },
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.6.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "6"
-            }
-        }
-    },
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.7.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "7"
-            }
-        }
-    },
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.7.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "8"
-            }
-        }
-    },
-
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": {
-                "operand1": "result.category.color.type",
-                "operator": "==",
-                "operand2": "DIFF"
-            },
-            "operator": "AND",
-            "operand2": {
-                "operand1": "result.category.color.category.9.comp2",
-                "operator": "==",
-                "operand2": "True"
-            }
-        },
-        "action": {
-            "name": "add_added_color",
-            "args": {
-                "colorlist": "added_color",
-                "color": "9"
-            }
+    "action": {
+        "name": "add_added_color",
+        "args": {
+            "colorlist": "added_color",
+            "color": "{color_value}"
         }
     }
-
-
-
-    ]
-
 }

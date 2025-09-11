@@ -1,23 +1,18 @@
 {
-    "rules": [
-    {
-        "id": "rule_id",
-        "name": "rule_name",
-        "condition": {
-            "operand1": "result.category.size.type",
-            "operator": "==",
-            "operand2": "DIFF"
-        },
-        "action": {
-            "name": "make_grid",
-            "args": {
-                "height": "result.category.size.category.height.comp2",
-                "width": "result.category.size.category.width.comp2",
-                "color_to_fill": 13
-            }
+    "id": "rule_id",
+    "name": "rule_name",
+    "parameter": {},
+    "condition": {
+        "operand1": "result.category.size.type",
+        "operator": "==",
+        "operand2": "DIFF"
+    },
+    "action": {
+        "name": "make_grid",
+        "args": {
+            "height": "result.category.size.category.height.comp2",
+            "width": "result.category.size.category.width.comp2",
+            "color_to_fill": 12
         }
     }
-        
-    ]
-
 }

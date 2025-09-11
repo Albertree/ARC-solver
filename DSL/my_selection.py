@@ -10,7 +10,13 @@ def selection_to_colorgrid(selection, main_grid):
     #     colorgrid[coord[0]][coord[1]] = 13
 
     for coord in selection:
-        colorgrid[coord[0]][coord[1]] = main_grid.colorgrid[coord[0]][coord[1]]
+        # Check if coordinates are within grid bounds
+        if (0 <= coord[0] < len(main_grid.colorgrid) and 
+            0 <= coord[1] < len(main_grid.colorgrid[0])):
+            colorgrid[coord[0]][coord[1]] = main_grid.colorgrid[coord[0]][coord[1]]
+        else:
+            # Skip coordinates that are out of bounds
+            print(f"Warning: Coordinate {coord} is out of bounds for grid size {len(main_grid.colorgrid)}x{len(main_grid.colorgrid[0])}")
     return colorgrid
 
 def colorgrid_to_colcoord(colorgrid):
@@ -18,10 +24,15 @@ def colorgrid_to_colcoord(colorgrid):
 
 def get_key_points(selection):
     center = []
-    min_row = 30
-    max_row = 0
-    min_col = 30
-    max_col = 0
+    if not selection:
+        # Return default values for empty selection
+        return center, (0, 0), (0, 0), (0, 0), (0, 0)
+    
+    min_row = selection[0][0]
+    max_row = selection[0][0]
+    min_col = selection[0][1]
+    max_col = selection[0][1]
+    
     for coord in selection: 
         if coord[0] < min_row:
             min_row = coord[0]
@@ -89,9 +100,9 @@ class SELECTION:
         self.bbox_colcoord = get_bbox_colcoord(self.bbox, self.bbox_pos)
         
         # width = width of the selection bbox
-        self.width = len(self.bbox[0])
+        self.width = len(self.bbox[0]) if self.bbox and len(self.bbox) > 0 else 0
         # height = height of the selection bbox
-        self.height = len(self.bbox)
+        self.height = len(self.bbox) if self.bbox else 0
         # size = (width, height) of the selection bbox
         self.size = (self.width, self.height)
         # shape = shape of the selection
