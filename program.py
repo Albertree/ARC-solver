@@ -33,10 +33,22 @@ class ProgramManager:
         input_grid = pair.input_grid
         output_grid = pair.output_grid
         
-        program = [
-            'def solve(input_grid):',
-            '    tfg0 = input_grid',
-        ]
+        # Define the base program structure
+        def create_base_program_structure():
+            return [
+                'def solve(input_grid):',
+                '    added_color = []',
+                '    removed_color = []',
+                '    tfg0 = input_grid',
+            ]
+        
+        def create_program_wrapper_end(tfg_var):
+            return [
+                f'    output_grid = {tfg_var}',
+                '    return output_grid'
+            ]
+        
+        program = create_base_program_structure()
         tfg_counter = 0
         current_grid_var = f"tfg{tfg_counter}"
         
@@ -101,30 +113,9 @@ class ProgramManager:
                 program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action_name}, {kwargs_str})")
                 current_grid_var = next_grid_var
         
-        # Fallback to original logic if no rules matched
-        if not actions:
-            if input_grid.size != output_grid.size:
-                most_frequent_color = input_grid.get_most_frequent_color()
-                tfg_counter += 1
-                next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, height={output_grid.height}, width={output_grid.width}, color_to_fill={most_frequent_color})")
-                current_grid_var = next_grid_var
-                input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
-            else:
-                input_raw_data_for_comparison = input_grid.raw_data
-
-            for r in range(output_grid.height):
-                for c in range(output_grid.width):
-                    input_color = input_raw_data_for_comparison[r][c] if r < len(input_raw_data_for_comparison) and c < len(input_raw_data_for_comparison[0]) else input_grid.get_most_frequent_color()
-                    
-                    if input_color != output_grid.raw_data[r][c]:
-                        tfg_counter += 1
-                        next_grid_var = f"tfg{tfg_counter}"
-                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, selection=[({r}, {c})], color={output_grid.raw_data[r][c]})")
-                        current_grid_var = next_grid_var
-
-        program.append(f"    output_grid = {current_grid_var}")
-        program.append(f"    return output_grid")
+        # If no rules matched, just return the wrapper structure without modifications
+        # Add wrapper end
+        program.extend(create_program_wrapper_end(current_grid_var))
         
         return program
 
@@ -135,39 +126,62 @@ class ProgramManager:
         input_grid = pair.input_grid
         output_grid = pair.output_grid
         
-        # If base_program is provided, start from it
+        # Define the base program structure
+        def create_base_program_structure():
+            return [
+                'def solve(input_grid):',
+                '    added_color = []',
+                '    removed_color = []',
+                '    tfg0 = input_grid',
+            ]
+        
+        def create_program_wrapper_end(tfg_var):
+            return [
+                f'    output_grid = {tfg_var}',
+                '    return output_grid'
+            ]
+        
+        # If base_program is provided, extract the modification section
         if base_program:
-            # Remove the last two lines (output_grid = tfgX and return output_grid) from base_program
-            program = base_program.copy()
-            if len(program) >= 2:
-                # Check if the last two lines are output_grid and return statements
-                if (program[-2].strip().startswith('output_grid = tfg') and 
-                    program[-1].strip() == 'return output_grid'):
-                    program = program[:-2]  # Remove last two lines
+            # Find the modification section (between tfg0 = input_grid and output_grid = tfgX)
+            program = create_base_program_structure()
             
+            # Extract modification lines from base_program
+            modification_lines = []
             tfg_counter = 0
             current_grid_var = f"tfg{tfg_counter}"
             
-            # Find the highest tfg counter in the base program
-            for line in program:
-                if 'tfg' in line and '=' in line:
-                    # Extract tfg number from lines like "tfg1 = apply_DSL(...)"
+            # Find modification section in base_program
+            in_modification_section = False
+            for line in base_program:
+                line_stripped = line.strip()
+                
+                # Start of modification section
+                if line_stripped == 'tfg0 = input_grid':
+                    in_modification_section = True
+                    continue
+                
+                # End of modification section
+                if line_stripped.startswith('output_grid = tfg') or line_stripped == 'return output_grid':
+                    in_modification_section = False
+                    continue
+                
+                # Collect modification lines
+                if in_modification_section and 'tfg' in line and '=' in line:
+                    modification_lines.append(line)
+                    # Extract tfg number to update counter
                     parts = line.split('tfg')
                     if len(parts) > 1:
                         num_part = parts[1].split()[0]
                         if num_part.isdigit():
                             tfg_counter = max(tfg_counter, int(num_part))
             
-            # Set current_grid_var to the last tfg variable
+            # Add modification lines to new program
+            program.extend(modification_lines)
             current_grid_var = f"tfg{tfg_counter}"
         else:
             # Start with fresh program
-            program = [
-                'def solve(input_grid):',
-                '    added_color = []',
-                '    removed_color = []',
-                '    tfg0 = input_grid',
-            ]
+            program = create_base_program_structure()
             tfg_counter = 0
             current_grid_var = f"tfg{tfg_counter}"
         
@@ -231,30 +245,9 @@ class ProgramManager:
                 program.append(dsl_call)
                 current_grid_var = next_grid_var
         
-        # Fallback to original logic if no rules matched
-        if not rules:
-            if input_grid.size != output_grid.size:
-                most_frequent_color = input_grid.get_most_frequent_color()
-                tfg_counter += 1
-                next_grid_var = f"tfg{tfg_counter}"
-                program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, make_grid, height={output_grid.height}, width={output_grid.width}, color_to_fill={most_frequent_color})")
-                current_grid_var = next_grid_var
-                input_raw_data_for_comparison = [[most_frequent_color for _ in range(output_grid.width)] for _ in range(output_grid.height)]
-            else:
-                input_raw_data_for_comparison = input_grid.raw_data
-
-            for r in range(output_grid.height):
-                for c in range(output_grid.width):
-                    input_color = input_raw_data_for_comparison[r][c] if r < len(input_raw_data_for_comparison) and c < len(input_raw_data_for_comparison[0]) else input_grid.get_most_frequent_color()
-                    
-                    if input_color != output_grid.raw_data[r][c]:
-                        tfg_counter += 1
-                        next_grid_var = f"tfg{tfg_counter}"
-                        program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, coloring, selection=[({r}, {c})], color={output_grid.raw_data[r][c]})")
-                        current_grid_var = next_grid_var
-
-        program.append(f"    output_grid = {current_grid_var}")
-        program.append(f"    return output_grid")
+        # If no rules matched, just return the wrapper structure without modifications
+        # Add wrapper end
+        program.extend(create_program_wrapper_end(current_grid_var))
         
         return program
 

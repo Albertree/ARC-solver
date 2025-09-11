@@ -953,9 +953,11 @@ def save_comparison_result(data, output_path):
     with open(output_path, 'w') as f:
         json.dump(data, f, indent=2, default=str)
     
-    print(f"Comparison result saved to: {output_path}")
+    # print(f"Comparison result saved to: {output_path}") # Uncomment to print the output path
 
             
+
+
 if __name__ == "__main__":
     # comparing from memory (.json)
 

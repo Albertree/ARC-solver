@@ -183,8 +183,7 @@
             ],
             "decorator_list": [],
             "returns": null,
-            "type_comment": null,
-            "type_params": []
+            "type_comment": null
         }
     ],
     "type_ignores": []

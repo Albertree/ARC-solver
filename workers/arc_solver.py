@@ -61,11 +61,8 @@ class ARCSolver:
                     self.program_manager.save_program(grid_program, pair_idx, "GRID", self.task_hex_code)
                     print(f"✅ GRID program generated with {len(rules)} rules")
                 else:
-                    # Create a basic GRID program that just returns input_grid
-                    grid_program = [
-                        'def solve(input_grid):',
-                        '    return input_grid'
-                    ]
+                    # Create a basic GRID program with wrapper structure
+                    grid_program = self.program_manager.generate_program_with_rules(pair, pair_idx, [])
                     self.program_manager.save_program(grid_program, pair_idx, "GRID", self.task_hex_code)
                     print(f"⚠️ No GRID rules found, created basic program")
 
