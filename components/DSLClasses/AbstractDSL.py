@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from ARCKG.grid import GRID
 from DSLClasses.enums import DSLType, DSLName
 from DSLClasses.ParamType import ParamType
@@ -28,6 +29,10 @@ class AbstractDSL:
             "args" : self.args,
             "apply_function" : self.apply_function
         }
+    
+    @abstractmethod
+    def to_raw_python_string(self) :
+        pass       
 
     def __str__(self):
         return self.name

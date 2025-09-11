@@ -57,7 +57,8 @@ class Program() :
 
     def to_dict(self) -> dict:
         dict_output = {"id" : str(self.id)}
-        dict_output.update(self.subprograms_to_dict())       
+        dict_output.update(self.subprograms_to_dict())
+        return dict_output       
 
     def subprograms_to_dict(self) -> dict:
         dict_output = {}
@@ -68,6 +69,21 @@ class Program() :
                 dict_output[str(idx)] = program.to_dict()
         
         return dict_output
+    
+    def to_raw_python_string(self) -> None:
+        python_string = ""
+
+        return python_string
+    
+    def to_python_string(self) -> None:
+        python_string = ""
+        for idx, program in enumerate(self.subprograms) :
+            if isinstance(program, Program) :
+                python_string += program.to_raw_python_string()
+            elif isinstance(program,AbstractDSL) : 
+                python_string += program.to_raw_python_string()
+        
+        return python_string
 
     ### Program application methods ### 
 
