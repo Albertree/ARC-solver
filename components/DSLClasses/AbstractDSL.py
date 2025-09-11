@@ -1,0 +1,43 @@
+from ARCKG.grid import GRID
+from DSLClasses.enums import DSLType, DSLName
+from DSLClasses.ParamType import ParamType
+from collections.abc import Callable
+
+
+class AbstractDSL:
+
+    def __init__(self):
+        self.name = DSLName.UNKNOWN
+        self.dsl_type = DSLType.UNKNOWN
+        self.args:dict = {}
+        self.apply_function:Callable = lambda x: x
+
+    def execute(self,grid:GRID):
+        return self.apply_function(grid,self.args)
+    
+    def get_args(self):
+        return self.args
+    
+    def set_args(self, args):
+        self.args = args
+
+    def to_dict(self) : 
+        return  {
+            "name" : self.name,
+            "dsl_type" : self.dsl_type,
+            "args" : self.args,
+            "apply_function" : self.apply_function
+        }
+
+    def __str__(self):
+        return self.name
+    
+    def __repr__(self):
+        return self.name
+    
+    def __eq__(self, other):
+        return self.name == other.name
+    
+    def __hash__(self):
+        return hash(self.name)
+
