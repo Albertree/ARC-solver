@@ -1,10 +1,11 @@
-from tracemalloc import start
 from ARCKG.grid import GRID
-from .DSLClasses.AbstractDSL import AbstractDSL
-from .DSLClasses.transformation.classes import *
+from .dsl_abstract import AbstractDSL
+from .dsl_transformation import *
+from .dsl_information import *
+from enum import Enum
 
 # {
-#     "id" : "asdfsfa",
+#     "id" : "07fed1ed.pair_0.<program_count>",
 #     "1" : {
 
 #     },
@@ -18,13 +19,13 @@ from .DSLClasses.transformation.classes import *
 # }
 
 class Program() :
-    id = 1
 
     def __init__(self, id) -> None:
-        self.id = id
-        raise NotImplementedError # should use new_id function for program maintainance.
+        self.id = id # should use new_id function for program maintainance.
         self.index = 0
-        self.subprograms:list[Program | AbstractDSL] = []
+        self.program_variables = ProgramVarManager("x")
+        self.program_grids = ProgramVarManager("tfg")
+        self.tree: ProgramNodeTree | ProgramNode = None
 
     ### Program property manipulation methods ### 
 
@@ -32,7 +33,7 @@ class Program() :
         self.id= id
     
     def set_subprograms(self,subprograms) :
-        self.subprograms = subprograms
+        self.tree = subprograms
 
     def append_subprogram(self,subprogram) :
         index_str = len(subprogram)+1
@@ -142,3 +143,66 @@ class Program() :
         
         else :
             pass
+
+
+
+
+class ProgramStatus(Enum) :
+    INIT_NODE="init_node"
+    NOT_READY = "not_ready"
+    READY = "ready"
+    IN_PROGRESS="in_progress"
+    DONE="done"
+
+class ProgramNode():
+    def __init__(self, var_manager, grid_manager, 
+                 dsl:AbstractDSL,
+                 needed_var_names:list[str]=[],                 
+                 ) :
+        self.status = ProgramStatus.INIT_NODE if len(needed_var_names)==0 else ProgramStatus.NOT_READY
+        self.var_manager = var_manager
+        self.grid_manager = grid_manager
+        self.dsl: Program | AbstractDSL = dsl
+    
+    def execute(self):
+        if isinstance(self.dsl,TransformationDSL) : 
+            pass
+        elif isinstance(self.dsl,InformationDSL) :
+            pass
+
+class ProgramNodeTree():
+    def __init__(self):
+        pass
+
+
+class ProgramVarManager():
+    registered_symbols = []
+
+    def __init__(self, symbol:str) :
+        if symbol in ProgramVarManager.registered_symbols :
+            raise ValueError
+        else : 
+            ProgramVarManager.registered_symbols.append(symbol)
+
+        self.symbol = symbol # ex) x, y, z ...
+        self.count = 0
+        self.vars = {}
+    
+    def new_var_name(self) -> str:
+        self.count+=1
+        return self.symbol+str(self.count)
+        # x1, x2, x3 ...
+    
+    def save_var(self,var_name:str,value) -> None:
+        if not(var_name in self.vars.keys()) :
+            raise SyntaxError
+        
+        else :
+            self.vars[var_name] = value
+    
+    def get_var(self,var_name:str) :
+        if not(var_name in self.vars.keys()) :
+            raise SyntaxError
+        
+        else :
+            return self.vars[var_name]

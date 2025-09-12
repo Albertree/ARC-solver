@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from ARCKG.grid import GRID
-from DSLClasses.enums import DSLType, DSLName
-from DSLClasses.ParamType import ParamType
+from .enums import DSLType, DSLName
 from collections.abc import Callable
 
 
@@ -32,13 +31,17 @@ class AbstractDSL:
     
     @abstractmethod
     def to_raw_python_string(self) :
-        pass       
+        pass
+
+    @abstractmethod
+    def core_function(self):
+        pass     
 
     def __str__(self):
-        return self.name
-    
+        return str(self.name)
+
     def __repr__(self):
-        return self.name
+        return f"<DSL {self.name}>"
     
     def __eq__(self, other):
         return self.name == other.name

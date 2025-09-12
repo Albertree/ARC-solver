@@ -1,4 +1,4 @@
-from ARCKG.ARCKG_components import *
+from ARCKG.ARCKG_component import *
 
 
 def make_layer():
@@ -493,13 +493,3 @@ def paste_sub_array(mother_array, pos, sub_array):
 
 # replace -> 없어도 괜찮음
 # 조건에 근거한 selection과 coloring 이면 가능하다.
-
-
-
-
-
-
-
-
-
-

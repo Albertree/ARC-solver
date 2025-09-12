@@ -3,7 +3,7 @@ from enum import Enum
 class DSLType(str,Enum):
     TRANSFORMATION = "transformation"
     PROPERTY = "property"
-    RELATION = "relation"
+    INFORMATION = "information"
     UTILITY = "utility"
     UNKNOWN = "unknown"
 
@@ -21,3 +21,4 @@ class DSLName(str,Enum):
     RECTANGLE = "rectangle"
     CROP = "crop"
     UNKNOWN = "unknown"
+    LONGEST_OBJECT = "longest_object"
