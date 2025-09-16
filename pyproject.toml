@@ -1,12 +1,12 @@
 [tool.pyright]
 exclude = [
     "memory/**",
+    "generated_codes/**",
     "node_modules/**", 
     ".git/**",
     "__pycache__/**"
 ]
-
-[tool.pyright]
 typeCheckingMode = "basic"
 reportMissingImports = false
 reportMissingTypeStubs = false
+reportUndefinedVariable = false

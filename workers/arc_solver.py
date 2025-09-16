@@ -24,18 +24,18 @@ class ARCSolver:
         self.program_manager = ProgramManager()
         # self.programs = []  # Store programs for each pair
 
-    def solve(self):
-        for i, pair in enumerate(self.task.example_pairs):
-            print(f"Processing example pair {i} for task {self.task_hex_code}")
-            lv1_program = self.program_manager.generate_program(pair, i)
-            self.program_manager.save_program(lv1_program, i, "GRID", self.task_hex_code)
-            # lv2_program = self._generate_level_2_program(lv1_program, pair, i)
-            # lv3_program = self._generate_level_3_program(lv2_program, pair, i)
+    # def solve(self):
+    #     for i, pair in enumerate(self.task.example_pairs):
+    #         print(f"Processing example pair {i} for task {self.task_hex_code}")
+    #         lv1_program = self.program_manager.generate_program(pair, i)
+    #         self.program_manager.save_program(lv1_program, i, "GRID", self.task_hex_code)
+    #         # lv2_program = self._generate_level_2_program(lv1_program, pair, i)
+    #         # lv3_program = self._generate_level_3_program(lv2_program, pair, i)
         
-        print(f"Level 1 programs generated for task {self.task_hex_code} in 'result_code'")
-        if lv1_program:
-            for line in lv1_program:
-                print(line)
+    #     print(f"Level 1 programs generated for task {self.task_hex_code} in 'result_code'")
+    #     if lv1_program:
+    #         for line in lv1_program:
+    #             print(line)
 
     # def try_DSL(self):
     #     input_grid = self.task.example_pairs[0].input_grid

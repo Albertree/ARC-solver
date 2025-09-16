@@ -40,7 +40,8 @@ class ARCManager:
     def from_hex_code(task_hex_code: str) -> TASK:
         possible_paths = [
             f"data/ARC_AGI/training/{task_hex_code}.json",
-            f"data/ARC_AGI/evaluation/{task_hex_code}.json"
+            f"data/ARC_AGI/evaluation/{task_hex_code}.json",
+            f"data/{task_hex_code}.json"
         ]
         
         task_data = None

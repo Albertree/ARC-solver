@@ -1,0 +1,11 @@
+{
+    "exclude": [
+      "memory/**",
+      "data/**",
+      "generated_codes/**"
+    ],
+    "typeCheckingMode": "basic",
+    "reportMissingImports": false,
+    "reportMissingTypeStubs": false,
+    "reportUndefinedVariable": false
+  }
