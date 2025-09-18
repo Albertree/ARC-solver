@@ -80,6 +80,8 @@ class PIXEL(GridComponent):
                     pixel_g_edge_path += f'PIXEL_edges'
                     if not os.path.exists(pixel_g_edge_path):
                         os.makedirs(pixel_g_edge_path)
+                        # Create hierarchical subfolders in PIXEL_edges
+                        os.makedirs(f'{pixel_g_edge_path}/PIXEL', exist_ok=True)
         
         # Save under object parents if they exist
         for parent in self.parent:
@@ -110,6 +112,8 @@ class PIXEL(GridComponent):
                             pixel_o_edge_path += f'PIXEL_edges'
                             if not os.path.exists(pixel_o_edge_path):
                                 os.makedirs(pixel_o_edge_path)
+                                # Create hierarchical subfolders in PIXEL_edges
+                                os.makedirs(f'{pixel_o_edge_path}/PIXEL', exist_ok=True)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()

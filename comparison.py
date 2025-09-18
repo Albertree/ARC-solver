@@ -867,14 +867,14 @@ def id_pair_to_comparison_path(id1, id2):
         # PAIR level: "007bbfb7.PAIR_nodes.0"
         pair_num1 = path_parts1[2]
         pair_num2 = path_parts2[2]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_edges/PAIR_{pair_num1}-PAIR_{pair_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_edges/PAIR/PAIR_{pair_num1}-PAIR_{pair_num2}.json"
     elif len(path_parts1) == 5 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes":
         # GRID level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0"
         pair_num1 = path_parts1[2]
         pair_num2 = path_parts2[2]
         grid_num1 = path_parts1[4]
         grid_num2 = path_parts2[4]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/GRID_{grid_num1}-GRID_{grid_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/GRID/GRID_{grid_num1}-GRID_{grid_num2}.json"
     elif len(path_parts1) == 7 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "OBJECT_nodes":
         # OBJECT level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0"
         pair_num1 = path_parts1[2]
@@ -883,7 +883,7 @@ def id_pair_to_comparison_path(id1, id2):
         grid_num2 = path_parts2[4]
         obj_num1 = path_parts1[6]
         obj_num2 = path_parts2[6]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_nodes/GRID_{grid_num1}/OBJECT_edges/OBJECT_{obj_num1}-OBJECT_{obj_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/OBJECT/OBJECT_{obj_num1}-OBJECT_{obj_num2}.json"
     elif len(path_parts1) == 7 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "PIXEL_nodes":
         # PIXEL level (grid direct): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.PIXEL_nodes.0"
         pair_num1 = path_parts1[2]
@@ -892,7 +892,7 @@ def id_pair_to_comparison_path(id1, id2):
         grid_num2 = path_parts2[4]
         pixel_num1 = path_parts1[6]
         pixel_num2 = path_parts2[6]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_nodes/GRID_{grid_num1}/PIXEL_edges/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/PIXEL/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
     elif len(path_parts1) == 9 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "OBJECT_nodes" and path_parts1[7] == "PIXEL_nodes":
         # PIXEL level (object): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0.PIXEL_nodes.0"
         pair_num1 = path_parts1[2]
@@ -903,7 +903,7 @@ def id_pair_to_comparison_path(id1, id2):
         obj_num2 = path_parts2[6]
         pixel_num1 = path_parts1[8]
         pixel_num2 = path_parts2[8]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_nodes/GRID_{grid_num1}/OBJECT_nodes/OBJECT_{obj_num1}/PIXEL_edges/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_nodes/GRID_{grid_num1}/OBJECT_nodes/OBJECT_{obj_num1}/PIXEL_edges/PIXEL/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
     else:
         raise ValueError(f"Invalid id format: {id1} or {id2}")
 
@@ -950,6 +950,11 @@ def load_json_file(json_path):
         return json.load(f)
 
 def save_comparison_result(data, output_path):
+    import os
+    
+    # Create directory structure if it doesn't exist
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
     with open(output_path, 'w') as f:
         json.dump(data, f, indent=2, default=str)
     

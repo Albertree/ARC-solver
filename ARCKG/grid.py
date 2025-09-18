@@ -290,6 +290,10 @@ class GRID(GridComponent) :
         grid_edge_path += f'GRID_edges'
         if not os.path.exists(grid_edge_path):
             os.makedirs(grid_edge_path)
+            # Create hierarchical subfolders in GRID_edges
+            os.makedirs(f'{grid_edge_path}/GRID', exist_ok=True)
+            os.makedirs(f'{grid_edge_path}/OBJECT', exist_ok=True)
+            os.makedirs(f'{grid_edge_path}/PIXEL', exist_ok=True)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()

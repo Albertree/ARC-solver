@@ -183,6 +183,9 @@ class TF_GRID(GRID):
             os.makedirs(object_nodes_path)
         if not os.path.exists(object_edges_path):
             os.makedirs(object_edges_path)
+            # Create hierarchical subfolders in OBJECT_edges
+            os.makedirs(f'{object_edges_path}/OBJECT', exist_ok=True)
+            os.makedirs(f'{object_edges_path}/PIXEL', exist_ok=True)
 
         # Create PIXEL_nodes and PIXEL_edges folders (same structure as GRID)
         pixel_nodes_path = f'{grid_path}/PIXEL_nodes'
@@ -191,6 +194,8 @@ class TF_GRID(GRID):
             os.makedirs(pixel_nodes_path)
         if not os.path.exists(pixel_edges_path):
             os.makedirs(pixel_edges_path)
+            # Create hierarchical subfolders in PIXEL_edges
+            os.makedirs(f'{pixel_edges_path}/PIXEL', exist_ok=True)
 
         # Save objects and pixels if they exist
         if hasattr(self, 'objects') and self.objects:
