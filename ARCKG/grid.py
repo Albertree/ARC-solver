@@ -266,6 +266,10 @@ class GRID(GridComponent) :
         import os
         import json
 
+        # Only save GRID_0 and GRID_1, skip GRID_2+ to prevent intermediate grid folders
+        if self.id > 1:
+            return
+
         grid_dict = self.property
         grid_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_nodes/GRID_{self.id}/'
         if not os.path.exists(grid_path):

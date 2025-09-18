@@ -160,21 +160,46 @@ class TF_GRID(GRID):
         if not os.path.exists(grid_path):
             os.makedirs(grid_path)
 
-        # TFGRID_node - TFGRID_property
-        path = f'{grid_path}/TFGRID_property'
-        file_name = f'TFGRID_{self.id}_property.json'
+        # GRID_property (same structure as GRID folders)
+        path = f'{grid_path}/GRID_property'
+        file_name = f'GRID_{self.id}_property.json'
         if not os.path.exists(path):
             os.makedirs(path)
 
         with open(f'{path}/{file_name}', 'w') as f:
             json.dump(grid_dict, f, indent=2)
 
-         # GRID_edge
+        # GRID_edges (same structure as GRID folders)
         grid_edge_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/'
         grid_edge_path += f'PAIR_nodes/PAIR_{self.parent[0].id}/'
         grid_edge_path += f'TFGRID_edges'
         if not os.path.exists(grid_edge_path):
             os.makedirs(grid_edge_path)
+
+        # Create OBJECT_nodes and OBJECT_edges folders (same structure as GRID)
+        object_nodes_path = f'{grid_path}/OBJECT_nodes'
+        object_edges_path = f'{grid_path}/OBJECT_edges'
+        if not os.path.exists(object_nodes_path):
+            os.makedirs(object_nodes_path)
+        if not os.path.exists(object_edges_path):
+            os.makedirs(object_edges_path)
+
+        # Create PIXEL_nodes and PIXEL_edges folders (same structure as GRID)
+        pixel_nodes_path = f'{grid_path}/PIXEL_nodes'
+        pixel_edges_path = f'{grid_path}/PIXEL_edges'
+        if not os.path.exists(pixel_nodes_path):
+            os.makedirs(pixel_nodes_path)
+        if not os.path.exists(pixel_edges_path):
+            os.makedirs(pixel_edges_path)
+
+        # Save objects and pixels if they exist
+        if hasattr(self, 'objects') and self.objects:
+            for obj in self.objects:
+                obj.to_json()
+        
+        if hasattr(self, 'pixels') and self.pixels:
+            for pixel in self.pixels:
+                pixel.to_json()
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()

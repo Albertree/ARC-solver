@@ -46,9 +46,16 @@ class PIXEL(GridComponent):
         import json
 
         pixel_dict = self.property
+        # Check if parent is TF_GRID to use TFGRID_nodes path
+        parent_grid = self.parent[0]
+        if hasattr(parent_grid, 'type') and parent_grid.type == 'tfgrid':
+            grid_nodes_path = 'TFGRID_nodes'
+        else:
+            grid_nodes_path = 'GRID_nodes'
+            
         pixel_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
         pixel_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        pixel_path += f'GRID_nodes/GRID_{self.parent[0].id}/'
+        pixel_path += f'{grid_nodes_path}/{self.parent[0].type.upper()}_{self.parent[0].id}/'
     
         # PIXEL_node - PIXEL_property
         file_name = f'PIXEL_{self.id}_property.json'
@@ -66,10 +73,10 @@ class PIXEL(GridComponent):
                     with open(f'{path_g}/{file_name}', 'w') as f:
                         json.dump(pixel_dict, f, indent=2)
                     
-                    # PIXEL_edge (if activated, PIXEL_edges will be saved under GRID_nodes/GRID_N/)
+                    # PIXEL_edge (if activated, PIXEL_edges will be saved under GRID_nodes/GRID_N/ or TFGRID_nodes/TFGRID_N/)
                     pixel_g_edge_path = f'memory/TASK_nodes/TASK_{task.hex_code}/'
                     pixel_g_edge_path += f'PAIR_nodes/PAIR_{pair.id}/'
-                    pixel_g_edge_path += f'GRID_nodes/GRID_{grid.id}/'
+                    pixel_g_edge_path += f'{grid_nodes_path}/{grid.type.upper()}_{grid.id}/'
                     pixel_g_edge_path += f'PIXEL_edges'
                     if not os.path.exists(pixel_g_edge_path):
                         os.makedirs(pixel_g_edge_path)
@@ -90,9 +97,15 @@ class PIXEL(GridComponent):
                                 json.dump(pixel_dict, f, indent=2)
 
                             # PIXEL_edge
+                            # Check if object's grid is TF_GRID
+                            if hasattr(obj_grid, 'type') and obj_grid.type == 'tfgrid':
+                                obj_grid_nodes_path = 'TFGRID_nodes'
+                            else:
+                                obj_grid_nodes_path = 'GRID_nodes'
+                                
                             pixel_o_edge_path = f'memory/TASK_nodes/TASK_{obj_task.hex_code}/'
                             pixel_o_edge_path += f'PAIR_nodes/PAIR_{obj_pair.id}/'
-                            pixel_o_edge_path += f'GRID_nodes/GRID_{obj_grid.id}/'
+                            pixel_o_edge_path += f'{obj_grid_nodes_path}/{obj_grid.type.upper()}_{obj_grid.id}/'
                             pixel_o_edge_path += f'OBJECT_nodes/OBJECT_{parent.id}/'
                             pixel_o_edge_path += f'PIXEL_edges'
                             if not os.path.exists(pixel_o_edge_path):

@@ -271,9 +271,16 @@ class OBJECT(GridComponent):
         import json
 
         object_dict = self.property
+        # Check if parent is TF_GRID to use TFGRID_nodes path
+        parent_grid = self.parent[-1]
+        if hasattr(parent_grid, 'type') and parent_grid.type == 'tfgrid':
+            grid_nodes_path = 'TFGRID_nodes'
+        else:
+            grid_nodes_path = 'GRID_nodes'
+            
         object_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
         object_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        object_path += f'GRID_nodes/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
+        object_path += f'{grid_nodes_path}/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
         object_path += f'OBJECT_nodes/OBJECT_{self.id}/'
         if not os.path.exists(object_path):
             os.makedirs(object_path)
@@ -290,7 +297,7 @@ class OBJECT(GridComponent):
         # OBJECT_edge
         object_edge_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
         object_edge_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        object_edge_path += f'GRID_nodes/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
+        object_edge_path += f'{grid_nodes_path}/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
         object_edge_path += f'OBJECT_edges'
         if not os.path.exists(object_edge_path):
             os.makedirs(object_edge_path)
