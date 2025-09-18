@@ -739,18 +739,20 @@ def compare(comp1, comp2, save=True):
     }
 
     if save:
-        save_comparison_result(final_data, id_pair_to_comparison_path(id1, id2))
-        # print(f"Combined comparison data saved to: {id_pair_to_comparison_path(id1, id2)}")
+        # Extract score for score-based folder organization
+        score = 0
+        if "score" in processed_result:
+            try:
+                score = int(processed_result["score"].split("/")[0])
+            except:
+                score = 0
+        
+        output_path = id_pair_to_comparison_path(id1, id2, score)
+        save_comparison_result(final_data, output_path)
 
         return final_data
 
     return final_data
-
-# def compare_from_ids(id1, id2):
-#     comp1 = load_json_file(id_to_json_path(id1))
-#     comp2 = load_json_file(id_to_json_path(id2))
-    
-#     return compare(comp1, comp2)
 
 
 
@@ -848,7 +850,7 @@ def json_path_to_id(json_path):
     else:
         raise ValueError(f"Invalid json path: {json_path}")
     
-def id_pair_to_comparison_path(id1, id2):
+def id_pair_to_comparison_path(id1, id2, score=0):
     root = "memory/"
     
     # id1과 id2는 이제 경로 문자열
@@ -867,14 +869,14 @@ def id_pair_to_comparison_path(id1, id2):
         # PAIR level: "007bbfb7.PAIR_nodes.0"
         pair_num1 = path_parts1[2]
         pair_num2 = path_parts2[2]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_edges/PAIR/PAIR_{pair_num1}-PAIR_{pair_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_edges/PAIR/{score}/PAIR_{pair_num1}-PAIR_{pair_num2}.json"
     elif len(path_parts1) == 5 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes":
         # GRID level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0"
         pair_num1 = path_parts1[2]
         pair_num2 = path_parts2[2]
         grid_num1 = path_parts1[4]
         grid_num2 = path_parts2[4]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/GRID/GRID_{grid_num1}-GRID_{grid_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/GRID/{score}/GRID_{grid_num1}-GRID_{grid_num2}.json"
     elif len(path_parts1) == 7 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "OBJECT_nodes":
         # OBJECT level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0"
         pair_num1 = path_parts1[2]
@@ -883,7 +885,7 @@ def id_pair_to_comparison_path(id1, id2):
         grid_num2 = path_parts2[4]
         obj_num1 = path_parts1[6]
         obj_num2 = path_parts2[6]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/OBJECT/OBJECT_{obj_num1}-OBJECT_{obj_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/OBJECT/{score}/OBJECT_{obj_num1}-OBJECT_{obj_num2}.json"
     elif len(path_parts1) == 7 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "PIXEL_nodes":
         # PIXEL level (grid direct): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.PIXEL_nodes.0"
         pair_num1 = path_parts1[2]
@@ -892,7 +894,7 @@ def id_pair_to_comparison_path(id1, id2):
         grid_num2 = path_parts2[4]
         pixel_num1 = path_parts1[6]
         pixel_num2 = path_parts2[6]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/PIXEL/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/PIXEL/{score}/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
     elif len(path_parts1) == 9 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "OBJECT_nodes" and path_parts1[7] == "PIXEL_nodes":
         # PIXEL level (object): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0.PIXEL_nodes.0"
         pair_num1 = path_parts1[2]
@@ -903,7 +905,7 @@ def id_pair_to_comparison_path(id1, id2):
         obj_num2 = path_parts2[6]
         pixel_num1 = path_parts1[8]
         pixel_num2 = path_parts2[8]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_nodes/GRID_{grid_num1}/OBJECT_nodes/OBJECT_{obj_num1}/PIXEL_edges/PIXEL/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
+        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_nodes/GRID_{grid_num1}/OBJECT_nodes/OBJECT_{obj_num1}/PIXEL_edges/PIXEL/{score}/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
     else:
         raise ValueError(f"Invalid id format: {id1} or {id2}")
 
@@ -954,6 +956,19 @@ def save_comparison_result(data, output_path):
     
     # Create directory structure if it doesn't exist
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # Also create the score-based subfolder structure if it's a comparison result
+    if "result" in data and "score" in data["result"]:
+        try:
+            score = int(data["result"]["score"].split("/")[0])
+            # Extract the base path (without the score folder)
+            path_parts = output_path.split('/')
+            if len(path_parts) >= 2:
+                # Find the score folder in the path and create the full structure
+                base_path = '/'.join(path_parts[:-1])  # Remove the filename
+                os.makedirs(base_path, exist_ok=True)
+        except:
+            pass  # If score extraction fails, just use the original path
     
     with open(output_path, 'w') as f:
         json.dump(data, f, indent=2, default=str)

@@ -301,9 +301,13 @@ class OBJECT(GridComponent):
         object_edge_path += f'OBJECT_edges'
         if not os.path.exists(object_edge_path):
             os.makedirs(object_edge_path)
-            # Create hierarchical subfolders in OBJECT_edges
-            os.makedirs(f'{object_edge_path}/OBJECT', exist_ok=True)
-            os.makedirs(f'{object_edge_path}/PIXEL', exist_ok=True)
+            # Create hierarchical subfolders in OBJECT_edges with score-based folders
+            # OBJECT comparisons: max score 8 (0-8)
+            for score in range(9):
+                os.makedirs(f'{object_edge_path}/OBJECT/{score}', exist_ok=True)
+            # PIXEL comparisons: max score 2 (0-2)
+            for score in range(3):
+                os.makedirs(f'{object_edge_path}/PIXEL/{score}', exist_ok=True)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()
