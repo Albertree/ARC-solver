@@ -1,3 +1,4 @@
+from typing import Any
 from ARCKG.grid import GRID
 from .dsl_abstract import AbstractDSL
 from .dsl_transformation import *
@@ -19,7 +20,8 @@ from enum import Enum
 # }
 
 class Program() :
-
+    id = 0
+    
     def __init__(self, id) -> None:
         self.id = id # should use new_id function for program maintainance.
         self.index = 0
@@ -160,13 +162,21 @@ class ProgramNode():
                  needed_var_names:list[str]=[],                 
                  ) :
         self.status = ProgramStatus.INIT_NODE if len(needed_var_names)==0 else ProgramStatus.NOT_READY
-        self.var_manager = var_manager
-        self.grid_manager = grid_manager
+        self.var_manager:ProgramVarManager = var_manager
+        self.grid_manager:ProgramVarManager = grid_manager
         self.dsl: Program | AbstractDSL = dsl
+        self.needed_var_names = needed_var_names
     
     def execute(self):
+        dsl_kwargs = {}
+        for idx, var_name in enumerate(self.needed_var_names):
+            dsl_kwargs[str(idx)] = self.var_manager.get_var(var_name)
+
         if isinstance(self.dsl,TransformationDSL) : 
-            pass
+            var_results, grid_results = self.dsl.core_function(dsl_kwargs)
+            self.var_manager.update(var_results)
+            self.grid_manager.update(grid_results)
+
         elif isinstance(self.dsl,InformationDSL) :
             pass
 
@@ -176,7 +186,7 @@ class ProgramNodeTree():
 
 
 class ProgramVarManager():
-    registered_symbols = []
+    registered_symbols = [] # symbols that are already in use with other ProgramVarManager instances ex) x, y, z, ...
 
     def __init__(self, symbol:str) :
         if symbol in ProgramVarManager.registered_symbols :
@@ -206,3 +216,9 @@ class ProgramVarManager():
         
         else :
             return self.vars[var_name]
+    
+    def update(self, updates:dict[str,Any]) :
+        for key in updates.keys():
+            self.save_var(key,updates[key])
+
+
