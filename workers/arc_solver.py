@@ -146,7 +146,11 @@ class ARCSolver:
                     object_result = grid_result
 
 
-                # print(f"{len(pair.input_grid.objects) * len(pair.output_grid.objects)} OBJECT comparisons are completed!")
+                # ==================== OBJECT LEVEL ====================
+                # Perform object comparisons
+                for i, obj1 in enumerate(pair.input_grid.objects):
+                    for j, obj2 in enumerate(pair.output_grid.objects):
+                        comparison = compare(obj1, obj2, save=True)
 
                 # make rules from object comparison result
 

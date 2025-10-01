@@ -1,5 +1,5 @@
-from workers.arc_solver import ARCSolver
 from managers.arc_manager import ARCManager
+from workers.arc_solver import ARCSolver
 from basics.utils import printcg
 
 if __name__ == "__main__":
@@ -10,7 +10,8 @@ if __name__ == "__main__":
     # TASK_HEX_CODE = "aabf363d" # 객체 좌하단 픽셀 색으로 색칠하기
     # TASK_HEX_CODE = "ae3edfdc" # 빨강 파랑 점 기준으로 픽셀 모임
     # TASK_HEX_CODE = "00000000" # 내가 만든 rotate 문제
-    TASK_HEX_CODE = "1b8318e3" # 회색 객체로 모이는 픽셀 이동
+    # TASK_HEX_CODE = "1b8318e3" # 회색 객체로 모이는 픽셀 이동
+    TASK_HEX_CODE = "b745798f" # 테두리 구석 칠하기
     
     task = ARCManager.from_hex_code(TASK_HEX_CODE)
 

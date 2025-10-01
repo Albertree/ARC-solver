@@ -476,6 +476,76 @@ import os
 import json
 
 
+def shapes_are_equivalent(shape1, shape2):
+    """
+    Check if two shapes are equivalent considering rotations and reflections.
+    Returns True if the shapes are the same after any rotation (0°, 90°, 180°, 270°) 
+    or reflection (horizontal, vertical, diagonal, anti-diagonal).
+    """
+    if not shape1 or not shape2:
+        return shape1 == shape2
+    
+    # First check if they're exactly the same
+    if shape1 == shape2:
+        return True
+    
+    # Check all rotations
+    for rotation in [0, 90, 180, 270]:
+        rotated_shape = rotate_shape(shape1, rotation)
+        if rotated_shape == shape2:
+            return True
+    
+    # Check all reflections
+    for reflection in ['horizontal', 'vertical', 'diagonal', 'antidiagonal']:
+        reflected_shape = reflect_shape(shape1, reflection)
+        if reflected_shape == shape2:
+            return True
+        
+        # Check combinations of rotation and reflection
+        for rotation in [0, 90, 180, 270]:
+            rotated_reflected = rotate_shape(reflected_shape, rotation)
+            if rotated_reflected == shape2:
+                return True
+    
+    return False
+
+def rotate_shape(shape, degrees):
+    """Rotate a 2D shape by the specified degrees (0, 90, 180, 270)."""
+    if not shape or degrees == 0:
+        return shape
+    
+    if degrees == 90:
+        # 90 degrees clockwise: transpose then reverse each row
+        return [list(row[::-1]) for row in zip(*shape)]
+    elif degrees == 180:
+        # 180 degrees: reverse rows then reverse each row
+        return [row[::-1] for row in shape[::-1]]
+    elif degrees == 270:
+        # 270 degrees clockwise: reverse each row then transpose
+        return [list(row) for row in zip(*[row[::-1] for row in shape])]
+    
+    return shape
+
+def reflect_shape(shape, reflection_type):
+    """Reflect a 2D shape along the specified axis."""
+    if not shape:
+        return shape
+    
+    if reflection_type == 'horizontal':
+        # Flip horizontally (reverse each row)
+        return [row[::-1] for row in shape]
+    elif reflection_type == 'vertical':
+        # Flip vertically (reverse rows)
+        return shape[::-1]
+    elif reflection_type == 'diagonal':
+        # Reflect along main diagonal
+        return [list(row) for row in zip(*shape)]
+    elif reflection_type == 'antidiagonal':
+        # Reflect along anti-diagonal
+        return [list(row[::-1]) for row in zip(*shape)][::-1]
+    
+    return shape
+
 def get_comparison_data(comparison_result):
     def count_comm_in_category(category_data, count_leaf_nodes_only=False):
         comm_count = 0
@@ -644,17 +714,25 @@ def compare_nested_json(comp1, comp2, path=""):
         is_2d = any(isinstance(item, list) for item in comp1) or any(isinstance(item, list) for item in comp2)
         
         if is_2d:
-            # For 2D lists, check if each sublist has the same set of elements and same length
-            all_common = True
-            for i, (sublist1, sublist2) in enumerate(zip(comp1, comp2)):
-                if not isinstance(sublist1, list) or not isinstance(sublist2, list):
-                    all_common = False
-                    break
-                if set(sublist1) != set(sublist2) or len(sublist1) != len(sublist2):
-                    all_common = False
-                    break
-            
-            result["type"] = "COMM" if all_common else "DIFF"
+            # Special handling for shape comparison - check if this is a shape field
+            if path.endswith("shape") or "shape" in path:
+                # Use rotation and reflection invariant comparison for shapes
+                if shapes_are_equivalent(comp1, comp2):
+                    result["type"] = "COMM"
+                else:
+                    result["type"] = "DIFF"
+            else:
+                # For other 2D lists, check if each sublist has the same set of elements and same length
+                all_common = True
+                for i, (sublist1, sublist2) in enumerate(zip(comp1, comp2)):
+                    if not isinstance(sublist1, list) or not isinstance(sublist2, list):
+                        all_common = False
+                        break
+                    if set(sublist1) != set(sublist2) or len(sublist1) != len(sublist2):
+                        all_common = False
+                        break
+                
+                result["type"] = "COMM" if all_common else "DIFF"
         else:
             # For 1D lists, check if both lists have the same set of elements
             if set(comp1) == set(comp2):
