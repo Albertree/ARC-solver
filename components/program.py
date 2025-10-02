@@ -25,35 +25,28 @@ class Program() :
     def __init__(self, id) -> None:
         self.id = id # should use new_id function for program maintainance.
         self.index = 0
-        self.program_variables = ProgramVarManager("x")
-        self.program_grids = ProgramVarManager("tfg")
-        self.tree: ProgramNodeTree | ProgramNode = None
+        self.program_variables = ProgramVarStorage('value')
+        self.program_grids = ProgramVarStorage('grid')
+        self.nodes: list[ProgramNode]  = None
 
     ### Program property manipulation methods ### 
 
     def set_id(self,id:str) -> None :
         self.id= id
     
-    def set_subprograms(self,subprograms) :
-        self.tree = subprograms
+    def set_nodes(self,node_list) :
+        self.initial_nodes = node_list
 
-    def append_subprogram(self,subprogram) :
-        index_str = len(subprogram)+1
-        self.subprograms[index_str] = subprogram
+    def append_initial_node(self,node,prior_node_id) :
+        # self.tree.append(program_node)
+        pass
 
-    def append(self,idx:int,subprograms:list) : 
-        self.subprograms = self.subprograms[:idx]+subprograms+self.subprograms[idx:]
-
-    def replace_subprogram(self, idx:int, new_program) :
-        popped = self.subprograms[str(idx)]
-        self.subprograms[str(idx)] = new_program
-        return popped
 
     @classmethod
     def splice(self,new_id:str,start_idx:int, end_idx:int):
         spliced = Program(new_id)
-        spliced.set_subprogram(self.subprograms[start_idx:end_idx])
-        self.set_subprogram(self.subprograms[:start_idx]+self.set_subprograms[end_idx:])
+        spliced.set_tree(self.subprograms[start_idx:end_idx])
+        self.set_tree(self.subprograms[:start_idx]+self.set_subprograms[end_idx:])
         return spliced
 
     #### class parsing methods ####
@@ -91,15 +84,9 @@ class Program() :
     ### Program application methods ### 
 
     def execute(self,grid:GRID) -> GRID :
-        for subprogram in self.subprograms :
-            if isinstance(subprogram, Program) :
-                grid = subprogram.execute(grid)
-            elif isinstance(subprogram,AbstractDSL) : 
-                grid = subprogram.execute(grid)
-            else :
-                raise ValueError
-        
-        return grid
+        for init_node in self.tree.get_init_nodes() :        
+            return
+        pass
 
     
     ### double underscore methods ### 
@@ -147,8 +134,6 @@ class Program() :
             pass
 
 
-
-
 class ProgramStatus(Enum) :
     INIT_NODE="init_node"
     NOT_READY = "not_ready"
@@ -156,69 +141,114 @@ class ProgramStatus(Enum) :
     IN_PROGRESS="in_progress"
     DONE="done"
 
+# programNode metadata example
+# {
+#     'vars' : ['grid','ccw'],
+#        
+# }
+
+
+# programNode result parcel example
+# {
+#     '3' : {                 # variables for node id 3
+#         'grid' : ('tfg',3),    # node id 3's 'grid' variable can be accessed via tfg3
+#     },
+#     '4' : {
+#         'ccw' : ('x',2)        # node id 4's 'ccw' variable can be accessed via x2
+#     }   
+# }
+
+
 class ProgramNode():
-    def __init__(self, var_manager, grid_manager, 
-                 dsl:AbstractDSL,
-                 needed_var_names:list[str]=[],                 
+    def __init__(self, node_id, next_nodes:list[int], 
+                 dsl:AbstractDSL,                
                  ) :
-        self.status = ProgramStatus.INIT_NODE if len(needed_var_names)==0 else ProgramStatus.NOT_READY
-        self.var_manager:ProgramVarManager = var_manager
-        self.grid_manager:ProgramVarManager = grid_manager
-        self.dsl: Program | AbstractDSL = dsl
-        self.needed_var_names = needed_var_names
+        self.id = node_id
+        self.next_nodes = next_nodes
+        self.dsl = dsl
+        self.dsl
+
+        self.vars = {}
+        for key in dsl.args.keys():     # dsl args are 
+            self.vars[key] = None       # initialize all vars into None
+
+    def save_prior_results(self,parcels) :
+        if str(self.id) in parcels.keys() :
+            my_parcel = parcels[str(self.id)]
+            for key in my_parcel.keys():
+                symbol, idx = my_parcel[key]
+                self.vars[key] = ProgramVarStorage.get_var(symbol,idx)
+        
+
+    def run_dsl(self):
+        self.dsl.core_function(**(self.vars))
+        return {}
     
+    def is_ready(self):
+        for key in self.vars.keys() :
+            if self.vars[key]==None :
+                return False
+        
+        return True
+
     def execute(self):
-        dsl_kwargs = {}
-        for idx, var_name in enumerate(self.needed_var_names):
-            dsl_kwargs[str(idx)] = self.var_manager.get_var(var_name)
+        if len(self.prior_nodes) >0 : 
+            for prior_node in self.prior_nodes :
+                if not prior_node.is_ready() :
+                    prior_node.execute()
+    
+        result = self.dsl.run_dsl()
+        for nodes in self.next_nodes :
+            nodes.save_prior_results(result)
+        
+        return True
 
-        if isinstance(self.dsl,TransformationDSL) : 
-            var_results, grid_results = self.dsl.core_function(dsl_kwargs)
-            self.var_manager.update(var_results)
-            self.grid_manager.update(grid_results)
-
-        elif isinstance(self.dsl,InformationDSL) :
-            pass
-
-class ProgramNodeTree():
-    def __init__(self):
-        pass
+            
 
 
-class ProgramVarManager():
+class ProgramVarStorage():
     registered_symbols = [] # symbols that are already in use with other ProgramVarManager instances ex) x, y, z, ...
+    vars = {}
 
-    def __init__(self, symbol:str) :
-        if symbol in ProgramVarManager.registered_symbols :
+    def __init__(self) :
+        pass
+    
+    def append_symbol(symbol:str) :
+        if symbol in ProgramVarStorage.registered_symbols :
             raise ValueError
         else : 
-            ProgramVarManager.registered_symbols.append(symbol)
+            ProgramVarStorage.registered_symbols.append(symbol)
+            ProgramVarStorage.vars[symbol] = []
 
-        self.symbol = symbol # ex) x, y, z ...
-        self.count = 0
-        self.vars = {}
-    
-    def new_var_name(self) -> str:
-        self.count+=1
-        return self.symbol+str(self.count)
-        # x1, x2, x3 ...
-    
-    def save_var(self,var_name:str,value) -> None:
-        if not(var_name in self.vars.keys()) :
-            raise SyntaxError
+    @staticmethod
+    def append_var(symbol:str,value) -> tuple[str,int]:
+        if not(symbol in ProgramVarStorage.registered_symbols) :
+            raise ValueError("unknown variable symbol")
+
+        else :
+            ProgramVarStorage.vars[symbol].append(value)
+            idx = len(ProgramVarStorage.vars[symbol])-1
+            return (symbol,idx)
+     
+    @staticmethod
+    def save_var(symbol:str,idx:int, value) -> None:
+        if not((symbol in ProgramVarStorage.registered_symbols) and idx< len(ProgramVarStorage.vars[symbol])):
+            raise ValueError
         
         else :
-            self.vars[var_name] = value
+            ProgramVarStorage.vars[symbol][idx] = value
     
-    def get_var(self,var_name:str) :
-        if not(var_name in self.vars.keys()) :
-            raise SyntaxError
+    @staticmethod
+    def get_var(symbol:str,idx:int) :
+        if not((symbol in ProgramVarStorage.registered_symbols) and idx< len(ProgramVarStorage.vars[symbol])):
+            raise ValueError
         
         else :
-            return self.vars[var_name]
+            return ProgramVarStorage.vars[symbol][idx]
     
-    def update(self, updates:dict[str,Any]) :
+    @staticmethod
+    def update(updates:dict[str,Any]) :
         for key in updates.keys():
-            self.save_var(key,updates[key])
+            ProgramVarStorage.save_var(key,updates[key])
 
 
