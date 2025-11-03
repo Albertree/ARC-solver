@@ -18,7 +18,7 @@ def extract_comparison_level(id):
         return "UNKNOWN"
 
 def load_matching_rules(comparison_level, category_key):
-    rule_basket_dir = "rule_basket"
+    rule_basket_dir = "DSL_precondition"
     rules = []
     
     if not os.path.exists(rule_basket_dir):

@@ -193,6 +193,7 @@ def line_flip(grid, selection, direction, pivot):
     
     return layer
 
+# 5. point_flip
 def point_flip(grid, selection, pivot):
     layer = make_layer()
 
@@ -236,7 +237,7 @@ def point_flip(grid, selection, pivot):
     
     return layer
 
-# 5. move
+# 6. move
 def move(grid, selection, direction, distance):
     layer = make_layer()
     
@@ -252,7 +253,7 @@ def move(grid, selection, direction, distance):
 
     return layer
 
-# 6. teleport
+# 7. teleport
 def teleport(grid, selection, grab, destination):
     layer = make_layer()
 
@@ -278,7 +279,7 @@ def teleport(grid, selection, grab, destination):
 
     return layer
 
-# 7. connect
+# 8. connect
 def connect(grid, selection, color):
     assert len(selection.coordinate) == 2
     point1 = selection.coordinate[0]
@@ -303,7 +304,7 @@ def connect(grid, selection, color):
 
     return layer
 
-# 8. straight_line
+# 9. straight_line
 def straight_line(grid, selection, direction, length, color):
     # (0,1)   - right,
     # (1,1)   - down-right,
@@ -331,7 +332,7 @@ def straight_line(grid, selection, direction, length, color):
 
     return layer
 
-# 9. rectangle
+# 10. rectangle
 def rectangle(grid, selection, color):
     assert len(selection.coordinate) == 2
     point1 = selection.coordinate[0]
@@ -344,7 +345,7 @@ def rectangle(grid, selection, color):
             layer[30 + i][30 + j] = color
     return layer
 
-# 10. crop
+# 11. crop
 def crop(grid, selection):
     layer = make_edit_space()
     for i in range(len(selection.bbox)):

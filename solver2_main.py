@@ -1,3 +1,4 @@
+from ARCKG.task import TASK
 from managers.arc_manager import ARCManager
 from workers.arc_solver import ARCSolver
 from basics.utils import printcg
@@ -6,7 +7,8 @@ from basics.utils import printcg
 if __name__ == "__main__":
     # TASK_HEX_CODE = "08ed6ac7"
     # TASK_HEX_CODE = "rota000a"
-    TASK_HEX_CODE = "lflp000b"
+    # TASK_HEX_CODE = "lflp000a"
+    TASK_HEX_CODE = "move000b"
 
     task = ARCManager.from_hex_code(TASK_HEX_CODE)
     
