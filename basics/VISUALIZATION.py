@@ -1,9 +1,11 @@
 import json
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 # from .ARCLOADER import *
 
-settings = json.load(open('./basics/settings.json', 'r'))
+_settings_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.json')
+settings = json.load(open(_settings_path, 'r'))
 colors_rgb = settings['colors_rgb']
 
 # color note 
@@ -27,105 +29,371 @@ colors_rgb = settings['colors_rgb']
 # ]
 # }
 
-def _plot_grid(ax, grid_data, color='#AAB7B8', alpha=1.0, linewidth=1.5):
-    """Helper function to plot a single grid on a given matplotlib axis."""
-    ax.grid(True, which='both', color=color, alpha=alpha, linewidth=linewidth)
-    ax.xaxis.set_ticks_position('top')
-    ax.set_xticks([x - 0.5 for x in range(1 + np.array(grid_data).shape[1])])
-    ax.yaxis.set_ticks_position('left')
-    ax.set_yticks([x - 0.5 for x in range(1 + np.array(grid_data).shape[0])])
-    ax.tick_params(top=False, labeltop=False, left=False, labelleft=False)
-    ax.imshow(grid_data)
-
-def _plot_grids_in_row(grids, titles=None):
-    """Plots a list of grids in a single row."""
-    num_grids = len(grids)
-    fig, axs = plt.subplots(1, num_grids, figsize=(4 * num_grids, 4))
-    if num_grids == 1:
-        axs = [axs]  # Make it iterable for consistency
-    
-    rgb_grids = [_convert_to_rgb(grid) for grid in grids]
-
-    for i, grid in enumerate(rgb_grids):
-        _plot_grid(axs[i], grid)
-        if titles and i < len(titles):
-            axs[i].set_title(titles[i])
-
-    plt.tight_layout()
-    plt.show()
-
-def _plot_multiple_pairs(pairs):
-    """Plots multiple pairs of grids, each pair in its own row."""
-    num_pairs = len(pairs)
-    fig, axs = plt.subplots(num_pairs, 2, figsize=(8, 4 * num_pairs))
-    if num_pairs == 1:
-        axs = [axs] # Make it iterable
-
-    for i, pair in enumerate(pairs):
-        rgb_input = _convert_to_rgb(pair[0])
-        rgb_output = _convert_to_rgb(pair[1])
-        
-        ax_input = axs[i][0]
-        ax_output = axs[i][1]
-        
-        _plot_grid(ax_input, rgb_input)
-        ax_input.set_title(f"Pair {i+1}: Input")
-        
-        _plot_grid(ax_output, rgb_output)
-        ax_output.set_title(f"Pair {i+1}: Output")
-        
-    plt.tight_layout()
-    plt.show()
-
-def _convert_to_rgb(data):
-    """Converts a grid of color indices to an RGB grid."""
-    if not isinstance(data, list) or not data:
-        return []
-    return [[colors_rgb[value] for value in row] for row in data]
-
-def plot_data(data):
-    """
-    Plots ARC grids. Dispatches to the appropriate plotting function based on data structure.
-    - Single grid: [[]]
-    - List of grids (e.g., triplet): [[[]], [[]], [[]]]
-    - List of pairs: [[input, output], [input, output]]
-    """
-    if not isinstance(data, list):
-        print("Invalid data format: Input must be a list.")
-        return
-    
-    # Check for a list of pairs
-    is_list_of_pairs = all(isinstance(item, list) and len(item) == 2 and isinstance(item[0], list) and isinstance(item[0][0], list) for item in data)
-    
-    # Check for a single grid
-    is_single_grid = all(isinstance(row, list) and all(isinstance(val, int) for val in row) for row in data)
-    
-    # Check for a list of grids (e.g., a pair or triplet)
-    is_list_of_grids = all(isinstance(grid, list) and all(isinstance(row, list) for row in grid) for grid in data) and not is_list_of_pairs
-
-    if is_single_grid:
-        _plot_grids_in_row([data], titles=["Grid"])
-    elif is_list_of_grids:
-        titles = []
-        if len(data) == 2:
-            titles = ["Input", "Output"]
-        elif len(data) == 3:
-            titles = ["Input", "Expected Output", "Generated Output"]
-        _plot_grids_in_row(data, titles=titles)
-    elif is_list_of_pairs:
-        _plot_multiple_pairs(data)
-    else:
-        # Fallback for complex structures or debugging
-        print("Unrecognized data structure for plotting.")
-
-# Keep old functions for now to avoid breaking other parts of the codebase.
-# They can be removed after confirming everything works with the new structure.
+# convert color grid to rbg grid
 def convert_data(datas, dim):
-    return datas # No-op for now
-def spliter_full(grid):
-    return grid
+    result = []
+    if dim == 1:
+        result = [[colors_rgb[datas]]]
+
+    elif dim == 2: # dim = (row, col)
+        for line in datas:
+            d_grid = [colors_rgb[value] for value in line]
+            result.append(d_grid)
+
+    elif dim == 3: # dim = (input & output(2), row, col)
+        for data in datas:
+            for line in data:
+                d_input = [[colors_rgb[value] for value in line] for line in datas[0]]
+                d_output = [[colors_rgb[value] for value in line] for line in datas[1]]
+        result.append(d_input)
+        result.append(d_output)
+
+    elif dim == 4: # dim = (number of pairs(p), input & output(2), row, col)
+        for pair in datas:
+            resul = []
+            for data in pair:
+                for line in data:
+                    d_input = [[colors_rgb[value] for value in line] for line in pair[0]]
+                    d_output = [[colors_rgb[value] for value in line] for line in pair[1]]
+            resul.append(d_input)
+            resul.append(d_output)
+            result.append(resul)
+
+    elif dim == 5:
+        for data in datas:
+            resul = []
+            for row in data:
+                if row != None:
+                    d_objects = [[colors_rgb[value] for value in line] for line in row]
+                else:
+                    d_objects = None
+                resul.append(d_objects)
+            result.append(resul)
+
+    elif dim == 6: # dim = transformation history (rows, 5 columns, grid_height, grid_width)
+        for row in datas:
+            row_result = []
+            for grid in row:
+                if grid is None:
+                    # Handle None (empty) grids
+                    row_result.append(None)
+                else:
+                    # Convert each grid's colors to RGB
+                    grid_result = [[colors_rgb[value] for value in line] for line in grid]
+                    row_result.append(grid_result)
+            result.append(row_result)
+
+    elif dim == 10:
+        result = [[], []]
+        for line in datas[0][0]:
+            d_grid = [colors_rgb[value] for value in line]
+            result[0].append(d_grid)
+        
+        for data in datas[1]:
+            resul = []
+            for line in data:
+                d_colors = [colors_rgb[value] for value in line]
+                resul.append(d_colors)
+            result[1].append(resul)
+
+    else:
+        raise Exception("Invalid data dimension: ")
+    
+    return result
+
+# detected object list reformation to have five columns
 def detected_object_reform(datas):
-    return datas
+    obj_num = len(datas)
+    col_num = 5
+    row_num = obj_num // col_num + 1
+    adds = col_num - (obj_num % col_num) 
+
+    for i in range(adds):
+        datas.append(None)
+
+    result = []
+    for i in range(row_num):
+        resul = []
+        for j in range(col_num): 
+            resul.append(datas[i * col_num + j]) 
+        result.append(resul)
+
+    if result[-1] == [None for _ in range(col_num)]:
+        result.pop()
+
+    return result
+
+
+# split grid into 10 colors
+def spliter_full(grid):
+    assert type(grid[0][0]) == int 
+    dim1 = len(grid)
+    dim2 = len(grid[0])
+
+    result = [[grid], None] # [[[2d-ori]], [[2d-0], [2d-1], [2d-2], ... [2d-9]]]
+    frame = [[[13 for _ in range(dim2)] for _ in range(dim1)] for _ in range(10)]
+
+    for i in range(dim1):
+        for j in range(dim2):
+            frame[grid[i][j]][i][j] = grid[i][j]
+    result[1] = frame
+
+    return result
+
+
+# plot grid
+def plot_data(datas, keyword = None):
+    if keyword == "tencolorsplit":
+        datas = spliter_full(datas)
+    elif keyword == "objects":
+        datas = detected_object_reform(datas)
+    elif keyword == "tf_history":
+        # Handle transformation history with 5 columns specifically
+        pass  # Data structure is already correct for this case
+
+    # check data dimension
+    if type(datas) == int:
+        dim = 1
+    elif type(datas[0]) == int:
+        datas = [datas]
+        dim = 2
+    elif type(datas[0][0]) == int:
+        dim = 2
+    elif type(datas[0][0][0]) == int:
+        assert len(datas) == 2
+        dim = 3
+    elif type(datas[0][0][0][0]) == int:
+        # plot 10 color split (datas must be the output of spliter)
+        if keyword == "tencolorsplit":
+            assert len(datas) == 2 # [original, ten splits]
+            assert len(datas[0]) == 1
+            assert type(datas[0][0][0][0]) == int # [0][0][dim1][dim2]
+            assert len(datas[1]) == 10
+            assert type(datas[1][9][0][0]) == int # [1][0 - 9][dim1][dim2]
+            dim = 10
+
+        elif keyword == "objects":
+            dim = 5
+            
+        elif keyword == "tf_history":
+            # Check if all rows have exactly 5 columns
+            assert all(len(row) == 5 for row in datas)
+            dim = 6  # New dimension for transformation history
+
+        else:
+            dim = 4
+    elif type(datas[0][0][0][0][0]) == int:
+        assert len(datas) == 2
+        new = []
+        for tr in datas[0]:
+            new.append(tr)
+        for te in datas[1]:
+            new.append(te)
+        datas = new
+        dim = 4
+    else:
+        raise Exception("Invalid data dimension")
+    
+    datas = convert_data(datas, dim)
+    color = '#AAB7B8' # 'purple'
+    alpha = 1
+    linewidth = 1.5
+
+    # plot grids depending on the dimension
+    if dim == 1:
+        num_data = 1
+
+        fig, ax = plt.subplots(1, 1, figsize = (4, 4))
+        plt.tight_layout()
+
+        ax.grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth)
+        ax.xaxis.set_ticks_position('top')
+        ax.set_xticks([x - 0.50 for x in range(1 + (np.array(datas).shape[1]))])
+        ax.yaxis.set_ticks_position('left')
+        ax.set_yticks([x - 0.50 for x in range(1 + (np.array(datas).shape[0]))])
+        ax.tick_params(top = False, labeltop = False, left = False, labelleft = False) 
+        ax.imshow(datas)
+
+    elif dim == 2: # dim = (row, col)
+        num_data = len(datas)
+
+        fig, ax = plt.subplots(1, 1, figsize = (4, 4))
+        plt.tight_layout()
+
+        ax.grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth) 
+        ax.xaxis.set_ticks_position('top')
+        ax.set_xticks([x - 0.50 for x in range(1 + (np.array(datas).shape[1]))])
+        ax.yaxis.set_ticks_position('left')
+        ax.set_yticks([x - 0.50 for x in range(1 + (np.array(datas).shape[0]))])
+        ax.tick_params(top = False, labeltop = False, left = False, labelleft = False)
+        ax.imshow(datas)
+        
+        plt.show()
+
+    elif dim == 3: # dim = (input & output(2), row, col)
+        num_data = len(datas)
+
+        fig, axs = plt.subplots(1, 2, figsize = (8, 4 * num_data))
+        plt.tight_layout()
+        
+        for i in range(2):
+            axs[i].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth) 
+            axs[i].xaxis.set_ticks_position('top')
+            axs[i].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[i]).shape[1]))]) # atleast_2d
+            axs[i].yaxis.set_ticks_position('left')
+            axs[i].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[i]).shape[0]))]) # atleast_2d
+            axs[i].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+            axs[i].imshow(datas[i])
+
+        plt.show()
+
+    elif dim == 4: # dim = (number of pairs(p), input & output(2), row, col)
+        num_data = len(datas)
+        fig, axs = plt.subplots(num_data, 2, figsize=(6, 3 * num_data))
+        plt.tight_layout()
+
+        if num_data == 1:
+            datas = datas[0]
+            for i in range(num_data):
+                for j in range(2):
+                    axs[j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth)    
+                    axs[j].xaxis.set_ticks_position('top')
+                    axs[j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[j]).shape[1]))])
+                    axs[j].yaxis.set_ticks_position('left')
+                    axs[j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[j]).shape[0]))])
+                    axs[j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                    axs[j].imshow(datas[j])
+        else:
+            for i in range(num_data):
+                for j in range(2):
+                    axs[i, j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth)    
+                    axs[i, j].xaxis.set_ticks_position('top')
+                    axs[i, j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[1]))])
+                    axs[i, j].yaxis.set_ticks_position('left')
+                    axs[i, j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[0]))])
+                    axs[i, j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                    axs[i, j].imshow(datas[i][j])
+
+        plt.show()
+
+
+    # for detected objects (undefined number display)
+    elif dim == 5:
+        num_data = len(datas)
+
+        num_row = len(datas)
+        num_col = len(datas[0])
+
+        fig, axs = plt.subplots(num_row, num_col, figsize = (3*num_col, 3*num_row))
+        plt.tight_layout()
+        
+    
+        if num_row == 1:
+            for i in range(num_row):
+                for j in range(num_col):
+                    if datas[i][j] == None:
+                        axs[j].axis('off')
+                    else:
+                        axs[j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth) 
+                        axs[j].xaxis.set_ticks_position('top')
+                        axs[j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[1]))])
+                        axs[j].yaxis.set_ticks_position('left')
+                        axs[j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[0]))])
+                        axs[j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                        axs[j].imshow(datas[i][j])
+
+        else:
+            for i in range(num_row):
+                for j in range(num_col):
+
+                    if datas[i][j] == None:
+                        axs[i, j].axis('off')
+                    else:
+                        axs[i, j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth) 
+                        axs[i, j].xaxis.set_ticks_position('top')
+                        axs[i, j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[1]))])
+                        axs[i, j].yaxis.set_ticks_position('left')
+                        axs[i, j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[0]))])
+                        axs[i, j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                        axs[i, j].imshow(datas[i][j])
+
+        plt.show()
+
+
+
+    elif dim == 10:
+        num_data = len(datas)
+
+        fig, axs = plt.subplots(num_data, 10, figsize = (20, 4))
+        plt.tight_layout()
+
+        for i in range(num_data):                
+            for j in range(10):
+                if i == 0:
+                    if j == 0:  
+                        axs[i, j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth) 
+                        axs[i, j].xaxis.set_ticks_position('top')
+                        axs[i, j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[i]).shape[1]))])
+                        axs[i, j].yaxis.set_ticks_position('left')
+                        axs[i, j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[i]).shape[1]))])
+                        axs[i, j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                        axs[i, j].imshow(datas[i])
+
+                    else:
+                        axs[i, j].axis('off')
+                        
+                else:
+                    axs[i, j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth)    
+                    axs[i, j].xaxis.set_ticks_position('top')
+                    axs[i, j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[i]).shape[1]))])
+                    axs[i, j].yaxis.set_ticks_position('left')
+                    axs[i, j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[i]).shape[1]))])
+                    axs[i, j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                    axs[i, j].imshow(datas[i][j])
+
+        plt.show()
+
+    # for transformation history (5 columns fixed)
+    elif dim == 6:
+        num_row = len(datas)
+        num_col = 5  # Always 5 columns for transformation history
+
+        fig, axs = plt.subplots(num_row, num_col, figsize = (3*num_col, 3*num_row))
+        plt.tight_layout()
+        
+        if num_row == 1:
+            for j in range(num_col):
+                if datas[0][j] is None:
+                    # Handle None (empty) grids - turn off axis completely
+                    axs[j].axis('off')
+                else:
+                    axs[j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth) 
+                    axs[j].xaxis.set_ticks_position('top')
+                    axs[j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[0][j]).shape[1]))])
+                    axs[j].yaxis.set_ticks_position('left')
+                    axs[j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[0][j]).shape[0]))])
+                    axs[j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                    axs[j].imshow(datas[0][j])
+        else:
+            for i in range(num_row):
+                for j in range(num_col):
+                    if datas[i][j] is None:
+                        # Handle None (empty) grids - turn off axis completely
+                        axs[i, j].axis('off')
+                    else:
+                        axs[i, j].grid(True, which = 'both', color = color, alpha = alpha, linewidth = linewidth) 
+                        axs[i, j].xaxis.set_ticks_position('top')
+                        axs[i, j].set_xticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[1]))])
+                        axs[i, j].yaxis.set_ticks_position('left')
+                        axs[i, j].set_yticks([x - 0.50 for x in range(1 + (np.array(datas[i][j]).shape[0]))])
+                        axs[i, j].tick_params(top = False, labeltop = False, left = False, labelleft = False)
+                        axs[i, j].imshow(datas[i][j])
+
+        plt.show()
+
+    else:
+        raise Exception("Invalid data dimension: ", dim)
+
 
 
 # if __name__ == "__main__":

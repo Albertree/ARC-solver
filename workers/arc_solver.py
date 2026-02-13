@@ -4,16 +4,15 @@ import os
 import ast
 import json
 # from .program_optimizer import ProgramOptimizer
-from comparison import * 
+from ARCKG.comparison import * 
 from pprint import pprint
-from make_rule import get_matching_actions
-from program import ProgramManager
+from program_gen import ProgramManager, get_matching_actions
 
-from DSL.my_apply_DSL import *
-from DSL.my_DSL import *
-from DSL.my_selection import *
-from DSL.my_layer_DSL import *
-from DSL.my_transformation_DSL import *
+from DSL.apply import *
+from DSL.object_finder import *
+from DSL.selection import *
+from DSL.layer import *
+from DSL.transformation import *
 from basics.utils import printcg
 
 

@@ -213,5 +213,6 @@ memory/
 # Result code
 result_code/
 
-# Generated codes
+# Generated / output files (not under memory/)
+outputs/
 generated_codes/

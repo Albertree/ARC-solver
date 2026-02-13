@@ -1,4 +1,4 @@
-from DSL.my_layer_DSL import make_layer
+from DSL.layer import make_layer
 
 # SELECTION
 def selection_to_colorgrid(selection, main_grid):

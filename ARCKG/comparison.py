@@ -470,8 +470,6 @@
 #     # Save to JSON file
 #     output_path = f"comparison_result_{TASK_HEX_CODE}_{typ}.json"
 #     save_comparison_result(result, output_path, id1, id2)
-from managers.arc_manager import ARCManager
-from pprint import pprint
 import os
 import json
 
@@ -1057,8 +1055,10 @@ def save_comparison_result(data, output_path):
 
 
 if __name__ == "__main__":
-    # comparing from memory (.json)
+    from pprint import pprint
+    from managers.arc_manager import ARCManager
 
+    # comparing from memory (.json)
     TASK_HEX_CODE = "08ed6ac7"
     task = ARCManager.from_hex_code(TASK_HEX_CODE)
 

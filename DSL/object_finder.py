@@ -1,4 +1,4 @@
-from DSL.hodel_DSL import *
+from DSL.base import *
 
 
 def togrid(data): # list of tuples [(color, (row, col))]

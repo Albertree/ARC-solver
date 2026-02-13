@@ -1,49 +1,37 @@
-from ARCKG.ARCKG_components import *
+from DSL.layer import make_layer, make_edit_space
+from DSL.types import *
+from basics.utils import printcg
 
 
-def make_layer():
-    return [[13 for _ in range(90)] for _ in range(90)]
-
-def make_edit_space():
-    return [[12 for _ in range(90)] for _ in range(90)]
-
-def make_selection_layer(selection, with_color_from_main_grid=False):
-    layer = make_layer()
-    if with_color_from_main_grid:
-        for i in range(len(selection.coordinate)):
-            layer[30 + selection.coordinate[i][0]][30 + selection.coordinate[i][1]] = selection.colorgrid[selection.coordinate[i][0]][selection.coordinate[i][1]]
-    else:
-        for i in range(len(selection.coordinate)):
-            layer[30 + selection.coordinate[i][0]][30 + selection.coordinate[i][1]] = 12 # selection color
-    return layer
-
-def make_mask(height, width):
-    # print("make_mask", height, width)
-    mask = [[14 for _ in range(90)] for _ in range(90)]
-    # print(mask)
-    for i in range(height):
-        for j in range(width):
-            mask[30 + i][30 + j] = 13
-    return mask
-
-#########################################################################
-# TRANSFORMATION DSL
-def make_canvas(grid, selection, height, width, color_to_fill):
+# basic transformation DSLs
+# 0. make_grid
+def make_grid(**kwargs):
+    height = kwargs.get('height')
+    width = kwargs.get('width')
+    color_to_fill = kwargs.get('color_to_fill')
+    
     layer = make_layer()
     for i in range(height):
         for j in range(width):
             layer[30 + i][30 + j] = color_to_fill
     return layer
 
-
-def coloring(grid, selection, color):
+# 1. coloring
+def coloring(**kwargs):
+    selection = kwargs.get('selection')
+    color = kwargs.get('color')
+    
     layer = make_layer()
     for coord in selection.coordinate:
         layer[30 + coord[0]][30 + coord[1]] = color
     return layer
 
-
-def color_switch(grid, selection, color1, color2):
+# 2. color_switch
+def color_switch(**kwargs):
+    selection = kwargs.get('selection')
+    color1 = kwargs.get('color1')
+    color2 = kwargs.get('color2')
+    
     layer = make_layer()
     for coord in selection.coordinate:
         if selection.colorgrid[coord[0]][coord[1]] == color1:
@@ -52,64 +40,7 @@ def color_switch(grid, selection, color1, color2):
             layer[30 + coord[0]][30 + coord[1]] = color1
     return layer
 
-# hodel
-def rot90(grid, selection):
-    layer = make_layer()
-    rotated_layer = [list(row) for row in zip(*selection.colorgrid[::-1])]
-    for i in range(len(rotated_layer)):
-        for j in range(len(rotated_layer[0])):
-            layer[30 + i][30 + j] = rotated_layer[i][j]
-    return layer
-
-def rot180(grid, selection):
-    layer = make_layer()
-    rotated_layer = [list(row[::-1]) for row in selection.colorgrid[::-1]]
-    for i in range(len(rotated_layer)):
-        for j in range(len(rotated_layer[0])):
-            layer[30 + i][30 + j] = rotated_layer[i][j]
-    return layer
-
-def rot270(grid, selection):
-    layer = make_layer()
-    rotated_layer = [list(row) for row in zip(*selection.colorgrid)][::-1]
-    for i in range(len(rotated_layer)):
-        for j in range(len(rotated_layer[0])):
-            layer[30 + i][30 + j] = rotated_layer[i][j]
-    return layer
-
-def horizontal_flip(grid, selection):
-    layer = make_layer()
-    flipped_layer = selection.colorgrid[::-1]  # Reverse the order of rows
-    for i in range(len(flipped_layer)):
-        for j in range(len(flipped_layer[0])):
-            layer[30 + i][30 + j] = flipped_layer[i][j]
-    return layer
-    
-def vertical_flip(grid, selection):
-    layer = make_layer()
-    flipped_layer = [list(row[::-1]) for row in selection.colorgrid]
-    for i in range(len(flipped_layer)):
-        for j in range(len(flipped_layer[0])):
-            layer[30 + i][30 + j] = flipped_layer[i][j]
-    return layer
-
-def diagonal_flip(grid, selection):
-    layer = make_layer()
-    flipped_layer = [list(row[::-1]) for row in zip(*selection.colorgrid)][::-1]
-    for i in range(len(flipped_layer)):
-        for j in range(len(flipped_layer[0])):
-            layer[30 + i][30 + j] = flipped_layer[i][j]
-    return layer
-
-def antidiag_flip(grid, selection):
-    layer = make_layer()
-    flipped_layer = [list(row[::-1]) for row in zip(*selection.colorgrid[::-1])]
-    for i in range(len(flipped_layer)):
-        for j in range(len(flipped_layer[0])):
-            layer[30 + i][30 + j] = flipped_layer[i][j]
-    return layer
-
-
+# 3. rotate
 def rotate(grid, selection, direction, iteration, pivot):
     layer = make_layer()
     
@@ -178,6 +109,7 @@ def rotate(grid, selection, direction, iteration, pivot):
     else:  # iteration == 3
         rotated_object = [list(row) for row in zip(*selection.bbox)][::-1]  # rot270
     
+    # pprint("rotated_object", rotated_object)
     
     # Place rotated object in layer with rotated offset
     for i in range(len(rotated_object)):
@@ -187,6 +119,7 @@ def rotate(grid, selection, direction, iteration, pivot):
     
     return layer
 
+# 4. line_flip
 def line_flip(grid, selection, direction, pivot):
     layer = make_layer()
 
@@ -260,6 +193,7 @@ def line_flip(grid, selection, direction, pivot):
     
     return layer
 
+# 5. point_flip
 def point_flip(grid, selection, pivot):
     layer = make_layer()
 
@@ -303,6 +237,7 @@ def point_flip(grid, selection, pivot):
     
     return layer
 
+# 6. move
 def move(grid, selection, direction, distance):
     layer = make_layer()
     
@@ -318,6 +253,7 @@ def move(grid, selection, direction, distance):
 
     return layer
 
+# 7. teleport
 def teleport(grid, selection, grab, destination):
     layer = make_layer()
 
@@ -343,6 +279,7 @@ def teleport(grid, selection, grab, destination):
 
     return layer
 
+# 8. connect
 def connect(grid, selection, color):
     assert len(selection.coordinate) == 2
     point1 = selection.coordinate[0]
@@ -367,6 +304,7 @@ def connect(grid, selection, color):
 
     return layer
 
+# 9. straight_line
 def straight_line(grid, selection, direction, length, color):
     # (0,1)   - right,
     # (1,1)   - down-right,
@@ -394,6 +332,7 @@ def straight_line(grid, selection, direction, length, color):
 
     return layer
 
+# 10. rectangle
 def rectangle(grid, selection, color):
     assert len(selection.coordinate) == 2
     point1 = selection.coordinate[0]
@@ -406,6 +345,7 @@ def rectangle(grid, selection, color):
             layer[30 + i][30 + j] = color
     return layer
 
+# 11. crop
 def crop(grid, selection):
     layer = make_edit_space()
     for i in range(len(selection.bbox)):
@@ -415,55 +355,10 @@ def crop(grid, selection):
 
 
 
-# def scale(selection):
-#     return selection
-
-
-# def paste(selection, colorgrid, handle, target):
-#     # use selection and colorgrid to make a colcoord
-#     colcoord = colorgrid_to_colcoord(colorgrid)
-#     # use handle and target to make a list of coordinates
-#     coordinates = []
-#     for i in range(len(handle)):
-#         for j in range(len(handle[0])):
-#             if handle[i][j] == 1:
-#                 coordinates.append((i, j))
-#     return selection
-
-
-def select_sub_array(matrix, row_start, row_end, col_start, col_end):
-    return [row[col_start:col_end] for row in matrix[row_start:row_end]]
-
-# def paste_sub_array(mother_array, pos, sub_array):
-#     row_start, row_end = pos[0], pos[0]+len(sub_array)
-#     col_start, col_end = pos[1], pos[1]+len(sub_array[0])
-#     return [row[:col_start] + sub_array[i] + row[col_end:] for i, row in enumerate(mother_array)]
-
-def paste_sub_array(mother_array, pos, sub_array):
-    # Create a copy of the mother array to avoid modifying the original
-    result = [row[:] for row in mother_array]
-    
-    row_start, col_start = pos[0], pos[1]
-    row_end = min(row_start + len(sub_array), len(mother_array))
-    col_end = min(col_start + len(sub_array[0]), len(mother_array[0]))
-    
-    for i in range(row_start, row_end):
-        for j in range(col_start, col_end):
-            sub_i = i - row_start
-            sub_i = i - row_start
-            sub_j = j - col_start
-            result[i][j] = sub_array[sub_i][sub_j]
-    
-    return result
-
-
-
-
 # 필요한 것
 # copy
 # paste
-
-
+# scale
 
 
 #########################################################################
@@ -497,6 +392,27 @@ def paste_sub_array(mother_array, pos, sub_array):
 
 
 
+
+
+
+
+
+#########################################################################
+# TRANSFORMATION DSL
+
+# CAUTION!! TF DSL 중 make_canvas 함수에 변경사항이 있습니다.
+# 다른 TF DSL 함수에는 selection 이라는 인자가 반드시 필요해서 통일성을 위해 make_canvas 함수에도 포함을 시켰지만,
+# 필요하지 않고, 함수의 직관성을 저해한다고 판단되어 make_canvas 함수에서 selection 인자를 제거했습니다.
+# 그리고 함수의 이름에 canvas라는 ARC 도메인에서 사용되지 않는 단어가 있어서 부르고 기억하기 어렵다고 판단되었습니다.
+# 이에 make_canvas 함수를 make_grid 함수로 이름을 변경했습니다.
+# 2025 0708 - 이석기
+
+# def make_canvas(grid, selection, height, width, color_to_fill):
+#     layer = make_layer()
+#     for i in range(height):
+#         for j in range(width):
+#             layer[30 + i][30 + j] = color_to_fill
+#     return layer
 
 
 

@@ -1,5 +1,5 @@
 from .ARCKG_component import ARCKGComponent
-from DSL.my_DSL import find_all_objects
+from DSL.object_finder import find_all_objects
 from .grid_component import GridComponent
 from .pixel import PIXEL, PIXELInfo
 from .object import OBJECT, OBJECTInfo

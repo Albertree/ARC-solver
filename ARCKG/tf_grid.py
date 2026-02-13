@@ -1,10 +1,10 @@
 from .grid import GRID, GRIDInfo
-from DSL.my_layer_DSL import merge_layers
+from DSL.layer import merge_layers
 from typing import NamedTuple
 from .ARCKG_component import ARCKGComponent
 from .pixel import PIXEL, PIXELInfo
 from .object import OBJECT, OBJECTInfo
-from DSL.my_DSL import find_all_objects
+from DSL.object_finder import find_all_objects
 
 class TF_GRIDInfo(NamedTuple):
     id: int

@@ -1,9 +1,9 @@
-from DSL.my_transformation_DSL import *
-from DSL.my_util_DSL import *
+from DSL.transformation import *
+from DSL.util import *
 from ARCKG.tf_grid import TF_GRID, TF_GRIDInfo
-from DSL.my_selection import SELECTION
+from DSL.selection import SELECTION
 from basics.utils import printcg
-from DSL.my_layer_DSL import merge_layers, paste_sub_array, make_selection_layer, make_mask, make_edit_space, make_layer
+from DSL.layer import merge_layers, paste_sub_array, make_selection_layer, make_mask, make_edit_space, make_layer
 
 # def check_args(main_grid, func, *args):
 #     if func == make_grid:

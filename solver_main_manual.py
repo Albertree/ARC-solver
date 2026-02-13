@@ -1,7 +1,7 @@
 import os
 
 from managers.arc_manager import ARCManager
-from program import ProgramManager
+from program_gen import ProgramManager
 from basics.utils import printcg
 
     
