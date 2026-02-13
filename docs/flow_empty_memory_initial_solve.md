@@ -127,7 +127,7 @@
 - **호출**: `rules = get_matching_actions(comparison_result)`
 - **사용하는 규칙**:
   - `extract_comparison_level(comparison_result["id1"])` → `"GRID"`.
-  - `load_matching_rules("GRID", category_key)` → **DSL_precondition/** 아래 `GRID_*.json` 파일만 로드.  
+  - `load_matching_rules("GRID", category_key)` → **DSL_activation_rule/** 아래 `GRID_*.json` 파일만 로드.  
     예: `GRID_color_add_added_color.json`, `GRID_color_add_removed_color.json`, `GRID_size_make_grid.json` 등.
   - 각 규칙의 `condition`을 `evaluate_rule_condition(rule['condition'], comparison_result, param_combo)`로 평가.
   - 조건을 만족하면 `rule['action']`의 인자를 `process_action_args`로 채워 **actions 리스트**에 넣음.
@@ -173,7 +173,7 @@
   - `for obj_i in grid_result.objects: for obj_o in pair.output_grid.objects: compare(obj_i, obj_o, save=True)`  
   - `rules = get_matching_actions(comparison_result)` (각 비교마다), `all_object_actions.extend(rules)`
 - **사용하는 규칙**:  
-  - `load_matching_rules("OBJECT", category_key)` → **DSL_precondition/** 의 `OBJECT_*.json` (예: `OBJECT_color_coloring.json`).
+  - `load_matching_rules("OBJECT", category_key)` → **DSL_activation_rule/** 의 `OBJECT_*.json` (예: `OBJECT_color_coloring.json`).
 - **저장**:
   - **Semantic**: 각 (obj_i, obj_o) 비교 결과가 `memory/semantic/.../GRID_edges/OBJECT/{score}/OBJECT_{i}-OBJECT_{j}.json`에 저장됨.
 
@@ -203,7 +203,7 @@
   - `for pix_i in object_result.pixels: for pix_o in pair.output_grid.pixels: compare(pix_i, pix_o, save=True)`  
   - `get_matching_actions(comparison_result)` → `all_pixel_actions`
 - **사용하는 규칙**:  
-  - `load_matching_rules("PIXEL", category_key)` → **DSL_precondition/** 의 `PIXEL_*.json` (예: `PIXEL_color_coloring.json`).
+  - `load_matching_rules("PIXEL", category_key)` → **DSL_activation_rule/** 의 `PIXEL_*.json` (예: `PIXEL_color_coloring.json`).
 - **저장**:  
   - **Semantic**: 각 (pix_i, pix_o) 비교 결과가 `memory/semantic/.../GRID_edges/PIXEL/{score}/PIXEL_{i}-PIXEL_{j}.json`에 저장됨.
 
@@ -241,19 +241,19 @@
 |------|----------------|----------|----------|------------|---------|
 | 태스크 로드 | 없음 | TASK/PAIR/GRID(OBJECT/PIXEL) 노드·엣지 디렉터리 | - | - | task, task_hex 등 |
 | GRID 비교 | 없음 | GRID_edges 비교 결과 JSON | - | - | comparison_result, rules |
-| GRID 규칙 매칭 | DSL_precondition GRID_*.json | - | - | - | candidate_rules, reasons |
+| GRID 규칙 매칭 | DSL_activation_rule GRID_*.json | - | - | - | candidate_rules, reasons |
 | GRID 프로그램 저장 | (생성 시 사용한 rules) | - | - | (성공 시 나중에) | - |
 | GRID 실행/검증 후 | - | - | record(episode) | store_program(성공 시) | steps, 결과 정리 |
-| OBJECT 비교/규칙 | DSL_precondition OBJECT_*.json | OBJECT 비교 결과 | - | - | all_object_actions |
+| OBJECT 비교/규칙 | DSL_activation_rule OBJECT_*.json | OBJECT 비교 결과 | - | - | all_object_actions |
 | OBJECT 프로그램/실행 | (OBJECT 규칙 기반) | - | record(episode) | store_program(성공 시) | - |
-| PIXEL 비교/규칙 | DSL_precondition PIXEL_*.json | PIXEL 비교 결과 | - | - | all_pixel_actions |
+| PIXEL 비교/규칙 | DSL_activation_rule PIXEL_*.json | PIXEL 비교 결과 | - | - | all_pixel_actions |
 | PIXEL 프로그램/실행 | (PIXEL 규칙 기반) | - | record(episode) | store_program(성공 시) | - |
 
 ---
 
 ## 6. 규칙 파일 위치 및 역할 (참고)
 
-- **위치**: `DSL_precondition/`
+- **위치**: `DSL_activation_rule/`
 - **GRID 레벨**: `GRID_color_add_added_color.json`, `GRID_color_add_removed_color.json`, `GRID_size_make_grid.json` 등 — `get_matching_actions`에서 `comparison_level == "GRID"`일 때 로드.
 - **OBJECT 레벨**: `OBJECT_color_coloring.json` 등 — OBJECT 비교 결과에 대해 조건 평가 후 action 생성.
 - **PIXEL 레벨**: `PIXEL_color_coloring.json` 등 — PIXEL 비교 결과에 대해 동일.

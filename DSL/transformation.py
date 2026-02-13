@@ -1,5 +1,5 @@
-from DSL.my_layer_DSL import make_layer, make_edit_space
-from DSL.hodel_arc_types import *
+from DSL.layer import make_layer, make_edit_space
+from DSL.types import *
 from basics.utils import printcg
 
 

@@ -1,5 +1,7 @@
-#########################################################################
-# others
+"""
+Grid/object utility functions (ex-ARCKG_DSL).
+Pure functions for color grids, coordinates, shape, symmetry, etc.
+"""
 
 # GRID
 def grid_color(grid):
@@ -52,10 +54,6 @@ def object_colcoord_to_colorgrid(object):
     for n in range(len(object)):
         colorgrid[object[n][1][0]-(col_move)][object[n][1][1]-(row_move)] = object[n][0]
     return colorgrid
-
-# def object_to_colcoord(object):
-#     # return a list of integer and integer tuple (color, (row, col))
-#     return [(object[i][j], (i, j)) for i in range(len(list(object))) for j in range(len(list(object)[0])) if list(object)[i][j] != 13]
 
 def colcoord_to_coordinate(colcoord):
     return [(colcoord[i][1][0], colcoord[i][1][1]) for i in range(len(colcoord))]

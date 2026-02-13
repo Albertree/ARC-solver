@@ -2,7 +2,7 @@
     "exclude": [
       "memory/**",
       "data/**",
-      "generated_codes/**"
+      "outputs/**"
     ],
     "typeCheckingMode": "off",
     "reportMissingImports": false,

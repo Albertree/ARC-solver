@@ -1,4 +1,4 @@
-from DSL.my_layer_DSL import make_layer
+from DSL.layer import make_layer
 
 # Originate from hodel_DSL, rewritten in my style
 def rot90(grid, selection):

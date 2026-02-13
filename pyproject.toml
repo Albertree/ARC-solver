@@ -1,7 +1,7 @@
 [tool.pyright]
 exclude = [
     "memory/**",
-    "generated_codes/**",
+    "outputs/**",
     "node_modules/**", 
     ".git/**",
     "__pycache__/**"
