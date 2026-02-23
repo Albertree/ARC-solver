@@ -9,13 +9,13 @@ from typing import List, Dict, Any, Optional
 
 from ARCKG.task import TASK
 from ARCKG.grid import GRID
-from ARCKG.tf_grid import TF_GRID
 from ARCKG import compare
 from program_gen.rules import get_matching_actions
 from DSL.apply import apply_DSL
 from DSL.transformation import coloring, make_grid
 from DSL.util import add_added_color, add_removed_color
 from DSL.selection import SELECTION
+from DSL.schema import get_arg_type
 
 
 def _action_args_to_kwargs_str(action_args: Dict) -> str:
@@ -44,7 +44,6 @@ class ProgramManager:
         self.base_output_dir = base_output_dir
 
     def generate_program(self, pair, pair_index: int) -> List[str]:
-        TF_GRID.reset_id_counter()
         input_grid = pair.input_grid
         output_grid = pair.output_grid
 
@@ -66,14 +65,13 @@ class ProgramManager:
             kwargs_str = _action_args_to_kwargs_str(action['args'])
             tfg_counter += 1
             next_grid_var = f"tfg{tfg_counter}"
-            program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action['name']}, {kwargs_str})")
+            program.append(f"    {next_grid_var} = apply_DSL(main_grid={current_grid_var}, func={action['name']}, {kwargs_str})")
             current_grid_var = next_grid_var
 
         program.extend(wrapper_end(current_grid_var))
         return program
 
     def generate_program_with_rules(self, pair, pair_index: int, rules: List[Dict], base_program: List[str] = None) -> List[str]:
-        TF_GRID.reset_id_counter()
         input_grid = pair.input_grid
         output_grid = pair.output_grid
 
@@ -114,7 +112,7 @@ class ProgramManager:
             kwargs_str = _action_args_to_kwargs_str(action['args'])
             tfg_counter += 1
             next_grid_var = f"tfg{tfg_counter}"
-            program.append(f"    {next_grid_var} = apply_DSL({current_grid_var}, {action['name']}, {kwargs_str})")
+            program.append(f"    {next_grid_var} = apply_DSL(main_grid={current_grid_var}, func={action['name']}, {kwargs_str})")
             current_grid_var = next_grid_var
 
         program.extend(wrapper_end(current_grid_var))
@@ -128,17 +126,104 @@ class ProgramManager:
     def save_program(self, program: List[str], pair_index: int, level: str = "GRID", task_hex_code: str = None) -> None:
         original_code = "\n".join(program)
         level_dir = os.path.join(self.base_output_dir, task_hex_code, level)
-        self.save_code_and_ast(level_dir, f"{task_hex_code}_{pair_index}_{level.lower()}", original_code)
+        self.save_code_and_ast(
+            level_dir, f"{task_hex_code}_{pair_index}_{level.lower()}", original_code,
+            task_hex_code=task_hex_code, pair_index=pair_index, level=level
+        )
 
-    def save_code_and_ast(self, output_dir: str, base_filename: str, code: str) -> None:
+    def save_code_and_ast(
+        self,
+        output_dir: str,
+        base_filename: str,
+        code: str,
+        task_hex_code: Optional[str] = None,
+        pair_index: Optional[int] = None,
+        level: Optional[str] = None,
+    ) -> None:
         os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, f"{base_filename}.py"), "w") as f:
+        py_path = os.path.join(output_dir, f"{base_filename}.py")
+        with open(py_path, "w") as f:
             f.write(code)
         tree = ast.parse(code)
+        ast_dict = self.ast_to_dict(tree)
+        self._annotate_ast_with_dsl_types(ast_dict)
         ast_dir = os.path.join(output_dir, "ast")
         os.makedirs(ast_dir, exist_ok=True)
         with open(os.path.join(ast_dir, f"{base_filename}.json"), "w") as f:
-            json.dump(self.ast_to_dict(tree), f, indent=4)
+            json.dump(ast_dict, f, indent=4)
+        task_hex_code, pair_index, level = self._resolve_context_meta(base_filename, task_hex_code, pair_index, level)
+        self._write_context(output_dir, base_filename, code, task_hex_code, pair_index, level)
+
+    def _resolve_context_meta(self, base_filename: str, task_hex_code: Optional[str], pair_index: Optional[int], level: Optional[str]):
+        """Resolve task_hex_code, pair_index, level; parse from base_filename if missing so context can always be written."""
+        if task_hex_code is not None and pair_index is not None and level is not None:
+            return task_hex_code, pair_index, level
+        parts = base_filename.rsplit("_", 2)
+        if len(parts) == 3 and parts[1].isdigit():
+            task_hex_code = task_hex_code or parts[0]
+            pair_index = pair_index if pair_index is not None else int(parts[1])
+            level = level or parts[2].upper()
+        return task_hex_code or "", pair_index if pair_index is not None else 0, level or ""
+
+    def _annotate_ast_with_dsl_types(self, node: Any) -> None:
+        """Add dsl_type to keyword nodes in apply_DSL calls (in-place)."""
+        if not isinstance(node, dict):
+            if isinstance(node, list):
+                for item in node:
+                    self._annotate_ast_with_dsl_types(item)
+            return
+        if node.get("node_type") == "Call":
+            func = node.get("func", {})
+            if isinstance(func, dict) and func.get("id") == "apply_DSL":
+                keywords = node.get("keywords", [])
+                func_name = None
+                for kw in keywords:
+                    if isinstance(kw, dict) and kw.get("arg") == "func":
+                        v = kw.get("value")
+                        if isinstance(v, dict) and v.get("node_type") == "Name":
+                            func_name = v.get("id")
+                        break
+                for kw in keywords:
+                    if not isinstance(kw, dict):
+                        continue
+                    arg_name = kw.get("arg")
+                    if arg_name is None:
+                        continue
+                    t = get_arg_type("apply_DSL", arg_name) if arg_name in ("main_grid", "func") else (
+                        get_arg_type(func_name, arg_name) if func_name else None
+                    )
+                    if t is not None:
+                        kw["dsl_type"] = t
+        for v in node.values():
+            self._annotate_ast_with_dsl_types(v)
+
+    def _write_context(
+        self, output_dir: str, base_filename: str, code: str,
+        task_hex_code: str, pair_index: int, level: str,
+    ) -> None:
+        """Write context file next to code (same dir as .py). One per program save."""
+        lines = code.strip().splitlines()
+        steps = []
+        for line in lines:
+            s = line.strip()
+            if "apply_DSL" in s and "=" in s:
+                steps.append({
+                    "step_index": len(steps),
+                    "line_ref": s,
+                    "rule_id": None,
+                    "condition": None,
+                    "args_origin": {},
+                })
+        payload = {
+            "task_hex_code": task_hex_code,
+            "pair_index": pair_index,
+            "level": level,
+            "program_file": f"{base_filename}.py",
+            "steps": steps,
+        }
+        ctx_path = os.path.join(output_dir, f"{base_filename}.context.json")
+        with open(ctx_path, "w") as f:
+            json.dump(payload, f, indent=2)
 
     def execute_program(self, program_path: str, input_grid: GRID) -> Optional[GRID]:
         with open(program_path, 'r') as f:

@@ -269,45 +269,22 @@ class OBJECT(GridComponent):
     def to_json(self):
         import os
         import json
+        from .memory_paths import object_node_dir, object_property_path
 
         object_dict = self.property
-        # Check if parent is TF_GRID to use TFGRID_nodes path
+        hex_code = self.parent[0].parent[0].parent.hex_code
+        pair_id = self.parent[0].parent[0].id
         parent_grid = self.parent[-1]
-        if hasattr(parent_grid, 'type') and parent_grid.type == 'tfgrid':
-            grid_nodes_path = 'TFGRID_nodes'
-        else:
-            grid_nodes_path = 'GRID_nodes'
-            
-        object_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
-        object_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        object_path += f'{grid_nodes_path}/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
-        object_path += f'OBJECT_nodes/OBJECT_{self.id}/'
+        grid_id = parent_grid.id
+
+        object_path = object_node_dir(hex_code, pair_id, 'G', grid_id, self.id)
         if not os.path.exists(object_path):
             os.makedirs(object_path)
 
-        # OBJECT_node - OBJECT_property
-        path = f'{object_path}/OBJECT_property'
-        file_name = f'OBJECT_{self.id}_property.json'
-        if not os.path.exists(path):
-            os.makedirs(path)
-        
-        with open(f'{path}/{file_name}', 'w') as f:
+        # OBJECT property (self-pointing edge): E_O{id}.json
+        prop_path = object_property_path(hex_code, pair_id, 'G', grid_id, self.id)
+        with open(prop_path, 'w') as f:
             json.dump(object_dict, f, indent=2)
-
-        # OBJECT_edge
-        object_edge_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
-        object_edge_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        object_edge_path += f'{grid_nodes_path}/{self.parent[-1].type.upper()}_{self.parent[-1].id}/'
-        object_edge_path += f'OBJECT_edges'
-        if not os.path.exists(object_edge_path):
-            os.makedirs(object_edge_path)
-            # Create hierarchical subfolders in OBJECT_edges with score-based folders
-            # OBJECT comparisons: max score 8 (0-8)
-            for score in range(9):
-                os.makedirs(f'{object_edge_path}/OBJECT/{score}', exist_ok=True)
-            # PIXEL comparisons: max score 2 (0-2)
-            for score in range(3):
-                os.makedirs(f'{object_edge_path}/PIXEL/{score}', exist_ok=True)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()
@@ -317,7 +294,8 @@ class OBJECT(GridComponent):
         import os
         import json
         
-        arckg_file = f'memory/TASK_nodes/ARCKG_{self.parent[0].parent[0].parent.hex_code}.json'
+        from .memory_paths import task_node_dir
+        arckg_file = f'{task_node_dir(self.parent[0].parent[0].parent.hex_code)}ARCKG_{self.parent[0].parent[0].parent.hex_code}.json'
         
         # Check if integrated ARCKG file exists
         if not os.path.exists(arckg_file):

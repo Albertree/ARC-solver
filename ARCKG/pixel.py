@@ -44,46 +44,30 @@ class PIXEL(GridComponent):
     def to_json(self):
         import os
         import json
+        from .memory_paths import (
+            pixel_node_dir,
+            pixel_property_path,
+            pixel_under_object_dir,
+            pixel_under_object_property_path,
+        )
 
         pixel_dict = self.property
-        # Check if parent is TF_GRID to use TFGRID_nodes path
-        parent_grid = self.parent[0]
-        if hasattr(parent_grid, 'type') and parent_grid.type == 'tfgrid':
-            grid_nodes_path = 'TFGRID_nodes'
-        else:
-            grid_nodes_path = 'GRID_nodes'
-            
-        pixel_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent[0].parent.hex_code}/'
-        pixel_path += f'PAIR_nodes/PAIR_{self.parent[0].parent[0].id}/'
-        pixel_path += f'{grid_nodes_path}/{self.parent[0].type.upper()}_{self.parent[0].id}/'
-    
-        # PIXEL_node - PIXEL_property
-        file_name = f'PIXEL_{self.id}_property.json'
-        
-        # Save under grid (always save under grid)
         grid = self.parent[0] if self.parent else None
+
+        # Save under grid (always save under grid)
         if grid and hasattr(grid, 'parent') and grid.parent:
             pair = grid.parent[0] if isinstance(grid.parent, list) else grid.parent
             if pair and hasattr(pair, 'parent') and pair.parent:
                 task = pair.parent
                 if task:
-                    path_g = f'{pixel_path}/PIXEL_nodes/PIXEL_{self.id}/PIXEL_property'
+                    hex_code, pair_id, grid_id = task.hex_code, pair.id, grid.id
+                    path_g = pixel_node_dir(hex_code, pair_id, 'G', grid_id, self.id)
                     if not os.path.exists(path_g):
                         os.makedirs(path_g)
-                    with open(f'{path_g}/{file_name}', 'w') as f:
+                    prop_path = pixel_property_path(hex_code, pair_id, 'G', grid_id, self.id)
+                    with open(prop_path, 'w') as f:
                         json.dump(pixel_dict, f, indent=2)
-                    
-                    # PIXEL_edge (if activated, PIXEL_edges will be saved under GRID_nodes/GRID_N/ or TFGRID_nodes/TFGRID_N/)
-                    pixel_g_edge_path = f'memory/TASK_nodes/TASK_{task.hex_code}/'
-                    pixel_g_edge_path += f'PAIR_nodes/PAIR_{pair.id}/'
-                    pixel_g_edge_path += f'{grid_nodes_path}/{grid.type.upper()}_{grid.id}/'
-                    pixel_g_edge_path += f'PIXEL_edges'
-                    if not os.path.exists(pixel_g_edge_path):
-                        os.makedirs(pixel_g_edge_path)
-                        # Create hierarchical subfolders in PIXEL_edges with score-based folders
-                        for score in range(3):  # PIXEL max score is 2
-                            os.makedirs(f'{pixel_g_edge_path}/PIXEL/{score}', exist_ok=True)
-        
+
         # Save under object parents if they exist
         for parent in self.parent:
             if hasattr(parent, 'type') and parent.type == 'object':
@@ -93,29 +77,16 @@ class PIXEL(GridComponent):
                     if obj_pair and hasattr(obj_pair, 'parent') and obj_pair.parent:
                         obj_task = obj_pair.parent
                         if obj_task:
-                            path_o = f'{pixel_path}/OBJECT_nodes/OBJECT_{self.parent[1].id}/PIXEL_nodes/PIXEL_{self.id}/PIXEL_property'
+                            hex_code = obj_task.hex_code
+                            pair_id = obj_pair.id
+                            grid_id = obj_grid.id
+                            obj_id = parent.id
+                            path_o = pixel_under_object_dir(hex_code, pair_id, 'G', grid_id, obj_id, self.id)
                             if not os.path.exists(path_o):
                                 os.makedirs(path_o)
-                            with open(f'{path_o}/{file_name}', 'w') as f:
+                            prop_path = pixel_under_object_property_path(hex_code, pair_id, 'G', grid_id, obj_id, self.id)
+                            with open(prop_path, 'w') as f:
                                 json.dump(pixel_dict, f, indent=2)
-
-                            # PIXEL_edge
-                            # Check if object's grid is TF_GRID
-                            if hasattr(obj_grid, 'type') and obj_grid.type == 'tfgrid':
-                                obj_grid_nodes_path = 'TFGRID_nodes'
-                            else:
-                                obj_grid_nodes_path = 'GRID_nodes'
-                                
-                            pixel_o_edge_path = f'memory/TASK_nodes/TASK_{obj_task.hex_code}/'
-                            pixel_o_edge_path += f'PAIR_nodes/PAIR_{obj_pair.id}/'
-                            pixel_o_edge_path += f'{obj_grid_nodes_path}/{obj_grid.type.upper()}_{obj_grid.id}/'
-                            pixel_o_edge_path += f'OBJECT_nodes/OBJECT_{parent.id}/'
-                            pixel_o_edge_path += f'PIXEL_edges'
-                            if not os.path.exists(pixel_o_edge_path):
-                                os.makedirs(pixel_o_edge_path)
-                                # Create hierarchical subfolders in PIXEL_edges with score-based folders
-                                for score in range(3):  # PIXEL max score is 2
-                                    os.makedirs(f'{pixel_o_edge_path}/PIXEL/{score}', exist_ok=True)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()
@@ -138,7 +109,8 @@ class PIXEL(GridComponent):
         if not task:
             return
             
-        arckg_file = f'memory/TASK_nodes/ARCKG_{task.hex_code}.json'
+        from .memory_paths import task_node_dir
+        arckg_file = f'{task_node_dir(task.hex_code)}ARCKG_{task.hex_code}.json'
         
         # Check if integrated ARCKG file exists
         if not os.path.exists(arckg_file):

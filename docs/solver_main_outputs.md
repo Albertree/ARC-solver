@@ -6,16 +6,21 @@
 
 ## 1. memory/ (ARCKG 비교 결과)
 
-`compare(comp1, comp2, save=True)` 호출 시 `id_pair_to_comparison_path` 규칙에 따라 저장됩니다.
+**물리적 저장소**: 프로젝트 루트 기준 **`memory/`** 폴더 아래.  
+`compare(comp1, comp2, save=True)` 호출 시 `ARCKG/memory_paths.py`의 `id_pair_to_comparison_path` → `edge_*_comparison_path` 규칙으로 저장됩니다.
 
-| 비교 단계 | 저장 경로 예시 (root = `memory/`) |
-|-----------|-----------------------------------|
-| GRID      | `TASK_nodes/TASK_{hex}/PAIR_nodes/PAIR_{n}/GRID_edges/GRID/{score}/GRID_{g1}-GRID_{g2}.json` |
-| OBJECT    | `TASK_nodes/.../GRID_edges/OBJECT/{score}/OBJECT_{o1}-OBJECT_{o2}.json` |
-| PIXEL     | `TASK_nodes/.../GRID_edges/PIXEL/{score}/PIXEL_{p1}-PIXEL_{p2}.json` |
-| PAIR      | `TASK_nodes/TASK_{hex}/PAIR_edges/PAIR/{score}/PAIR_{n1}-PAIR_{n2}.json` |
+| 비교 종류 | 저장 경로 (root = `memory/`) |
+|-----------|------------------------------|
+| **PAIR 간 GRID 비교** (label1, label2 사용) | `N_T{hex}/E_{label1}-{label2}.json` 예: `N_Teasy0016/E_P0G0-P1G0.json` |
+| GRID-GRID (pair 내부 등, id 기반) | `N_T{hex}/N_P{pair_num}/E_G{g1}-G{g2}.json` |
+| OBJECT-OBJECT | `N_T{hex}/N_P{pair_num}/E_O{o1}-O{o2}.json` |
+| PIXEL-PIXEL | `N_T{hex}/N_P{pair_num}/E_X{x1}-X{x2}.json` |
+| PAIR-PAIR | `N_T{hex}/E_P{p1}-P{p2}.json` |
 
-- **호출 위치**: `workers/arc_solver.py` — GRID/OBJECT/PIXEL 단계에서 `compare(..., save=True)` 여러 번 호출.
+예: task `easy0016`에서 PAIR 간 GRID 비교 P0G0 vs P1G0 → `memory/N_Teasy0016/E_P0G0-P1G0.json` (task 노드 바로 아래).
+
+- **호출 위치**: `workers/arc_solver.py` — PAIR 간 GRID 비교, 그리고 GRID/OBJECT/PIXEL 단계에서 `compare(..., save=True)` 호출.
+- **로그**: PAIR 간 GRID 비교 시 각 쌍마다 `저장: memory/...` 경로가 출력됨.
 
 ---
 

@@ -720,16 +720,25 @@ def compare_nested_json(comp1, comp2, path=""):
                 else:
                     result["type"] = "DIFF"
             else:
-                # For other 2D lists, check if each sublist has the same set of elements and same length
+                # Grid contents 등 2D 리스트: 픽셀/셀 단위 정확 비교 (순서 무시 set 비교 시 다른 그리드가 COMM으로 나오는 버그 방지)
                 all_common = True
-                for i, (sublist1, sublist2) in enumerate(zip(comp1, comp2)):
-                    if not isinstance(sublist1, list) or not isinstance(sublist2, list):
-                        all_common = False
-                        break
-                    if set(sublist1) != set(sublist2) or len(sublist1) != len(sublist2):
-                        all_common = False
-                        break
-                
+                if len(comp1) != len(comp2):
+                    all_common = False
+                else:
+                    for i in range(len(comp1)):
+                        sublist1, sublist2 = comp1[i], comp2[i]
+                        if not isinstance(sublist1, list) or not isinstance(sublist2, list):
+                            all_common = False
+                            break
+                        if len(sublist1) != len(sublist2):
+                            all_common = False
+                            break
+                        for j in range(len(sublist1)):
+                            if sublist1[j] != sublist2[j]:
+                                all_common = False
+                                break
+                        if not all_common:
+                            break
                 result["type"] = "COMM" if all_common else "DIFF"
         else:
             # For 1D lists, check if both lists have the same set of elements
@@ -800,7 +809,10 @@ def compare_nested_json(comp1, comp2, path=""):
     
     return result
 
-def compare(comp1, comp2, save=True):
+def compare(comp1, comp2, save=True, label1=None, label2=None):
+    """
+    label1, label2: optional T,P,G,O,X 형식 레이블 (예: P0G0, P1G1). 저장 시 final_data에 포함.
+    """
     id1 = get_component_full_id(comp1)
     id2 = get_component_full_id(comp2)
     path =""
@@ -813,18 +825,27 @@ def compare(comp1, comp2, save=True):
         "id2": str(id2),
         "result": processed_result
     }
+    if label1 is not None:
+        final_data["label1"] = label1
+    if label2 is not None:
+        final_data["label2"] = label2
 
     if save:
-        # Extract score for score-based folder organization
-        score = 0
-        if "score" in processed_result:
-            try:
-                score = int(processed_result["score"].split("/")[0])
-            except:
-                score = 0
-        
-        output_path = id_pair_to_comparison_path(id1, id2, score)
+        # label1, label2가 있으면 task 노드 바로 아래 E_P0G0-P1G0.json 형식으로 저장 (PAIR 간 비교)
+        if label1 is not None and label2 is not None:
+            from .memory_paths import edge_task_level_comparison_path
+            task_hex = id1.split(".")[0]
+            output_path = edge_task_level_comparison_path(task_hex, label1, label2)
+        else:
+            score = 0
+            if "score" in processed_result:
+                try:
+                    score = int(processed_result["score"].split("/")[0])
+                except Exception:
+                    score = 0
+            output_path = id_pair_to_comparison_path(id1, id2, score)
         save_comparison_result(final_data, output_path)
+        final_data["saved_path"] = output_path
 
         return final_data
 
@@ -835,153 +856,126 @@ def compare(comp1, comp2, save=True):
 
 
 def id_to_json_path(id):
-    # id는 이제 경로 문자열 (예: "007bbfb7.PAIR_nodes.0")
-    root = "memory/"
-    
-    # 경로를 점으로 분리
+    # id는 경로 문자열 (예: "007bbfb7.PAIR_nodes.0"). 반환 경로: memory/N_T{hex}/E_T{hex}.json 등
+    from .memory_paths import (
+        task_property_path,
+        pair_property_path,
+        grid_property_path,
+        object_property_path,
+        pixel_property_path,
+        pixel_under_object_property_path,
+    )
     path_parts = id.split('.')
-    
+
     if len(path_parts) == 1:
-        # TASK level
         task_hex = path_parts[0]
-        return f"{root}TASK_nodes/TASK_{task_hex}/TASK_property/TASK_{task_hex}_property.json"
+        return task_property_path(task_hex)
     elif len(path_parts) == 3 and path_parts[1] == "PAIR_nodes":
-        # PAIR level: "007bbfb7.PAIR_nodes.0"
-        task_hex = path_parts[0]
-        pair_num = path_parts[2]
-        return f"{root}TASK_nodes/TASK_{task_hex}/PAIR_nodes/PAIR_{pair_num}/PAIR_property/PAIR_{pair_num}_property.json"
+        task_hex, pair_num = path_parts[0], path_parts[2]
+        return pair_property_path(task_hex, int(pair_num))
     elif len(path_parts) == 5 and path_parts[1] == "PAIR_nodes" and path_parts[3] == "GRID_nodes":
-        # GRID level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0"
-        task_hex = path_parts[0]
-        pair_num = path_parts[2]
-        grid_num = path_parts[4]
-        return f"{root}TASK_nodes/TASK_{task_hex}/PAIR_nodes/PAIR_{pair_num}/GRID_nodes/GRID_{grid_num}/GRID_property/GRID_{grid_num}_property.json"
+        task_hex, pair_num, grid_num = path_parts[0], path_parts[2], path_parts[4]
+        return grid_property_path(task_hex, int(pair_num), int(grid_num))
     elif len(path_parts) == 7 and path_parts[1] == "PAIR_nodes" and path_parts[3] == "GRID_nodes" and path_parts[5] == "OBJECT_nodes":
-        # OBJECT level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0"
-        task_hex = path_parts[0]
-        pair_num = path_parts[2]
-        grid_num = path_parts[4]
-        obj_num = path_parts[6]
-        return f"{root}TASK_nodes/TASK_{task_hex}/PAIR_nodes/PAIR_{pair_num}/GRID_nodes/GRID_{grid_num}/OBJECT_nodes/OBJECT_{obj_num}/OBJECT_property/OBJECT_{obj_num}_property.json"
+        task_hex, pair_num, grid_num, obj_num = path_parts[0], path_parts[2], path_parts[4], path_parts[6]
+        return object_property_path(task_hex, int(pair_num), 'G', int(grid_num), int(obj_num))
     elif len(path_parts) == 7 and path_parts[1] == "PAIR_nodes" and path_parts[3] == "GRID_nodes" and path_parts[5] == "PIXEL_nodes":
-        # PIXEL level (grid direct): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.PIXEL_nodes.0"
-        task_hex = path_parts[0]
-        pair_num = path_parts[2]
-        grid_num = path_parts[4]
-        pixel_num = path_parts[6]
-        return f"{root}TASK_nodes/TASK_{task_hex}/PAIR_nodes/PAIR_{pair_num}/GRID_nodes/GRID_{grid_num}/PIXEL_nodes/PIXEL_{pixel_num}/PIXEL_property/PIXEL_{pixel_num}_property.json"
+        task_hex, pair_num, grid_num, pixel_num = path_parts[0], path_parts[2], path_parts[4], path_parts[6]
+        return pixel_property_path(task_hex, int(pair_num), 'G', int(grid_num), int(pixel_num))
     elif len(path_parts) == 9 and path_parts[1] == "PAIR_nodes" and path_parts[3] == "GRID_nodes" and path_parts[5] == "OBJECT_nodes" and path_parts[7] == "PIXEL_nodes":
-        # PIXEL level (object): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0.PIXEL_nodes.0"
-        task_hex = path_parts[0]
-        pair_num = path_parts[2]
-        grid_num = path_parts[4]
-        obj_num = path_parts[6]
-        pixel_num = path_parts[8]
-        return f"{root}TASK_nodes/TASK_{task_hex}/PAIR_nodes/PAIR_{pair_num}/GRID_nodes/GRID_{grid_num}/OBJECT_nodes/OBJECT_{obj_num}/PIXEL_nodes/PIXEL_{pixel_num}/PIXEL_property/PIXEL_{pixel_num}_property.json"
+        task_hex, pair_num, grid_num, obj_num, pixel_num = path_parts[0], path_parts[2], path_parts[4], path_parts[6], path_parts[8]
+        return pixel_under_object_property_path(task_hex, int(pair_num), 'G', int(grid_num), int(obj_num), int(pixel_num))
     else:
         raise ValueError(f"Invalid id format: {id}")
 
 def json_path_to_id(json_path):
-    root = "memory/"
-    path_parts = json_path.split(root)[-1].split("/")
-    
-    if "TASK_property" in json_path:
-        # TASK level
-        task_hex = path_parts[1].split("_")[-1]
-        return task_hex
-    elif "PAIR_property" in json_path:
-        # PAIR level
-        task_hex = path_parts[1].split("_")[-1]
-        pair_num = path_parts[3].split("_")[-1]
-        return f"{task_hex}.PAIR_nodes.{pair_num}"
-    elif "GRID_property" in json_path:
-        # GRID level
-        task_hex = path_parts[1].split("_")[-1]
-        pair_num = path_parts[3].split("_")[-1]
-        grid_num = path_parts[5].split("_")[-1]
-        return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}"
-    elif "OBJECT_property" in json_path:
-        # OBJECT level
-        task_hex = path_parts[1].split("_")[-1]
-        pair_num = path_parts[3].split("_")[-1]
-        grid_num = path_parts[5].split("_")[-1]
-        obj_num = path_parts[7].split("_")[-1]
-        return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}.OBJECT_nodes.{obj_num}"
-    elif "PIXEL_property" in json_path:
-        # PIXEL level
-        task_hex = path_parts[1].split("_")[-1]
-        pair_num = path_parts[3].split("_")[-1]
-        grid_num = path_parts[5].split("_")[-1]
-        
-        # PIXEL이 OBJECT 아래에 있는지 GRID 아래에 있는지 확인
-        if "OBJECT_nodes" in json_path:
-            # OBJECT 아래의 PIXEL
-            obj_num = path_parts[7].split("_")[-1]
-            pixel_num = path_parts[9].split("_")[-1]
-            return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}.OBJECT_nodes.{obj_num}.PIXEL_nodes.{pixel_num}"
-        else:
-            # GRID 아래의 PIXEL
-            pixel_num = path_parts[7].split("_")[-1]
-            return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}.PIXEL_nodes.{pixel_num}"
-    else:
+    # New path format: memory/N_T{hex}/E_T{hex}.json, memory/N_T{hex}/N_P0/E_P0.json, ...
+    from .memory_paths import MEMORY_ROOT
+    path_parts = json_path.split(MEMORY_ROOT)[-1].rstrip("/").split("/")
+
+    def _task_hex():
+        for p in path_parts:
+            if p.startswith("N_T"):
+                return p[3:]
+        return None
+
+    def _grid_num(part):
+        if part.startswith("N_G"):
+            return part[3:]
+        return None
+
+    if not path_parts or not path_parts[0].startswith("N_T"):
         raise ValueError(f"Invalid json path: {json_path}")
+
+    task_hex = _task_hex()
+    if len(path_parts) == 2 and path_parts[1].startswith("E_T"):
+        return task_hex
+    if len(path_parts) >= 4 and path_parts[1].startswith("N_P") and path_parts[3].startswith("E_P"):
+        pair_num = path_parts[1][3:]
+        return f"{task_hex}.PAIR_nodes.{pair_num}"
+    if len(path_parts) >= 6 and path_parts[3].startswith("N_G") and path_parts[5].startswith("E_G"):
+        pair_num = path_parts[1][3:]
+        grid_num = path_parts[3][3:]
+        return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}"
+    if len(path_parts) >= 8 and path_parts[5].startswith("N_O") and path_parts[7].startswith("E_O"):
+        pair_num = path_parts[1][3:]
+        grid_num = _grid_num(path_parts[3])
+        if grid_num is None:
+            raise ValueError(f"Invalid json path: {json_path}")
+        obj_num = path_parts[5][3:]
+        return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}.OBJECT_nodes.{obj_num}"
+    if len(path_parts) >= 8 and path_parts[5].startswith("N_X") and path_parts[7].startswith("E_X"):
+        pair_num = path_parts[1][3:]
+        grid_num = _grid_num(path_parts[3])
+        if grid_num is None:
+            raise ValueError(f"Invalid json path: {json_path}")
+        pixel_num = path_parts[5][3:]
+        return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}.PIXEL_nodes.{pixel_num}"
+    if len(path_parts) >= 10 and path_parts[7].startswith("N_X") and path_parts[9].startswith("E_X"):
+        pair_num = path_parts[1][3:]
+        grid_num = _grid_num(path_parts[3])
+        if grid_num is None:
+            raise ValueError(f"Invalid json path: {json_path}")
+        obj_num = path_parts[5][3:]
+        pixel_num = path_parts[7][3:]
+        return f"{task_hex}.PAIR_nodes.{pair_num}.GRID_nodes.{grid_num}.OBJECT_nodes.{obj_num}.PIXEL_nodes.{pixel_num}"
+    raise ValueError(f"Invalid json path: {json_path}")
     
 def id_pair_to_comparison_path(id1, id2, score=0):
-    root = "memory/"
-    
-    # id1과 id2는 이제 경로 문자열
-    # 첫 번째 부분에서 task hex code를 추출
+    # Comparison edge paths: memory/N_T{hex}/E_P0-P1.json, E_G0-G1.json, etc.
+    from .memory_paths import (
+        edge_task_comparison_path,
+        edge_pair_comparison_path,
+        edge_grid_comparison_path,
+        edge_object_comparison_path,
+        edge_pixel_comparison_path_grid,
+        edge_pixel_comparison_path_object,
+    )
     task_hex1 = id1.split('.')[0]
-    task_hex2 = id2.split('.')[0]
-    
-    # 경로를 점으로 분리하여 타입을 판단
     path_parts1 = id1.split('.')
     path_parts2 = id2.split('.')
-    
+
     if len(path_parts1) == 1:
-        # TASK level
-        return f"{root}TASK_edges/TASK_{task_hex1}-TASK_{task_hex2}.json"
+        return edge_task_comparison_path(task_hex1, path_parts2[0])
     elif len(path_parts1) == 3 and path_parts1[1] == "PAIR_nodes":
-        # PAIR level: "007bbfb7.PAIR_nodes.0"
-        pair_num1 = path_parts1[2]
-        pair_num2 = path_parts2[2]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_edges/PAIR/{score}/PAIR_{pair_num1}-PAIR_{pair_num2}.json"
+        pair_num1, pair_num2 = path_parts1[2], path_parts2[2]
+        return edge_pair_comparison_path(task_hex1, pair_num1, pair_num2, score)
     elif len(path_parts1) == 5 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes":
-        # GRID level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0"
         pair_num1 = path_parts1[2]
-        pair_num2 = path_parts2[2]
-        grid_num1 = path_parts1[4]
-        grid_num2 = path_parts2[4]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/GRID/{score}/GRID_{grid_num1}-GRID_{grid_num2}.json"
+        grid_num1, grid_num2 = path_parts1[4], path_parts2[4]
+        return edge_grid_comparison_path(task_hex1, pair_num1, grid_num1, grid_num2, score)
     elif len(path_parts1) == 7 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "OBJECT_nodes":
-        # OBJECT level: "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0"
-        pair_num1 = path_parts1[2]
-        pair_num2 = path_parts2[2]
-        grid_num1 = path_parts1[4]
-        grid_num2 = path_parts2[4]
-        obj_num1 = path_parts1[6]
-        obj_num2 = path_parts2[6]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/OBJECT/{score}/OBJECT_{obj_num1}-OBJECT_{obj_num2}.json"
+        pair_num1, grid_num1 = path_parts1[2], path_parts1[4]
+        obj_num1, obj_num2 = path_parts1[6], path_parts2[6]
+        return edge_object_comparison_path(task_hex1, pair_num1, grid_num1, obj_num1, obj_num2, score)
     elif len(path_parts1) == 7 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "PIXEL_nodes":
-        # PIXEL level (grid direct): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.PIXEL_nodes.0"
-        pair_num1 = path_parts1[2]
-        pair_num2 = path_parts2[2]
-        grid_num1 = path_parts1[4]
-        grid_num2 = path_parts2[4]
-        pixel_num1 = path_parts1[6]
-        pixel_num2 = path_parts2[6]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_edges/PIXEL/{score}/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
+        pair_num1, grid_num1 = path_parts1[2], path_parts1[4]
+        pixel_num1, pixel_num2 = path_parts1[6], path_parts2[6]
+        return edge_pixel_comparison_path_grid(task_hex1, pair_num1, grid_num1, pixel_num1, pixel_num2, score)
     elif len(path_parts1) == 9 and path_parts1[1] == "PAIR_nodes" and path_parts1[3] == "GRID_nodes" and path_parts1[5] == "OBJECT_nodes" and path_parts1[7] == "PIXEL_nodes":
-        # PIXEL level (object): "007bbfb7.PAIR_nodes.0.GRID_nodes.0.OBJECT_nodes.0.PIXEL_nodes.0"
-        pair_num1 = path_parts1[2]
-        pair_num2 = path_parts2[2]
-        grid_num1 = path_parts1[4]
-        grid_num2 = path_parts2[4]
-        obj_num1 = path_parts1[6]
-        obj_num2 = path_parts2[6]
-        pixel_num1 = path_parts1[8]
-        pixel_num2 = path_parts2[8]
-        return f"{root}TASK_nodes/TASK_{task_hex1}/PAIR_nodes/PAIR_{pair_num1}/GRID_nodes/GRID_{grid_num1}/OBJECT_nodes/OBJECT_{obj_num1}/PIXEL_edges/PIXEL/{score}/PIXEL_{pixel_num1}-PIXEL_{pixel_num2}.json"
+        pair_num1, grid_num1, obj_num1 = path_parts1[2], path_parts1[4], path_parts1[6]
+        pixel_num1, pixel_num2 = path_parts1[8], path_parts2[8]
+        return edge_pixel_comparison_path_object(task_hex1, pair_num1, grid_num1, obj_num1, pixel_num1, pixel_num2, score)
     else:
         raise ValueError(f"Invalid id format: {id1} or {id2}")
 
@@ -997,7 +991,7 @@ def get_component_full_id(component):
         else:
             pair_num = component.id
         return f"{component.parent.hex_code}.PAIR_nodes.{pair_num}"
-    elif component.type == "grid" or component.type == "tfgrid":
+    elif component.type == "grid":
         # Handle tuple id format for grids
         if isinstance(component.id, tuple) and len(component.id) >= 6:
             grid_num = component.id[2]  # Extract grid number from tuple

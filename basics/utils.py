@@ -30,8 +30,16 @@ def color_text(index, text):
 # =============================================================================
 
 def printcg(data, wait_for_enter=True):
-    """Main function to print colored grid data with automatic type detection"""
-    print("\033[2J\033[H", end='')
+    """Main function to print colored grid data with automatic type detection.
+    ARC_AGENT_MODE=1 이면: 엔터 대기 없음, 화면 클리어 없음 → 터미널에 로그가 주욱 쌓임.
+    """
+    import os
+    agent_mode = bool(os.environ.get("ARC_AGENT_MODE"))
+    if agent_mode:
+        wait_for_enter = False
+        print("\n" + "─" * 50)  # 구분선: 이전 출력과 구분, 스크롤 시 보기 쉽게
+    else:
+        print("\033[2J\033[H", end='')
     
     # Case 1: Task view structure (input/output pairs)
     if detect_task_view(data):
@@ -350,6 +358,47 @@ def print_multiple_grids(grids):
             else:
                 row_segments.append("")
         print("    ".join(row_segments))
+
+
+def print_grids_side_by_side(labels, grids, gap="    "):
+    """Print labeled grids in one row (test input | output | gt output).
+    labels: list of 3 strings. grids: list of 3 raw 2D grids (or None for missing)."""
+    if not grids or len(grids) != 3:
+        return
+    # Normalize: get .view or raw; replace None with empty grid
+    raw = []
+    for g in grids:
+        if g is None:
+            raw.append([])
+        elif hasattr(g, "view") and detect_raw_grid(getattr(g, "view", None)):
+            raw.append(g.view)
+        elif detect_raw_grid(g):
+            raw.append(g)
+        else:
+            raw.append([])
+    # Width of each grid in chars (2 chars per cell)
+    widths = [(2 * len(r[0]) if r and r[0] else 0) for r in raw]
+    max_height = max(len(r) for r in raw) if raw else 0
+    # Print label line (center label under each grid)
+    label_line_parts = []
+    for i, lbl in enumerate(labels):
+        w = widths[i]
+        if len(lbl) > w:
+            lbl = lbl[: w - 2] + ".."
+        label_line_parts.append(lbl.center(w) if w else lbl)
+    print(gap.join(label_line_parts))
+    if max_height == 0:
+        print("(no grids)")
+        return
+    # Print grids row by row
+    for row_idx in range(max_height):
+        row_segments = []
+        for i, grid in enumerate(raw):
+            if row_idx < len(grid):
+                row_segments.append(''.join(color_text(val, "  ") for val in grid[row_idx]))
+            else:
+                row_segments.append(" " * (widths[i] if i < len(widths) else 0))
+        print(gap.join(row_segments))
 
 # =============================================================================
 # EXTRACTION FUNCTIONS (extract_*)
