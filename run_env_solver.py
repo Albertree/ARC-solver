@@ -4,7 +4,7 @@ ARCEnvironment + SolverAgent: solver_main 흐름을 에이전트로 돌린다.
 - 원하는 문제만 넣어서 디버깅하려면 SOLVER_TASK_IDS 를 설정.
 """
 
-from env import ARCEnvironment, SolverAgent
+from arc_env import ARCEnvironment, SolverAgent
 
 # 디버깅 시 테스트할 문제만 지정. None이면 easy 1개만.
 # SOLVER_TASK_IDS = ["easy0016"]  # 예: ["easy0004"] 또는 ["easy0004", "easy0012"]
