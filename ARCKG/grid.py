@@ -182,7 +182,7 @@ class GRID(GridComponent) :
         self.width = len(self.colorgrid[0])
         self.size = (self.height, self.width)
         self.shape = self.measure_shape(self.colorgrid)
-        self.area = self.measure_area(self.shape)
+        # self.area = self.measure_area(self.shape)
         self.center = self.center_of_grid()
 
         self.margin = self.margin_of_grid()
@@ -195,14 +195,14 @@ class GRID(GridComponent) :
         self.left_bottom = (self.height, 0)
         self.right_bottom = (self.height, self.width)
 
-        self.hori_symm = self.grid_horizontal_symmetry()
-        self.verti_symm = self.grid_vertical_symmetry()
-        if self.height == self.width:
-            self.diag_symm = self.grid_diagonal_symmetry()
-            self.anti_symm = self.grid_antidiagonal_symmetry()
-        else:
-            self.diag_symm = False
-            self.anti_symm = False
+        # self.hori_symm = self.grid_horizontal_symmetry()
+        # self.verti_symm = self.grid_vertical_symmetry()
+        # if self.height == self.width:
+        #     self.diag_symm = self.grid_diagonal_symmetry()
+        #     self.anti_symm = self.grid_antidiagonal_symmetry()
+        # else:
+        #     self.diag_symm = False
+        #     self.anti_symm = False
 
 
 
@@ -217,17 +217,20 @@ class GRID(GridComponent) :
         # self.property['color'].update({'color_count': len(self.color)})
         self.property['color'] = self.color
 
-        # area
-        self.property['area'] = {int(color): sum(1 for row in self.colorgrid for cell in row if cell == int(color)) for color in self.color}
-        self.property['area'].update({'total': sum(self.property['area'].values())})
+        # contents (colorgrid; GRID property 3개 → 총점 3)
+        self.property['contents'] = self.colorgrid
 
-        # symmetry
-        self.property['symmetry'] = {
-            'hori_symm': self.hori_symm,
-            'verti_symm': self.verti_symm,
-            'diag_symm': self.diag_symm,
-            'anti_symm': self.anti_symm
-        }
+        # area (GRID level: commented out so score is 0/2, 1/2, 2/2)
+        # self.property['area'] = {int(color): sum(1 for row in self.colorgrid for cell in row if cell == int(color)) for color in self.color}
+        # self.property['area'].update({'total': sum(self.property['area'].values())})
+
+        # symmetry (GRID level: commented out)
+        # self.property['symmetry'] = {
+        #     'hori_symm': self.hori_symm,
+        #     'verti_symm': self.verti_symm,
+        #     'diag_symm': self.diag_symm,
+        #     'anti_symm': self.anti_symm
+        # }
 
 
     @staticmethod
@@ -265,41 +268,23 @@ class GRID(GridComponent) :
     def to_json(self):
         import os
         import json
+        from .memory_paths import grid_node_dir, grid_property_path
 
         # Only save GRID_0 and GRID_1, skip GRID_2+ to prevent intermediate grid folders
         if self.id > 1:
             return
 
         grid_dict = self.property
-        grid_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/PAIR_nodes/PAIR_{self.parent[0].id}/GRID_nodes/GRID_{self.id}/'
+        hex_code = self.parent[0].parent.hex_code
+        pair_id = self.parent[0].id
+        grid_path = grid_node_dir(hex_code, pair_id, self.id)
         if not os.path.exists(grid_path):
             os.makedirs(grid_path)
 
-        # GRID_node - GRID_property
-        path = f'{grid_path}/GRID_property'
-        file_name = f'GRID_{self.id}_property.json'
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        with open(f'{path}/{file_name}', 'w') as f:
+        # GRID property (self-pointing edge): E_G{id}.json
+        prop_path = grid_property_path(hex_code, pair_id, self.id)
+        with open(prop_path, 'w') as f:
             json.dump(grid_dict, f, indent=2)
-
-         # GRID_edge
-        grid_edge_path = f'memory/TASK_nodes/TASK_{self.parent[0].parent.hex_code}/'
-        grid_edge_path += f'PAIR_nodes/PAIR_{self.parent[0].id}/'
-        grid_edge_path += f'GRID_edges'
-        if not os.path.exists(grid_edge_path):
-            os.makedirs(grid_edge_path)
-            # Create hierarchical subfolders in GRID_edges with score-based folders
-            # GRID comparisons: max score 4 (0-4)
-            for score in range(5):
-                os.makedirs(f'{grid_edge_path}/GRID/{score}', exist_ok=True)
-            # OBJECT comparisons: max score 8 (0-8)
-            for score in range(9):
-                os.makedirs(f'{grid_edge_path}/OBJECT/{score}', exist_ok=True)
-            # PIXEL comparisons: max score 2 (0-2)
-            for score in range(3):
-                os.makedirs(f'{grid_edge_path}/PIXEL/{score}', exist_ok=True)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()
@@ -309,7 +294,8 @@ class GRID(GridComponent) :
         import os
         import json
         
-        arckg_file = f'memory/TASK_nodes/ARCKG_{self.parent[0].parent.hex_code}.json'
+        from .memory_paths import task_node_dir
+        arckg_file = f'{task_node_dir(self.parent[0].parent.hex_code)}ARCKG_{self.parent[0].parent.hex_code}.json'
         
         # Check if integrated ARCKG file exists
         if not os.path.exists(arckg_file):
@@ -362,5 +348,5 @@ class GRID(GridComponent) :
         grid_type = "input" if self.id==0 else "output"
         pair_id = self.parent[0].id
         task_id = self.parent[0].parent.hex_code
-        return f"TF_GRID({grid_type} of PAIR({pair_id}th pair of TASK({task_id})))"
+        return f"GRID({grid_type} of PAIR({pair_id}th pair of TASK({task_id})))"
         

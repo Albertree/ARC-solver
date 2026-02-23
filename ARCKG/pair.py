@@ -56,26 +56,17 @@ class PAIR(ARCKGComponent):
     def to_json(self):
         import os
         import json
+        from .memory_paths import pair_node_dir, pair_property_path
 
         pair_dict = self.property
-        pair_path = f'memory/TASK_nodes/TASK_{self.parent.hex_code}/PAIR_nodes/PAIR_{self.id}/'
+        pair_path = pair_node_dir(self.parent.hex_code, self.id)
         if not os.path.exists(pair_path):
             os.makedirs(pair_path)
 
-        # PAIR_node - PAIR_property
-        path = f'{pair_path}/PAIR_property'
-        file_name = f'PAIR_{self.id}_property.json'
-        if not os.path.exists(path):
-            os.makedirs(path)
-        
-        with open(f'{path}/{file_name}', 'w') as f:
+        # PAIR property (self-pointing edge): E_P{id}.json
+        prop_path = pair_property_path(self.parent.hex_code, self.id)
+        with open(prop_path, 'w') as f:
             json.dump(pair_dict, f, indent=2)
-
-         # PAIR_edge
-        pair_edge_path = f'memory/TASK_nodes/TASK_{self.parent.hex_code}/'
-        pair_edge_path += f'PAIR_edges'
-        if not os.path.exists(pair_edge_path):
-            os.makedirs(pair_edge_path)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()
@@ -85,7 +76,8 @@ class PAIR(ARCKGComponent):
         import os
         import json
         
-        arckg_file = f'memory/TASK_nodes/ARCKG_{self.parent.hex_code}.json'
+        from .memory_paths import task_node_dir
+        arckg_file = f'{task_node_dir(self.parent.hex_code)}ARCKG_{self.parent.hex_code}.json'
         
         # Check if integrated ARCKG file exists
         if not os.path.exists(arckg_file):

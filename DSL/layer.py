@@ -55,4 +55,20 @@ def merge_layers(accumulated_layers, keep_original=False):
             for j in range(len(layer[0])):
                 if layer[i][j] != 13:
                     merged_grid[i][j] = layer[i][j]
-    return merged_grid 
+    return merged_grid
+
+
+def make_trimmed_grid(merged_grid, mask):
+    """Extract trimmed grid from merged_layer using mask (13 = valid region). Offset 30,30."""
+    max_row = 0
+    max_col = 0
+    for i in range(len(mask)):
+        for j in range(len(mask[0])):
+            if mask[i][j] == 13:
+                max_row = i
+                max_col = j
+    trimmed_grid = [[13 for _ in range(30, max_col + 1)] for _ in range(30, max_row + 1)]
+    for i in range(len(trimmed_grid)):
+        for j in range(len(trimmed_grid[0])):
+            trimmed_grid[i][j] = merged_grid[30 + i][30 + j]
+    return trimmed_grid
