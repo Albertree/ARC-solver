@@ -123,6 +123,7 @@ class ARCEnvironment:
         task_id = self._episode_task_ids[self._current_index]
         try:
             self._current_task = ARCManager.from_hex_code(task_id)
+            breakpoint()
             self._current_task_json = self._task_to_agent_json(self._current_task)
             n = len(self._current_task.test_pairs)
             self._attempts_left = [self._max_attempts_per_pair] * n
@@ -194,7 +195,10 @@ class ARCEnvironment:
             correct_per_pair = [False] * n
         else:
             for i, test_pair in enumerate(test_pairs):
-                gt_view = test_pair.output_grid.view if hasattr(test_pair.output_grid, "view") else test_pair.output_grid
+                if getattr(self._current_task, "test_output_ground_truth", None) and i < len(self._current_task.test_output_ground_truth):
+                    gt_view = self._current_task.test_output_ground_truth[i]
+                else:
+                    gt_view = test_pair.output_grid.view if hasattr(test_pair.output_grid, "view") else test_pair.output_grid
                 ok = _grids_equal(answer[i], gt_view)
                 correct_per_pair.append(ok)
                 if not ok:

@@ -237,6 +237,13 @@ class GRID(GridComponent) :
     def from_json(grid_info:GRIDInfo, parent:ARCKGComponent):
         ggg = GRID(id=grid_info.id, type=grid_info.type, raw_data=grid_info.raw_data, parent=parent)
 
+        if not grid_info.raw_data or not grid_info.raw_data[0]:
+            ggg.pixels = []
+            ggg.objects = []
+            ggg.update_property()
+            ggg.to_json()
+            return ggg
+
         pixel_list = []
         for r in range(len(grid_info.raw_data)):
             for c in range(len(grid_info.raw_data[0])):
@@ -273,16 +280,21 @@ class GRID(GridComponent) :
         # Only save GRID_0 and GRID_1, skip GRID_2+ to prevent intermediate grid folders
         if self.id > 1:
             return
+        # Test pair: do not persist output grid (G1) so no answer structure is stored
+        pair = self.parent[0] if self.parent else None
+        if pair and getattr(pair, "type", None) == "test" and self.id == 1:
+            return
 
         grid_dict = self.property
         hex_code = self.parent[0].parent.hex_code
-        pair_id = self.parent[0].id
-        grid_path = grid_node_dir(hex_code, pair_id, self.id)
+        pair_path_id = self.parent[0].path_id
+        grid_path = grid_node_dir(hex_code, pair_path_id, self.id)
         if not os.path.exists(grid_path):
             os.makedirs(grid_path)
+            print(f"[grid.to_json] dir created: {grid_path}  (pair_path_id={pair_path_id}, grid_id={self.id})")
 
         # GRID property (self-pointing edge): E_G{id}.json
-        prop_path = grid_property_path(hex_code, pair_id, self.id)
+        prop_path = grid_property_path(hex_code, pair_path_id, self.id)
         with open(prop_path, 'w') as f:
             json.dump(grid_dict, f, indent=2)
         

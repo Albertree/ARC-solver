@@ -4,7 +4,7 @@ Convention: folders = nodes (N_*), JSON files = edges/properties (E_*).
 Root: memory/
 - TASK: memory/N_T{hex}/
 - TASK property (self-edge): memory/N_T{hex}/E_T{hex}.json
-- PAIR: memory/N_T{hex}/N_P{pair_id}/
+- PAIR: memory/N_T{hex}/N_P{pair_id}/  (train: 0,1,2 ; test: a,b,c,...)
 - PAIR property: memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json
 - GRID: memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/
 - GRID property: memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/E_G{grid_id}.json
@@ -26,55 +26,55 @@ def task_property_path(hex_code: str) -> str:
     return f"{MEMORY_ROOT}N_T{hex_code}/E_T{hex_code}.json"
 
 
-def pair_node_dir(hex_code: str, pair_id: int) -> str:
-    """PAIR node folder: memory/N_T{hex}/N_P{pair_id}/"""
+def pair_node_dir(hex_code: str, pair_id: "int | str") -> str:
+    """PAIR node folder: memory/N_T{hex}/N_P{pair_id}/ (pair_id: train 0,1,2 or test a,b,c,...)"""
     return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/"
 
 
-def pair_property_path(hex_code: str, pair_id: int) -> str:
+def pair_property_path(hex_code: str, pair_id: "int | str") -> str:
     """PAIR property file: memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json"""
     return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/E_P{pair_id}.json"
 
 
-def grid_node_dir(hex_code: str, pair_id: int, grid_id: int) -> str:
+def grid_node_dir(hex_code: str, pair_id: "int | str", grid_id: int) -> str:
     """GRID node folder: memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/"""
     return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_G{grid_id}/"
 
 
-def grid_property_path(hex_code: str, pair_id: int, grid_id: int) -> str:
+def grid_property_path(hex_code: str, pair_id: "int | str", grid_id: int) -> str:
     """GRID property file: .../N_G{grid_id}/E_G{grid_id}.json"""
     return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_G{grid_id}/E_G{grid_id}.json"
 
 
-def object_node_dir(hex_code: str, pair_id: int, grid_or_tf: str, grid_id: int, obj_id: int) -> str:
+def object_node_dir(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int) -> str:
     """OBJECT node folder. grid_or_tf is 'G' (GRID)."""
     base = f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_{grid_or_tf}{grid_id}/"
     return f"{base}N_O{obj_id}/"
 
 
-def object_property_path(hex_code: str, pair_id: int, grid_or_tf: str, grid_id: int, obj_id: int) -> str:
+def object_property_path(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int) -> str:
     """OBJECT property file: .../N_O{obj_id}/E_O{obj_id}.json"""
     return f"{object_node_dir(hex_code, pair_id, grid_or_tf, grid_id, obj_id)}E_O{obj_id}.json"
 
 
-def pixel_node_dir(hex_code: str, pair_id: int, grid_or_tf: str, grid_id: int, pixel_id: int) -> str:
+def pixel_node_dir(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, pixel_id: int) -> str:
     """PIXEL node folder under GRID."""
     base = f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_{grid_or_tf}{grid_id}/"
     return f"{base}N_X{pixel_id}/"
 
 
-def pixel_property_path(hex_code: str, pair_id: int, grid_or_tf: str, grid_id: int, pixel_id: int) -> str:
+def pixel_property_path(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, pixel_id: int) -> str:
     """PIXEL property file: .../N_X{pixel_id}/E_X{pixel_id}.json"""
     return f"{pixel_node_dir(hex_code, pair_id, grid_or_tf, grid_id, pixel_id)}E_X{pixel_id}.json"
 
 
-def pixel_under_object_dir(hex_code: str, pair_id: int, grid_or_tf: str, grid_id: int, obj_id: int, pixel_id: int) -> str:
+def pixel_under_object_dir(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int, pixel_id: int) -> str:
     """PIXEL node folder under OBJECT."""
     base = f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_{grid_or_tf}{grid_id}/N_O{obj_id}/"
     return f"{base}N_X{pixel_id}/"
 
 
-def pixel_under_object_property_path(hex_code: str, pair_id: int, grid_or_tf: str, grid_id: int, obj_id: int, pixel_id: int) -> str:
+def pixel_under_object_property_path(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int, pixel_id: int) -> str:
     """PIXEL property file under OBJECT: .../N_O{obj_id}/N_X{pixel_id}/E_X{pixel_id}.json"""
     return f"{pixel_under_object_dir(hex_code, pair_id, grid_or_tf, grid_id, obj_id, pixel_id)}E_X{pixel_id}.json"
 

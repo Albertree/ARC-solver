@@ -8,18 +8,35 @@ import os
 
 
 def extract_comparison_level(id):
+    """Map comparison id to level. Id can be spec format (T{hex}.P{p}.G{g}.O{o}.X{x}) or legacy text."""
+    if not id or not isinstance(id, str):
+        return "UNKNOWN"
+    # Spec format: last segment indicates level (X->PIXEL, O->OBJECT, G->GRID, P->PAIR)
+    parts = id.split(".")
+    if len(parts) >= 2:
+        last = parts[-1]
+        if last.startswith("X"):
+            return "PIXEL"
+        if last.startswith("O"):
+            return "OBJECT"
+        if last.startswith("G"):
+            return "GRID"
+        if last.startswith("P"):
+            return "PAIR"
+    if len(parts) == 1 and (id.startswith("T") or "TASK" in id):
+        return "TASK"
+    # Legacy: full words in id (e.g. edge ids or old format)
     if "PIXEL" in id:
         return "PIXEL"
-    elif "OBJECT" in id:
+    if "OBJECT" in id:
         return "OBJECT"
-    elif "GRID" in id:
+    if "GRID" in id:
         return "GRID"
-    elif "PAIR" in id:
+    if "PAIR" in id:
         return "PAIR"
-    elif "TASK" in id:
+    if "TASK" in id:
         return "TASK"
-    else:
-        return "UNKNOWN"
+    return "UNKNOWN"
 
 
 def load_matching_rules(comparison_level, category_key):

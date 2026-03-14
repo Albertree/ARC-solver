@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Optional, Union
 
 from .ARCKG_component import ARCKGComponent
 from .grid import GRID, GRIDInfo
@@ -7,14 +7,17 @@ class PAIRInfo(NamedTuple):
     id: int
     type: str
     raw_data: dict
+    path_id: Optional[str] = None  # train: None → use id (0,1,2); test: 'a','b','c',...
 
 class PAIR(ARCKGComponent):
-    def __init__(self, id:int, type:str, raw_data:dict, parent:ARCKGComponent): # , parent:ARCKGComponent, input_grid:ARCKGComponent= None, output_grid:ARCKGComponent=None):
+    def __init__(self, id:int, type:str, raw_data:dict, parent:ARCKGComponent, path_id: Optional[str] = None):
         super().__init__(id, type)
         self.raw_data = raw_data
         self.parent = parent
         self.property = dict()
         self.program = []
+        # Path segment for folders: train N_P0, N_P1,... ; test N_Pa, N_Pb,...
+        self.path_id: Union[int, str] = path_id if path_id is not None else id
 
     def update_property(self):
         self.childs = [self.input_grid, self.output_grid]
@@ -27,8 +30,14 @@ class PAIR(ARCKGComponent):
 
     
     @staticmethod
-    def from_json(pair_info:PAIRInfo, parent:ARCKGComponent):        
-        ppp = PAIR(id=pair_info.id, type=pair_info.type, raw_data=pair_info.raw_data, parent=parent)
+    def from_json(pair_info: PAIRInfo, parent: ARCKGComponent):
+        ppp = PAIR(
+            id=pair_info.id,
+            type=pair_info.type,
+            raw_data=pair_info.raw_data,
+            parent=parent,
+            path_id=getattr(pair_info, 'path_id', None),
+        )
 
         for i, k in enumerate(pair_info.raw_data.keys()):
             if k == 'input':
@@ -59,12 +68,12 @@ class PAIR(ARCKGComponent):
         from .memory_paths import pair_node_dir, pair_property_path
 
         pair_dict = self.property
-        pair_path = pair_node_dir(self.parent.hex_code, self.id)
+        pair_path = pair_node_dir(self.parent.hex_code, self.path_id)
         if not os.path.exists(pair_path):
             os.makedirs(pair_path)
 
-        # PAIR property (self-pointing edge): E_P{id}.json
-        prop_path = pair_property_path(self.parent.hex_code, self.id)
+        # PAIR property (self-pointing edge): E_P{path_id}.json
+        prop_path = pair_property_path(self.parent.hex_code, self.path_id)
         with open(prop_path, 'w') as f:
             json.dump(pair_dict, f, indent=2)
         

@@ -1,3 +1,4 @@
+import copy
 from typing import NamedTuple
 
 from .ARCKG_component import ARCKGComponent
@@ -14,12 +15,14 @@ class TASK(ARCKGComponent):
         self.raw_data = raw_data
         self.hex_code = hex_code
 
-        self.example_pairs = [self.raw_data['train']]
-        self.test_pairs = [self.raw_data['test']]
+        self.example_pairs = [self.raw_data["train"]]
+        self.test_pairs = [self.raw_data["test"]]
 
         self.view = self.task_dict_to_list(self.raw_data)
 
         self.property = dict()
+        # Filled in from_json: list of ground-truth output grids for test pairs (so solver can compare)
+        self.test_output_ground_truth = None
 
     def task_dict_to_list(self, raw_data: dict) -> list:
         view = []
@@ -68,13 +71,21 @@ class TASK(ARCKGComponent):
             pair = PAIR.from_json(example_pair_info, parent=ttt)
             example_pairs.append(pair)
         
-        # Create test pairs
+        # Preserve ground-truth test outputs for later comparison (no answer in ARCKG)
+        ttt.test_output_ground_truth = [
+            copy.deepcopy(test["output"]) for test in task_info.raw_data["test"]
+        ]
+
+        # Create test pairs with empty output so ARCKG is built without the answer
         test_pairs = []
-        for i, test in enumerate(task_info.raw_data['test']):
+        for i, test in enumerate(task_info.raw_data["test"]):
+            # 1 row, 0 cols so GRID.from_json runs without building objects/pixels from answer
+            raw_data_no_output = {"input": test["input"], "output": [[]]}
             test_pair_info = PAIRInfo(
                 id=i,
-                type='test',
-                raw_data=test
+                type="test",
+                raw_data=raw_data_no_output,
+                path_id=chr(ord("a") + i),
             )
             pair = PAIR.from_json(test_pair_info, parent=ttt)
             test_pairs.append(pair)

@@ -8,7 +8,9 @@ from arc_env import ARCEnvironment, SolverAgent
 
 # 디버깅 시 테스트할 문제만 지정. None이면 easy 1개만.
 # SOLVER_TASK_IDS = ["easy0016"]  # 예: ["easy0004"] 또는 ["easy0004", "easy0012"]
-SOLVER_TASK_IDS = ["08ed6ac7"]  
+SOLVER_TASK_IDS = ["08ed6ac7"] 
+# SOLVER_TASK_IDS = ["0ca9ddb6"] 
+
 
 # 에이전트 중간 출력: True면 단계별 로그 + 그리드 요약을 stdout에 출력.
 VERBOSE = True

@@ -1,0 +1,393 @@
+{
+  "id1": "T08ed6ac7.P1.G0.O0",
+  "id2": "T08ed6ac7.P1.G1.O1",
+  "lca_node_id": "T08ed6ac7.P1",
+  "edge_id": "E_P1G0O0-P1G1O1",
+  "order": 1,
+  "result": {
+    "type": "DIFF",
+    "score": "7/8",
+    "category": {
+      "area": {
+        "type": "COMM",
+        "score": "1/1",
+        "category": {},
+        "comp1": 8,
+        "comp2": 8
+      },
+      "color": {
+        "type": "DIFF",
+        "score": "8/10",
+        "category": {
+          "0": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "1": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": false,
+            "comp2": true
+          },
+          "2": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "3": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "4": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "5": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": true,
+            "comp2": false
+          },
+          "6": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "7": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "8": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "9": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          }
+        }
+      },
+      "coordinate": {
+        "type": "COMM",
+        "score": "1/1",
+        "category": {},
+        "comp1": [
+          [
+            2,
+            7
+          ],
+          [
+            6,
+            7
+          ],
+          [
+            4,
+            7
+          ],
+          [
+            5,
+            7
+          ],
+          [
+            8,
+            7
+          ],
+          [
+            1,
+            7
+          ],
+          [
+            7,
+            7
+          ],
+          [
+            3,
+            7
+          ]
+        ],
+        "comp2": [
+          [
+            3,
+            7
+          ],
+          [
+            6,
+            7
+          ],
+          [
+            4,
+            7
+          ],
+          [
+            5,
+            7
+          ],
+          [
+            8,
+            7
+          ],
+          [
+            1,
+            7
+          ],
+          [
+            7,
+            7
+          ],
+          [
+            2,
+            7
+          ]
+        ]
+      },
+      "method": {
+        "type": "COMM",
+        "score": "3/3",
+        "category": {
+          "diagonal": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "univalued": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "without_bg": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          }
+        }
+      },
+      "pos": {
+        "type": "COMM",
+        "score": "4/4",
+        "category": {
+          "left_bottom": {
+            "type": "COMM",
+            "score": "2/2",
+            "category": {
+              "col_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 7,
+                "comp2": 7
+              },
+              "row_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 8,
+                "comp2": 8
+              }
+            }
+          },
+          "left_top": {
+            "type": "COMM",
+            "score": "2/2",
+            "category": {
+              "col_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 7,
+                "comp2": 7
+              },
+              "row_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 1,
+                "comp2": 1
+              }
+            }
+          },
+          "right_bottom": {
+            "type": "COMM",
+            "score": "2/2",
+            "category": {
+              "col_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 7,
+                "comp2": 7
+              },
+              "row_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 8,
+                "comp2": 8
+              }
+            }
+          },
+          "right_top": {
+            "type": "COMM",
+            "score": "2/2",
+            "category": {
+              "col_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 7,
+                "comp2": 7
+              },
+              "row_index": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": 1,
+                "comp2": 1
+              }
+            }
+          }
+        }
+      },
+      "shape": {
+        "type": "COMM",
+        "score": "1/1",
+        "category": {},
+        "comp1": [
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ],
+        "comp2": [
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ],
+          [
+            1
+          ]
+        ]
+      },
+      "size": {
+        "type": "COMM",
+        "score": "2/2",
+        "category": {
+          "height": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": 8,
+            "comp2": 8
+          },
+          "width": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": 1,
+            "comp2": 1
+          }
+        }
+      },
+      "symmetry": {
+        "type": "COMM",
+        "score": "4/4",
+        "category": {
+          "anti_symm": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "diag_symm": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "hori_symm": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "verti_symm": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          }
+        }
+      }
+    }
+  }
+}

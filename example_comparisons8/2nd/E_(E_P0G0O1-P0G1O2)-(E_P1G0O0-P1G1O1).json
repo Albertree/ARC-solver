@@ -1,0 +1,1077 @@
+{
+  "id1": "E_P0G0O1-P0G1O2",
+  "id2": "E_P1G0O0-P1G1O1",
+  "lca_node_id": "T08ed6ac7",
+  "edge_id": "E_(E_P0G0O1-P0G1O2)-(E_P1G0O0-P1G1O1)",
+  "order": 2,
+  "result": {
+    "type": "DIFF",
+    "score": "2/3",
+    "category": {
+      "result.category": {
+        "type": "DIFF",
+        "score": "6/8",
+        "category": {
+          "area": {
+            "type": "COMM",
+            "score": "3/3",
+            "category": {
+              "area.category": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": {},
+                "comp2": {}
+              },
+              "area.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "1/1",
+                "comp2": "1/1"
+              },
+              "area.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "COMM",
+                "comp2": "COMM"
+              }
+            }
+          },
+          "color": {
+            "type": "COMM",
+            "score": "3/3",
+            "category": {
+              "color.category": {
+                "type": "COMM",
+                "score": "10/10",
+                "category": {
+                  "0": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "0.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "0.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "0.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "1": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "1.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "1.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "0/1",
+                        "comp2": "0/1"
+                      },
+                      "1.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "DIFF",
+                        "comp2": "DIFF"
+                      }
+                    }
+                  },
+                  "2": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "2.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "2.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "2.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "3": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "3.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "3.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "3.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "4": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "4.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "4.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "4.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "5": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "5.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "5.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "0/1",
+                        "comp2": "0/1"
+                      },
+                      "5.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "DIFF",
+                        "comp2": "DIFF"
+                      }
+                    }
+                  },
+                  "6": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "6.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "6.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "6.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "7": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "7.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "7.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "7.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "8": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "8.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "8.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "8.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "9": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "9.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "9.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "9.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  }
+                }
+              },
+              "color.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "8/10",
+                "comp2": "8/10"
+              },
+              "color.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "DIFF",
+                "comp2": "DIFF"
+              }
+            }
+          },
+          "coordinate": {
+            "type": "COMM",
+            "score": "3/3",
+            "category": {
+              "coordinate.category": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": {},
+                "comp2": {}
+              },
+              "coordinate.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "1/1",
+                "comp2": "1/1"
+              },
+              "coordinate.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "COMM",
+                "comp2": "COMM"
+              }
+            }
+          },
+          "method": {
+            "type": "COMM",
+            "score": "3/3",
+            "category": {
+              "method.category": {
+                "type": "COMM",
+                "score": "3/3",
+                "category": {
+                  "diagonal": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "diagonal.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "diagonal.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "diagonal.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "univalued": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "univalued.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "univalued.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "univalued.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "without_bg": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "without_bg.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "without_bg.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "without_bg.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  }
+                }
+              },
+              "method.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "3/3",
+                "comp2": "3/3"
+              },
+              "method.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "COMM",
+                "comp2": "COMM"
+              }
+            }
+          },
+          "pos": {
+            "type": "DIFF",
+            "score": "2/3",
+            "category": {
+              "pos.category": {
+                "type": "DIFF",
+                "score": "0/4",
+                "category": {
+                  "left_bottom": {
+                    "type": "DIFF",
+                    "score": "2/3",
+                    "category": {
+                      "left_bottom.category": {
+                        "type": "DIFF",
+                        "score": "2/2",
+                        "category": {
+                          "col_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "col_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "col_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "col_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          },
+                          "row_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "row_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "row_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "row_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "left_bottom.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "2/2",
+                        "comp2": "2/2"
+                      },
+                      "left_bottom.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "left_top": {
+                    "type": "DIFF",
+                    "score": "2/3",
+                    "category": {
+                      "left_top.category": {
+                        "type": "DIFF",
+                        "score": "2/2",
+                        "category": {
+                          "col_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "col_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "col_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "col_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          },
+                          "row_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "row_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "row_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "row_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "left_top.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "2/2",
+                        "comp2": "2/2"
+                      },
+                      "left_top.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "right_bottom": {
+                    "type": "DIFF",
+                    "score": "2/3",
+                    "category": {
+                      "right_bottom.category": {
+                        "type": "DIFF",
+                        "score": "2/2",
+                        "category": {
+                          "col_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "col_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "col_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "col_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          },
+                          "row_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "row_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "row_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "row_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "right_bottom.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "2/2",
+                        "comp2": "2/2"
+                      },
+                      "right_bottom.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "right_top": {
+                    "type": "DIFF",
+                    "score": "2/3",
+                    "category": {
+                      "right_top.category": {
+                        "type": "DIFF",
+                        "score": "2/2",
+                        "category": {
+                          "col_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "col_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "col_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "col_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          },
+                          "row_index": {
+                            "type": "COMM",
+                            "score": "3/3",
+                            "category": {
+                              "row_index.category": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": {},
+                                "comp2": {}
+                              },
+                              "row_index.score": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "1/1",
+                                "comp2": "1/1"
+                              },
+                              "row_index.type": {
+                                "type": "COMM",
+                                "score": "1/1",
+                                "category": {},
+                                "comp1": "COMM",
+                                "comp2": "COMM"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "right_top.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "2/2",
+                        "comp2": "2/2"
+                      },
+                      "right_top.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  }
+                }
+              },
+              "pos.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "4/4",
+                "comp2": "4/4"
+              },
+              "pos.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "COMM",
+                "comp2": "COMM"
+              }
+            }
+          },
+          "shape": {
+            "type": "COMM",
+            "score": "3/3",
+            "category": {
+              "shape.category": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": {},
+                "comp2": {}
+              },
+              "shape.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "1/1",
+                "comp2": "1/1"
+              },
+              "shape.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "COMM",
+                "comp2": "COMM"
+              }
+            }
+          },
+          "size": {
+            "type": "DIFF",
+            "score": "2/3",
+            "category": {
+              "size.category": {
+                "type": "DIFF",
+                "score": "2/2",
+                "category": {
+                  "height": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "height.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "height.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "height.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "width": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "width.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "width.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "width.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  }
+                }
+              },
+              "size.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "2/2",
+                "comp2": "2/2"
+              },
+              "size.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "COMM",
+                "comp2": "COMM"
+              }
+            }
+          },
+          "symmetry": {
+            "type": "COMM",
+            "score": "3/3",
+            "category": {
+              "symmetry.category": {
+                "type": "COMM",
+                "score": "4/4",
+                "category": {
+                  "anti_symm": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "anti_symm.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "anti_symm.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "anti_symm.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "diag_symm": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "diag_symm.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "diag_symm.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "diag_symm.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "hori_symm": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "hori_symm.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "hori_symm.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "hori_symm.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  },
+                  "verti_symm": {
+                    "type": "COMM",
+                    "score": "3/3",
+                    "category": {
+                      "verti_symm.category": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": {},
+                        "comp2": {}
+                      },
+                      "verti_symm.score": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "1/1",
+                        "comp2": "1/1"
+                      },
+                      "verti_symm.type": {
+                        "type": "COMM",
+                        "score": "1/1",
+                        "category": {},
+                        "comp1": "COMM",
+                        "comp2": "COMM"
+                      }
+                    }
+                  }
+                }
+              },
+              "symmetry.score": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "4/4",
+                "comp2": "4/4"
+              },
+              "symmetry.type": {
+                "type": "COMM",
+                "score": "1/1",
+                "category": {},
+                "comp1": "COMM",
+                "comp2": "COMM"
+              }
+            }
+          }
+        }
+      },
+      "result.score": {
+        "type": "COMM",
+        "score": "1/1",
+        "category": {},
+        "comp1": "7/8",
+        "comp2": "7/8"
+      },
+      "result.type": {
+        "type": "COMM",
+        "score": "1/1",
+        "category": {},
+        "comp1": "DIFF",
+        "comp2": "DIFF"
+      }
+    }
+  }
+}

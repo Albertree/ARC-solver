@@ -252,15 +252,24 @@ class OBJECT(GridComponent):
     @staticmethod
     def from_json(object_info:OBJECTInfo, parent:ARCKGComponent):
         ooo = OBJECT(id=object_info.id, type=object_info.type, raw_data=object_info.raw_data, parent=parent)
-        obj_coordinate = ooo.colcoord_to_coordinate(list(object_info.raw_data['obj']))
+        # Set of (row, col) tuples so each grid cell matches at most one object pixel
+        obj_coordinate = {tuple(c) for c in ooo.colcoord_to_coordinate(list(object_info.raw_data['obj']))}
 
         pixel_list = []
+        seen_pixel_ids = set()
         for pixel in parent.pixels:
-            if pixel.coordinate in obj_coordinate:
-                pixel_list.append(pixel)
+            coord = tuple(pixel.coordinate) if not isinstance(pixel.coordinate, tuple) else pixel.coordinate
+            if coord not in obj_coordinate:
+                continue
+            if pixel.id in seen_pixel_ids:
+                continue
+            seen_pixel_ids.add(pixel.id)
+            pixel_list.append(pixel)
+            if ooo not in pixel.parent:
                 pixel.parent.append(ooo)
-                pixel.to_json()
         ooo.pixels = pixel_list
+        for pixel in pixel_list:
+            pixel.to_json()
         ooo.update_property(object_info.raw_data)
         ooo.to_json()    
         
@@ -273,16 +282,17 @@ class OBJECT(GridComponent):
 
         object_dict = self.property
         hex_code = self.parent[0].parent[0].parent.hex_code
-        pair_id = self.parent[0].parent[0].id
+        pair_path_id = self.parent[0].parent[0].path_id
         parent_grid = self.parent[-1]
         grid_id = parent_grid.id
 
-        object_path = object_node_dir(hex_code, pair_id, 'G', grid_id, self.id)
+        object_path = object_node_dir(hex_code, pair_path_id, 'G', grid_id, self.id)
         if not os.path.exists(object_path):
             os.makedirs(object_path)
+            print(f"[object.to_json] dir created: {object_path}  (pair_path_id={pair_path_id}, grid_id={grid_id}, object_id={self.id})")
 
         # OBJECT property (self-pointing edge): E_O{id}.json
-        prop_path = object_property_path(hex_code, pair_id, 'G', grid_id, self.id)
+        prop_path = object_property_path(hex_code, pair_path_id, 'G', grid_id, self.id)
         with open(prop_path, 'w') as f:
             json.dump(object_dict, f, indent=2)
         

@@ -11,6 +11,8 @@ class PIXELInfo(NamedTuple):
 class PIXEL(GridComponent):
     def __init__(self, id:int, type:str, parent:list, raw_data:PIXELData_Type): #, pixel_data:PIXELData_Type):
         super().__init__(id, type, parent)
+        # Ensure each PIXEL has its own parent list (never shared with other pixels)
+        self.parent = list(self.parent)
         self.raw_data = raw_data
         self.property = dict()
 
@@ -60,33 +62,45 @@ class PIXEL(GridComponent):
             if pair and hasattr(pair, 'parent') and pair.parent:
                 task = pair.parent
                 if task:
-                    hex_code, pair_id, grid_id = task.hex_code, pair.id, grid.id
-                    path_g = pixel_node_dir(hex_code, pair_id, 'G', grid_id, self.id)
+                    hex_code, pair_path_id, grid_id = task.hex_code, pair.path_id, grid.id
+                    path_g = pixel_node_dir(hex_code, pair_path_id, 'G', grid_id, self.id)
                     if not os.path.exists(path_g):
                         os.makedirs(path_g)
-                    prop_path = pixel_property_path(hex_code, pair_id, 'G', grid_id, self.id)
+                        print(f"[pixel.to_json] dir created (under GRID): {path_g}  (pair_path_id={pair_path_id}, grid_id={grid_id}, pixel_id={self.id})")
+                    prop_path = pixel_property_path(hex_code, pair_path_id, 'G', grid_id, self.id)
                     with open(prop_path, 'w') as f:
                         json.dump(pixel_dict, f, indent=2)
 
-        # Save under object parents if they exist
+        # Save under object parents if they exist.
+        # Only write under an OBJECT when this pixel is actually in that object's pixels list,
+        # and at most once per OBJECT (guard against duplicate refs in self.parent).
+        seen_object_ids = set()
         for parent in self.parent:
-            if hasattr(parent, 'type') and parent.type == 'object':
-                obj_grid = parent.parent[0] if hasattr(parent, 'parent') and parent.parent else None
-                if obj_grid and hasattr(obj_grid, 'parent') and obj_grid.parent:
-                    obj_pair = obj_grid.parent[0] if isinstance(obj_grid.parent, list) else obj_grid.parent
-                    if obj_pair and hasattr(obj_pair, 'parent') and obj_pair.parent:
-                        obj_task = obj_pair.parent
-                        if obj_task:
-                            hex_code = obj_task.hex_code
-                            pair_id = obj_pair.id
-                            grid_id = obj_grid.id
-                            obj_id = parent.id
-                            path_o = pixel_under_object_dir(hex_code, pair_id, 'G', grid_id, obj_id, self.id)
-                            if not os.path.exists(path_o):
-                                os.makedirs(path_o)
-                            prop_path = pixel_under_object_property_path(hex_code, pair_id, 'G', grid_id, obj_id, self.id)
-                            with open(prop_path, 'w') as f:
-                                json.dump(pixel_dict, f, indent=2)
+            if not hasattr(parent, 'type') or parent.type != 'object':
+                continue
+            if parent.id in seen_object_ids:
+                continue
+            if not (hasattr(parent, 'pixels') and self in parent.pixels):
+                continue
+            seen_object_ids.add(parent.id)
+
+            obj_grid = parent.parent[0] if hasattr(parent, 'parent') and parent.parent else None
+            if obj_grid and hasattr(obj_grid, 'parent') and obj_grid.parent:
+                obj_pair = obj_grid.parent[0] if isinstance(obj_grid.parent, list) else obj_grid.parent
+                if obj_pair and hasattr(obj_pair, 'parent') and obj_pair.parent:
+                    obj_task = obj_pair.parent
+                    if obj_task:
+                        hex_code = obj_task.hex_code
+                        pair_path_id = obj_pair.path_id
+                        grid_id = obj_grid.id
+                        obj_id = parent.id
+                        path_o = pixel_under_object_dir(hex_code, pair_path_id, 'G', grid_id, obj_id, self.id)
+                        if not os.path.exists(path_o):
+                            os.makedirs(path_o)
+                            print(f"[pixel.to_json] dir created (under OBJECT): {path_o}  (pair_path_id={pair_path_id}, grid_id={grid_id}, object_id={obj_id}, pixel_id={self.id})")
+                        prop_path = pixel_under_object_property_path(hex_code, pair_path_id, 'G', grid_id, obj_id, self.id)
+                        with open(prop_path, 'w') as f:
+                            json.dump(pixel_dict, f, indent=2)
         
         # Update integrated ARCKG JSON
         # self.update_integrated_arckg_json()

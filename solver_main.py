@@ -48,7 +48,8 @@ if __name__ == "__main__":
         if task.test_pairs and getattr(solver, "_test_output_prediction", None) is not None:
             test_pair = task.test_pairs[0]
             t_view = test_pair.input_grid.view if hasattr(test_pair.input_grid, "view") else test_pair.input_grid
-            gt_view = test_pair.output_grid.view if hasattr(test_pair.output_grid, "view") else test_pair.output_grid
+            gt_view = (task.test_output_ground_truth[0] if getattr(task, "test_output_ground_truth", None) and len(task.test_output_ground_truth) > 0
+                       else (test_pair.output_grid.view if hasattr(test_pair.output_grid, "view") else test_pair.output_grid))
             pred_view = solver._test_output_prediction
             print_grids_side_by_side(["Test input", "예측 output", "GT output"], [t_view, pred_view, gt_view])
         _wait_enter("종료하려면 Enter를 누르세요...")
@@ -75,15 +76,15 @@ if __name__ == "__main__":
         else:
             test_pair = task.test_pairs[0]
             test_input_grid = test_pair.input_grid
-            gt_output_grid = test_pair.output_grid
+            gt_view = (task.test_output_ground_truth[0] if getattr(task, "test_output_ground_truth", None) and len(task.test_output_ground_truth) > 0
+                       else (test_pair.output_grid.view if hasattr(test_pair.output_grid, "view") else test_pair.output_grid))
             for level in ("GRID", "OBJECT", "PIXEL"):
                 abstract_path = os.path.join(base_dir, TASK_HEX_CODE, level, f"{TASK_HEX_CODE}_abstract_{level.lower()}.py")
                 if not os.path.isfile(abstract_path):
                     continue
                 print(f"[solver_main] LEVEL: {level} (abstract program 실행)")
-                # Build three grids for one row: test input | output | gt output
+                # Build three grids for one row: test input | output | gt output (GT from task property)
                 t_view = test_input_grid.view if hasattr(test_input_grid, "view") else test_input_grid
-                gt_view = gt_output_grid.view if hasattr(gt_output_grid, "view") else gt_output_grid
                 result = pm.execute_program(abstract_path, test_input_grid)
                 if result is not None:
                     out_view = result.view if hasattr(result, "view") else result

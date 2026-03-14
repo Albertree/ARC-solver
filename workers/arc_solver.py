@@ -320,11 +320,14 @@ class ARCSolver:
         return False
 
     def _apply_prediction_and_compare(self, test_idx: int, test_pair, pred_contents, lines, candidates_list=None):
-        """test pair별 예측 저장 및 GT와 비교. candidates_list 있으면 재제출 시 다음 후보 시도용."""
+        """test pair별 예측 저장 및 GT와 비교. candidates_list 있으면 재제출 시 다음 후보 시도용. GT는 task.test_output_ground_truth 사용."""
         self._test_output_predictions[test_idx] = pred_contents
         self._test_output_prediction_candidates_list[test_idx] = candidates_list if candidates_list else None
-        gt_grid = test_pair.output_grid
-        gt_view = getattr(gt_grid, "view", None) or getattr(gt_grid, "raw_data", None) or getattr(gt_grid, "colorgrid", None)
+        if getattr(self.task, "test_output_ground_truth", None) and test_idx < len(self.task.test_output_ground_truth):
+            gt_view = self.task.test_output_ground_truth[test_idx]
+        else:
+            gt_grid = test_pair.output_grid
+            gt_view = getattr(gt_grid, "view", None) or getattr(gt_grid, "raw_data", None) or getattr(gt_grid, "colorgrid", None)
         if gt_view is not None and pred_contents is not None:
             same_shape = len(pred_contents) == len(gt_view) and (
                 len(pred_contents) == 0 or (len(gt_view) > 0 and len(pred_contents[0]) == len(gt_view[0]))

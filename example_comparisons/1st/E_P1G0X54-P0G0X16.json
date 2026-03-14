@@ -1,0 +1,40 @@
+{
+  "id1": "T08ed6ac7.P1.G0.X54",
+  "id2": "T08ed6ac7.P0.G0.X16",
+  "lca_node_id": "T08ed6ac7",
+  "edge_id": "E_P1G0X54-P0G0X16",
+  "order": 1,
+  "result": {
+    "type": "DIFF",
+    "score": "1/2",
+    "category": {
+      "color": {
+        "type": "COMM",
+        "score": "1/1",
+        "category": {},
+        "comp1": 0,
+        "comp2": 0
+      },
+      "coordinate": {
+        "type": "DIFF",
+        "score": "0/2",
+        "category": {
+          "col_index": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": 0,
+            "comp2": 7
+          },
+          "row_index": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": 6,
+            "comp2": 1
+          }
+        }
+      }
+    }
+  }
+}

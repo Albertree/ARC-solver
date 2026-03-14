@@ -246,12 +246,15 @@ class SolverAgent:
                     c = len(t_view[0]) if t_view and t_view[0] else 1
                     answers[i] = _placeholder_grid(r, c, fill=0)
 
-            # 제출 전 항상 Input | Output | GT 표시 (PaG1이든 추상 프로그램이든, 맞든 틀리든)
+            # 제출 전 항상 Input | Output | GT 표시 (GT는 task.test_output_ground_truth 사용)
             if answers and test_pairs:
                 self._phase("Agent", "제출: Input | Output | GT (맞음/틀림 확인)")
                 for idx, (test_pair, ans_view) in enumerate(zip(test_pairs, answers)):
                     inp = test_pair.input_grid
-                    gt = test_pair.output_grid
+                    if getattr(task_obj, "test_output_ground_truth", None) and idx < len(task_obj.test_output_ground_truth):
+                        gt = task_obj.test_output_ground_truth[idx]
+                    else:
+                        gt = test_pair.output_grid
                     print(f"\n  [Agent] Test pair {idx}: Input  |  Output  |  GT")
                     print_grids_side_by_side(
                         ["Input", "Output", "GT"],
