@@ -1,0 +1,346 @@
+{
+  "id1": "T0bb8deee.P0.G0",
+  "id2": "T0bb8deee.P0.G1",
+  "lca_node_id": "T0bb8deee.P0",
+  "edge_id": "E_P0G0-P0G1",
+  "order": 1,
+  "result": {
+    "type": "DIFF",
+    "score": "0/3",
+    "category": {
+      "color": {
+        "type": "DIFF",
+        "score": "9/10",
+        "category": {
+          "0": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "1": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "2": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": true,
+            "comp2": false
+          },
+          "3": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "4": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "5": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": true,
+            "comp2": true
+          },
+          "6": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "7": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "8": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          },
+          "9": {
+            "type": "COMM",
+            "score": "1/1",
+            "category": {},
+            "comp1": false,
+            "comp2": false
+          }
+        }
+      },
+      "contents": {
+        "type": "DIFF",
+        "score": "0/1",
+        "category": {},
+        "comp1": [
+          [
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            3,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            3,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            4,
+            0,
+            0,
+            0,
+            2,
+            0,
+            5,
+            5,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            5,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            5,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "comp2": [
+          [
+            1,
+            1,
+            0,
+            0,
+            3,
+            3
+          ],
+          [
+            0,
+            1,
+            0,
+            3,
+            3,
+            0
+          ],
+          [
+            0,
+            1,
+            1,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            5,
+            5,
+            0
+          ],
+          [
+            4,
+            0,
+            4,
+            0,
+            5,
+            0
+          ],
+          [
+            0,
+            4,
+            0,
+            0,
+            0,
+            5
+          ]
+        ]
+      },
+      "size": {
+        "type": "DIFF",
+        "score": "0/2",
+        "category": {
+          "height": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": 12,
+            "comp2": 6
+          },
+          "width": {
+            "type": "DIFF",
+            "score": "0/1",
+            "category": {},
+            "comp1": 13,
+            "comp2": 6
+          }
+        }
+      }
+    }
+  }
+}

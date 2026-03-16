@@ -4,7 +4,8 @@ import os
 import ast
 import json
 # from .program_optimizer import ProgramOptimizer
-from ARCKG.comparison import * 
+from ARCKG.comparison import *
+from ARCKG.memory_paths import MEMORY_ROOT
 from pprint import pprint
 from program_gen import ProgramManager, get_matching_actions
 
@@ -396,10 +397,65 @@ class ARCSolver:
         )
         return can_make
 
+    def _ensure_task_and_pair_properties_saved(self):
+        """16단계 흐름 2·5: TASK property 및 모든 PAIR property 확인 후 semantic_memory에 저장."""
+        task = self.task
+        if not getattr(task, "property", None) or not task.property:
+            if hasattr(task, "update_property"):
+                task.update_property()
+            task.property = getattr(task, "property", {})
+        if hasattr(task, "to_json"):
+            try:
+                task.to_json()
+            except Exception:
+                pass
+        for pair in list(task.example_pairs) + list(getattr(task, "test_pairs", [])):
+            if not getattr(pair, "property", None) or not pair.property:
+                if hasattr(pair, "update_property"):
+                    pair.update_property()
+                pair.property = getattr(pair, "property", {})
+            if hasattr(pair, "to_json"):
+                try:
+                    pair.to_json()
+                except Exception:
+                    pass
+
+    def _compare_objects_within_grid(self, grid):
+        """16단계 11: 한 GRID 내 모든 object 쌍 비교. 저장: N_T{hex}/N_P{p}/N_G{g}/ 아래 (LCA=GRID)."""
+        objs = getattr(grid, "objects", []) or []
+        for i, o0 in enumerate(objs):
+            if not getattr(o0, "property", None):
+                o0.property = {}
+            for j in range(i + 1, len(objs)):
+                o1 = objs[j]
+                if not getattr(o1, "property", None):
+                    o1.property = {}
+                try:
+                    compare(o0, o1, save=True)
+                except Exception:
+                    pass
+
+    def _compare_objects_cross_grid_in_pair(self, pair):
+        """16단계 12: 한 PAIR 내 G0 object vs G1 object 전부 비교. 저장: N_T{hex}/N_P{p}/ 아래 (LCA=PAIR)."""
+        self._ensure_grid_property(pair.input_grid)
+        self._ensure_grid_property(pair.output_grid)
+        objs0 = getattr(pair.input_grid, "objects", []) or []
+        objs1 = getattr(pair.output_grid, "objects", []) or []
+        for o0 in objs0:
+            if not getattr(o0, "property", None):
+                o0.property = {}
+            for o1 in objs1:
+                if not getattr(o1, "property", None):
+                    o1.property = {}
+                try:
+                    compare(o0, o1, save=True)
+                except Exception:
+                    pass
+
     def _compare_pair_components(self, pair0, pair1, pair0_idx: int, pair1_idx: int):
         """
         PAIR 간 OBJECT 레벨 비교 (수도코드 3.3).
-        pair0 vs pair1: P0G0 객체들 vs P1G0 객체들, P0G1 객체들 vs P1G1 객체들 비교 후 memory에 저장.
+        pair0 vs pair1: P0G0 객체들 vs P1G0 객체들, P0G1 객체들 vs P1G1 객체들 비교 후 semantic_memory에 저장.
         """
         task_hex = self.task_hex_code
         self._ensure_grid_property(pair0.input_grid)
@@ -430,14 +486,53 @@ class ARCSolver:
             pair0.output_grid, pair1.output_grid,
             f"P{pair0_idx}G1", f"P{pair1_idx}G1"
         )
-        print(f"[PAIR 간 OBJECT 비교] P{pair0_idx}↔P{pair1_idx}: P{pair0_idx}G0-P{pair1_idx}G0, P{pair0_idx}G1-P{pair1_idx}G1 객체 비교 완료 → memory/N_T{task_hex}/")
+        print(f"[PAIR 간 OBJECT 비교] P{pair0_idx}↔P{pair1_idx}: P{pair0_idx}G0-P{pair1_idx}G0, P{pair0_idx}G1-P{pair1_idx}G1 객체 비교 완료 → {MEMORY_ROOT}N_T{task_hex}/")
+
+    def run_solver_flow_16_steps(self):
+        """
+        16단계 흐름대로 실행 (docs/solver_flow_16_steps.md).
+        agent·environment 정의 후 문제 풀기 시작한 뒤의 순서: TASK property → PAIR property → PAIR 비교(N_T) →
+        각 PAIR 내 GRID property·G0-G1 비교(N_P) → 같은 그리드 내 object 비교(G_0,G_1) → 같은 PAIR 내 G0-G1 object 비교(P_0) →
+        프로그램 시도 → PAIR 간 object 비교(N_T) → 예측.
+        """
+        task = self.task
+        print("[Flow] 1–2: TASK 해석·property 확인 및 저장")
+        self._ensure_task_and_pair_properties_saved()
+        print("[Flow] 3: semantic memory 다른 TASK 비교 (처음 상태라 생략)")
+        print("[Flow] 4–6: PAIR 레벨 진입, PAIR property 확인 완료, PAIR들 비교 → N_T 아래 저장, 목표 설정")
+        if not getattr(self, "goal", None):
+            self._set_goal_from_task_and_pairs()
+        self._compare_grids_across_pairs()
+        n_test = len(getattr(task, "test_pairs", []))
+        if n_test and getattr(self, "_pa_g1_prediction_attempted", False):
+            per_pair = getattr(self, "_pa_g1_correct_per_pair", None)
+            if per_pair and all(per_pair[i] for i in range(min(n_test, len(per_pair)))):
+                print("[Flow] PaG1 성공 → 16단계 여기서 종료 (test output 확정)")
+                return
+        print("[Flow] 7–12·13: 각 example PAIR에 대해 GRID property·G0-G1 비교(N_P) → 같은 그리드 내 object 비교(G_0,G_1) → G0-G1 object 비교(P_{p}) → 프로그램 시도")
+        for pair_idx, pair in enumerate(task.example_pairs):
+            self._ensure_grid_property(pair.input_grid)
+            self._ensure_grid_property(pair.output_grid)
+            compare(pair.input_grid, pair.output_grid, save=True)
+            self._try_make_grid_from_property(pair)
+            self._compare_objects_within_grid(pair.input_grid)
+            self._compare_objects_within_grid(pair.output_grid)
+            self._compare_objects_cross_grid_in_pair(pair)
+        print("[Flow] 14: 두 PAIR의 변화 공통화 — PAIR 간 object 비교 → N_T 아래 저장")
+        for i in range(1, len(task.example_pairs)):
+            self._compare_pair_components(task.example_pairs[0], task.example_pairs[i], 0, i)
+        print("[Flow] 15–16: DIFF 깊이·예측은 기존 test()/SOAR 연산자에서 수행. 나머지 프로그램 생성·실행은 test() 호출.")
+        self._flow_16_compare_done = True
+        self.test()
+        self._flow_16_compare_done = False
 
     def test(self):
         if not getattr(self, "goal", None):
             self._set_goal_from_task_and_pairs()
 
-        # PAIR 간 GRID 비교 (pair-program 생성보다 먼저): 엣지 생성, symbolic distance 확인
-        self._compare_grids_across_pairs()
+        # PAIR 간 GRID 비교 (pair-program 생성보다 먼저): 엣지 생성, symbolic distance 확인 (16단계 흐름에서 이미 했으면 스킵)
+        if not getattr(self, "_flow_16_compare_done", False):
+            self._compare_grids_across_pairs()
 
         # 예측으로 test output 일치 시 여기서 종료 (pair 루프·이후 단계 모두 브랜칭 아웃)
         if getattr(self, "_pa_g1_prediction_attempted", False) and getattr(self, "_pa_g1_prediction_correct", False):

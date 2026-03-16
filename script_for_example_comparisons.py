@@ -22,9 +22,9 @@ import random
 # -----------------------------------------------------------------------------
 # CONFIG
 # -----------------------------------------------------------------------------
-TASK_HEX_CODE = "08ed6ac7"
-COMPONENT_LEVEL = "object"   # "grid" | "object" | "pixel"
-OUT_DIR = "example_comparisons8"   # e.g. example_comparisons7 for 4 objects, level 2 only
+TASK_HEX_CODE = "0bb8deee"
+COMPONENT_LEVEL = "grid"   # "grid" | "object" | "pixel"
+OUT_DIR = "example_comparisons14"   # Save outputs under example_comparisons14/
 
 # Restrict pool: None = all; RESTRICT_TO_PAIR = int = that pair only; RESTRICT_TO_GRID = (pair_idx, grid_idx) = that grid only (grid_idx 0=input, 1=output).
 RESTRICT_TO_PAIR = None
@@ -40,28 +40,42 @@ FIXED_PIXEL_BY_GRID = None
 FIXED_OBJECT_BY_GRID = None
 
 # When set, pool = exactly these objects. Each item: (pair_idx, grid_idx, object_idx). P0G0O0, P0G1O0, P1G0O0, P1G1O0 → 1st pairs (0,1),(2,3); 2nd = 1.
-FIXED_OBJECTS_LIST = [
-    (0, 0, 1),   # Pair 0 GRID 0 Object 0
-    (0, 1, 2),   # Pair 0 GRID 1 Object 0
-    (1, 0, 0),   # Pair 1 GRID 0 Object 0
-    (1, 1, 1),   # Pair 1 GRID 1 Object 0
+FIXED_OBJECTS_LIST = None
+
+# When set, pool = exactly these grids. Each item: (pair_idx, grid_idx).
+FIXED_GRIDS_LIST = [
+    (0, 0),  # P0G0
+    (0, 1),  # P0G1
+    (1, 0),  # P1G0
+    (1, 1),  # P1G1
 ]
 
 # Max comparison order to generate (2 = 0th + 1st + 2nd only; 3 = include 3rd).
 MAX_ORDER = 2
 
-# Counts per order (used when generating; for FIXED_OBJECTS_LIST with 4 items we use N_1ST=2, N_2ND=1)
-N_0TH = 8
+# Counts per order (used when generating; for 4 fixed grids we use N_1ST=2, N_2ND=1)
+N_0TH = 4
 N_1ST = 2
 N_2ND = 1
 N_3RD = 1
 # -----------------------------------------------------------------------------
 
 
-def collect_pool(task, level, restrict_to_pair=None, restrict_to_grid=None, fixed_pixel_indices=None, fixed_pixel_by_grid=None, fixed_object_by_grid=None, fixed_objects_list=None):
-    """Collect components. fixed_objects_list = [(pair_idx, grid_idx, object_idx), ...] for exact object list."""
+def collect_pool(task, level, restrict_to_pair=None, restrict_to_grid=None, fixed_pixel_indices=None, fixed_pixel_by_grid=None, fixed_object_by_grid=None, fixed_objects_list=None, fixed_grids_list=None):
+    """Collect components.
+
+    fixed_objects_list = [(pair_idx, grid_idx, object_idx), ...] for exact object list.
+    fixed_grids_list   = [(pair_idx, grid_idx), ...] for exact grid list.
+    """
     pool = []
     pairs = task.example_pairs
+    if fixed_grids_list is not None and level == "grid":
+        for (pi, gi) in fixed_grids_list:
+            if pi < 0 or pi >= len(pairs):
+                continue
+            grid = (pairs[pi].input_grid, pairs[pi].output_grid)[gi]
+            pool.append(grid)
+        return pool
     if fixed_objects_list is not None and level == "object":
         for (pi, gi, oi) in fixed_objects_list:
             if pi < 0 or pi >= len(pairs):
@@ -137,7 +151,17 @@ def main():
         os.makedirs(os.path.join(OUT_DIR, sub), exist_ok=True)
     print(f"Loading task {TASK_HEX_CODE}...")
     task = ARCManager.from_hex_code(TASK_HEX_CODE)
-    pool = collect_pool(task, COMPONENT_LEVEL, RESTRICT_TO_PAIR, RESTRICT_TO_GRID, FIXED_PIXEL_INDICES, FIXED_PIXEL_BY_GRID, FIXED_OBJECT_BY_GRID, FIXED_OBJECTS_LIST)
+    pool = collect_pool(
+        task,
+        COMPONENT_LEVEL,
+        RESTRICT_TO_PAIR,
+        RESTRICT_TO_GRID,
+        FIXED_PIXEL_INDICES,
+        FIXED_PIXEL_BY_GRID,
+        FIXED_OBJECT_BY_GRID,
+        FIXED_OBJECTS_LIST,
+        FIXED_GRIDS_LIST,
+    )
     if not pool:
         print(f"No components found at level {COMPONENT_LEVEL}.")
         sys.exit(1)
@@ -148,6 +172,7 @@ def main():
         or (FIXED_PIXEL_BY_GRID is not None and COMPONENT_LEVEL == "pixel")
         or (FIXED_OBJECT_BY_GRID is not None and COMPONENT_LEVEL == "object")
         or (FIXED_OBJECTS_LIST is not None and COMPONENT_LEVEL == "object")
+        or (FIXED_GRIDS_LIST is not None and COMPONENT_LEVEL == "grid")
     )
     if use_fixed:
         random.seed(42)  # still used for any tie-break; 1st pairs are fixed below
@@ -177,11 +202,11 @@ def main():
         else:
             save_json(prop, f"E_{short}_{i}.json", "0th")
 
-    # 1st order: 4 node-vs-node (fixed pairs when use_fixed: (0,4),(1,5),(2,6),(3,7) for grid0 Xi vs grid1 Xi if pool is 8 from two grids; else (0,1),(2,3),(4,5),(6,7))
+    # 1st order: node-vs-node (fixed pairs when use_fixed)
     print("1st order (node vs node)...")
     first_results = []
-    if use_fixed and len(pool) == 4 and FIXED_OBJECTS_LIST is not None:
-        # P0G0O0 vs P0G1O0, P1G0O0 vs P1G1O0
+    if use_fixed and len(pool) == 4 and (FIXED_OBJECTS_LIST is not None or FIXED_GRIDS_LIST is not None):
+        # For 4 fixed items (objects or grids): P0G0 vs P0G1, P1G0 vs P1G1
         pairs_1st = [(0, 1), (2, 3)]
     elif use_fixed and len(pool) == 8 and (
         (FIXED_PIXEL_BY_GRID is not None and len(FIXED_PIXEL_BY_GRID) == 2)

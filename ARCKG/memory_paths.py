@@ -1,43 +1,58 @@
 """
 Memory storage path helpers.
 Convention: folders = nodes (N_*), JSON files = edges/properties (E_*).
-Root: memory/
-- TASK: memory/N_T{hex}/
-- TASK property (self-edge): memory/N_T{hex}/E_T{hex}.json
-- PAIR: memory/N_T{hex}/N_P{pair_id}/  (train: 0,1,2 ; test: a,b,c,...)
-- PAIR property: memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json
-- GRID: memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/
-- GRID property: memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/E_G{grid_id}.json
+
+LTM roots (SOAR-style):
+- Semantic: semantic_memory/  (node structure, properties, comparison edges)
+- Procedural: procedural_memory/  (production rules, chunks)
+- Episodic: episodic_memory/  (task-solving episodes)
+
+Semantic root: semantic_memory/
+- TASK: semantic_memory/N_T{hex}/
+- TASK property (self-edge): semantic_memory/N_T{hex}/E_T{hex}.json
+- PAIR: semantic_memory/N_T{hex}/N_P{pair_id}/  (train: 0,1,2 ; test: a,b,c,...)
+- PAIR property: semantic_memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json
+- GRID: semantic_memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/
+- GRID property: semantic_memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/E_G{grid_id}.json
 - OBJECT: .../N_G{grid_id}/N_O{obj_id}/
 - OBJECT property: .../N_O{obj_id}/E_O{obj_id}.json
 - PIXEL: .../N_X{pixel_id}/ with E_X{pixel_id}.json
 """
 
-MEMORY_ROOT = "memory/"
+# Semantic memory: node structure, properties, comparison edges (current storage)
+MEMORY_ROOT = "semantic_memory/"
+# Alias for code that referred to "semantic" root by this name
+SEMANTIC_MEMORY_ROOT = MEMORY_ROOT
+
+# Procedural memory: production rules, chunks (condition → operator)
+PROCEDURAL_MEMORY_ROOT = "procedural_memory/"
+
+# Episodic memory: task-solving episodes (state, operator, result sequences)
+EPISODIC_MEMORY_ROOT = "episodic_memory/"
 
 
 def task_node_dir(hex_code: str) -> str:
-    """TASK node folder: memory/N_T{hex}/"""
+    """TASK node folder: semantic_memory/N_T{hex}/"""
     return f"{MEMORY_ROOT}N_T{hex_code}/"
 
 
 def task_property_path(hex_code: str) -> str:
-    """TASK property (self-edge) file: memory/N_T{hex}/E_T{hex}.json"""
+    """TASK property (self-edge) file: semantic_memory/N_T{hex}/E_T{hex}.json"""
     return f"{MEMORY_ROOT}N_T{hex_code}/E_T{hex_code}.json"
 
 
 def pair_node_dir(hex_code: str, pair_id: "int | str") -> str:
-    """PAIR node folder: memory/N_T{hex}/N_P{pair_id}/ (pair_id: train 0,1,2 or test a,b,c,...)"""
+    """PAIR node folder: semantic_memory/N_T{hex}/N_P{pair_id}/ (pair_id: train 0,1,2 or test a,b,c,...)"""
     return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/"
 
 
 def pair_property_path(hex_code: str, pair_id: "int | str") -> str:
-    """PAIR property file: memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json"""
+    """PAIR property file: semantic_memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json"""
     return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/E_P{pair_id}.json"
 
 
 def grid_node_dir(hex_code: str, pair_id: "int | str", grid_id: int) -> str:
-    """GRID node folder: memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/"""
+    """GRID node folder: semantic_memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/"""
     return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_G{grid_id}/"
 
 
@@ -107,7 +122,7 @@ def edge_pixel_comparison_path_object(hex_code: str, pair_num: str, grid_num: st
 
 
 def edge_task_comparison_path(hex_1: str, hex_2: str) -> str:
-    """TASK-TASK comparison edge. At root: memory/E_T{hex1}-T{hex2}.json"""
+    """TASK-TASK comparison edge. At root: semantic_memory/E_T{hex1}-T{hex2}.json"""
     return f"{MEMORY_ROOT}E_T{hex_1}-T{hex_2}.json"
 
 

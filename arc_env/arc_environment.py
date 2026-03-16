@@ -123,7 +123,6 @@ class ARCEnvironment:
         task_id = self._episode_task_ids[self._current_index]
         try:
             self._current_task = ARCManager.from_hex_code(task_id)
-            breakpoint()
             self._current_task_json = self._task_to_agent_json(self._current_task)
             n = len(self._current_task.test_pairs)
             self._attempts_left = [self._max_attempts_per_pair] * n

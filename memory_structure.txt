@@ -1,4 +1,4 @@
-memory/
+semantic_memory/
 ├── TASK_nodes/
 │   ├── TASK_{task_hex_code}/
 │   │   ├── TASK_property/

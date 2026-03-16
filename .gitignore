@@ -207,8 +207,11 @@ marimo/_lsp/
 __marimo__/
 
 
-# Memory
+# Memory (SOAR LTM: semantic, procedural, episodic)
 memory/
+semantic_memory/
+procedural_memory/
+episodic_memory/
 
 # Result code
 result_code/

@@ -858,8 +858,15 @@ def compare_relation_results(r1, r2, prefix="result"):
             # Leaf or mixed: treat as scalar/struct via compare_nested_json
             raw = compare_nested_json(v1, v2, path=k)
             cat_details[k] = raw
+    # Category type must match score: COMM iff all sub-items are COMM (so score n/n => type COMM)
+    sub_results = [d for d in cat_details.values() if isinstance(d, dict) and "type" in d]
+    category_type = (
+        "COMM"
+        if (not sub_results or all(d.get("type") == "COMM" for d in sub_results))
+        else "DIFF"
+    )
     details[f"{prefix}.category"] = {
-        "type": "COMM" if c1 == c2 else "DIFF",
+        "type": category_type,
         "comp1": c1,
         "comp2": c2,
         "details": cat_details,
