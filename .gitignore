@@ -209,6 +209,9 @@ __marimo__/
 
 # Memory
 memory/
+semantic_memory/
+procedural_memory/
+episodic_memory/
 
 # Result code
 result_code/
