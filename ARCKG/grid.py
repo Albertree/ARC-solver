@@ -1,364 +1,123 @@
-from .ARCKG_component import ARCKGComponent
-from DSL.object_finder import find_all_objects
-from .grid_component import GridComponent
-from .pixel import PIXEL, PIXELInfo
-from .object import OBJECT, OBJECTInfo
-from typing import NamedTuple
+"""
+GRID node — PAIR 아래 한 격자.
+Node ID 형식: T{hex}.P{p}.G{g}  (G0=input, G1=output)
+"""
+
+import json
+import os
+
+from ARCKG.memory_paths import id_to_json_path, node_id_to_folder_path
+from ARCKG.hodel import find_all_objects
+from ARCKG.object import Object
+from ARCKG.pixel import Pixel
 
 
-class GRIDInfo(NamedTuple):
-    id: int
-    type: str
-    raw_data: list[list[int]]
+class Grid:
+    """
+    INTENT: 2D 정수 격자와 그 격자에서 추출된 Object 목록을 보유하는 KG 노드.
+            to_json()으로 E_G{g}.json 속성 파일을 기록한다.
+    MUST NOT: object-level 관계 추론을 여기서 수행하지 마 (OBJECT 레이어 책임).
+    REF: ARC-solver/ARCKG/grid.py GRID (line 14)
+    """
 
-class GRID(GridComponent) :
-    def __init__(self, id:int, type:str, parent:ARCKGComponent, raw_data:list): #, object_list:list[OBJECT]=[], pixel_list:list[PIXEL]=[], raw_data:list[list[int]]=[[1,0],[0,1]]) :
-        super().__init__(id, type, parent)
-        self.raw_data = raw_data
-        self.pixels = []
+    def __init__(self, grid_id: str, raw: list):
+        self.node_id = grid_id
+        self.raw = raw
+        self.objects: list = []
+        self.pixels: list = []   # grid-level Pixel 노드 (절대 좌표 기준)
+
+    @property
+    def height(self) -> int:
+        return len(self.raw)
+
+    @property
+    def width(self) -> int:
+        return len(self.raw[0]) if self.raw else 0
+
+    def extract_objects(self):
+        """
+        INTENT: hodel objects() 8-파라미터 조합으로 고유 Object를 추출해
+                self.objects / self.pixels에 저장한다.
+                각 object는 검출에 사용된 method dict를 보유한다.
+        REF: ARC-solver/DSL/object_finder.py find_all_objects (line 62)
+             ARCKG/hodel.py find_all_objects
+        """
+        if self.height == 0 or self.width == 0:
+            self.objects = []
+            self.pixels = []
+            return
+
         self.objects = []
-        self.property = dict()
+        self.pixels = []
+        grid_pixel_seen: set = set()   # 동일 (r,c) grid-level Pixel 중복 방지
 
+        for obj_idx, data in enumerate(find_all_objects(self.raw)):
+            object_id = f"{self.node_id}.O{obj_idx}"
+            obj = Object(
+                object_id=object_id,
+                colorgrid=data["colorgrid"],
+                pos=data["pos"],
+                method=data["method"],
+            )
 
-    def colorgrid_to_colcoord(self, colorgrid):
-        return [(colorgrid[i][j], (i, j)) for i in range(len(colorgrid)) for j in range(len(colorgrid[0])) if colorgrid[i][j] != 13]
+            # Object-level Pixel: 행-열 순 정렬
+            sorted_pixels = sorted(data["obj"], key=lambda x: (x[1][0], x[1][1]))
+            for pix_idx, (color, (r, c)) in enumerate(sorted_pixels):
+                obj_pixel_id = f"{object_id}.X{pix_idx}"
+                obj.pixels.append(
+                    Pixel(pixel_id=obj_pixel_id, color=color, row=r, col=c)
+                )
 
-    def colcoord_to_coordinate(self, colcoord):
-        return [(colcoord[i][1][0], colcoord[i][1][1]) for i in range(len(colcoord))]
+                # Grid-level Pixel: 행-우선 인덱스, 중복 없이
+                grid_pixel_idx = r * self.width + c
+                if grid_pixel_idx not in grid_pixel_seen:
+                    grid_pixel_seen.add(grid_pixel_idx)
+                    grid_pixel_id = f"{self.node_id}.X{grid_pixel_idx}"
+                    self.pixels.append(
+                        Pixel(pixel_id=grid_pixel_id, color=color,
+                              row=r, col=c)
+                    )
 
-    # def grid_color(self, grid):
-    #     return sorted(list(set([grid[i][j] for i in range(len(grid)) for j in range(len(grid[0])) if grid[i][j] != 13])))
-    def grid_color(self, colorgrid):
-        color = {"0": False, 
-                 "1": False, 
-                 "2": False, 
-                 "3": False, 
-                 "4": False, 
-                 "5": False, 
-                 "6": False, 
-                 "7": False, 
-                 "8": False, 
-                 "9": False 
-                 }
-        for i in range(len(colorgrid)):
-            for j in range(len(colorgrid[0])):
-                if colorgrid[i][j] != 13 and colorgrid[i][j] != 12:
-                    if color[str(colorgrid[i][j])] == False:
-                        color[str(colorgrid[i][j])] = True
-        return color
+            self.objects.append(obj)
 
-    def measure_shape(self, object):
-        # return an array of 0 or 1, 0 for value 13, 1 for other values
-        shape = [[0 for j in range(len(object[0]))] for i in range(len(object))]
-        for i in range(len(object)):
-            for j in range(len(object[0])): 
-                if object[i][j] != 13:
-                    shape[i][j] = 1 # 0 for valid color (color between 0 and 9)
-                else:
-                    shape[i][j] = -1 # -1 for no color (color 13)
-        return shape    
+    def to_json(self) -> dict:
+        """
+        GRID property 3개:
+          size     : {"height": int, "width": int}
+          color    : {0: bool, …, 9: bool}
+          contents : 2D int array
+        REF: ARC-solver/ARCKG/grid.py GRID.update_property (line 209-222)
+        """
+        color_dict = {i: False for i in range(10)}
+        for row in self.raw:
+            for val in row:
+                if 0 <= val <= 9:
+                    color_dict[val] = True
 
-    def measure_area(self, shape):
-        return sum([1 for i in range(len(shape)) for j in range(len(shape[0])) if shape[i][j] == 1])
-
-    def margin_of_grid(self):
-        margin = []
-        for i in range(len(self.raw_data)):
-            for j in range(len(self.raw_data[0])):
-                if i == 0 or i == len(self.raw_data) - 1 or j == 0 or j == len(self.raw_data[0]) - 1:
-                    margin.append((i, j))
-        return margin
-
-    def inner_of_grid(self):
-        inner = []  
-        for i in range(len(self.raw_data)):
-            for j in range(len(self.raw_data[0])):
-                if i != 0 and i != len(self.raw_data) - 1 and j != 0 and j != len(self.raw_data[0]) - 1:
-                    inner.append((i, j))
-        return inner
-
-    def corner_of_grid(self):
-        corner = []
-        for i in range(len(self.raw_data)):
-            for j in range(len(self.raw_data[0])):
-                if (i == 0 or i == len(self.raw_data) - 1) and (j == 0 or j == len(self.raw_data[0]) - 1):
-                    corner.append((i, j))
-        return corner
-
-    def edge_of_grid(self):
-        edge = []
-        for i in range(len(self.raw_data)):
-            for j in range(len(self.raw_data[0])):
-                if i == 0 or i == len(self.raw_data) - 1 or j == 0 or j == len(self.raw_data[0]) - 1:
-                    if not ((i == 0 or i == len(self.raw_data) - 1) and (j == 0 or j == len(self.raw_data[0]) - 1)):
-                        edge.append((i, j))
-        return edge
-
-    def center_of_grid(self):
-        center = []
-        if len(self.raw_data) % 2 == 1:
-            # vertical odd, horizontal odd
-            if len(self.raw_data[0]) % 2 == 1:
-                center.append((len(self.raw_data) // 2, len(self.raw_data[0]) // 2))
-            # vertical odd, horizontal even
-            else:
-                center.append((len(self.raw_data) // 2, len(self.raw_data[0]) // 2 - 1))
-                center.append((len(self.raw_data) // 2, len(self.raw_data[0]) // 2))
-        else:
-            # vertical even, horizontal odd
-            if len(self.raw_data[0]) % 2 == 1:
-                center.append((len(self.raw_data) // 2 - 1, len(self.raw_data[0]) // 2))
-                center.append((len(self.raw_data) // 2, len(self.raw_data[0]) // 2))
-            # vertical even, horizontal even
-            else:
-                center.append((len(self.raw_data) // 2 - 1, len(self.raw_data[0]) // 2 - 1))
-                center.append((len(self.raw_data) // 2 - 1, len(self.raw_data[0]) // 2))
-                center.append((len(self.raw_data) // 2, len(self.raw_data[0]) // 2 - 1))
-                center.append((len(self.raw_data) // 2, len(self.raw_data[0]) // 2))
-        return center
-
-    def grid_horizontal_symmetry(self):
-        # Check if the grid is horizontally symmetric
-        rows = len(self.raw_data)
-        cols = len(self.raw_data[0])
-        for i in range(rows // 2 + 1):
-            if self.raw_data[i] != self.raw_data[rows - i - 1]:
-                return False
-        return True
-
-    def grid_vertical_symmetry(self):
-        # Check if the grid is vertically symmetric
-        rows = len(self.raw_data)
-        cols = len(self.raw_data[0])
-        for j in range(cols // 2 + 1):
-            for i in range(rows):
-                if self.raw_data[i][j] != self.raw_data[i][cols - j - 1]:
-                    return False
-        return True
-
-    def grid_diagonal_symmetry(self):
-        # Check if the grid is symmetric along the main diagonal
-        size = len(self.raw_data)
-        for i in range(size):
-            for j in range(i + 1, size):
-                if self.raw_data[i][j] != self.raw_data[j][i]:
-                    return False
-        return True
-
-    def grid_antidiagonal_symmetry(self):
-        # Check if the grid is symmetric along the anti-diagonal
-        size = len(self.raw_data)
-        for i in range(size):
-            for j in range(size - i - 1):
-                if self.raw_data[i][j] != self.raw_data[size - j - 1][size - i - 1]:
-                    return False
-        return True
-    
-    def get_most_frequent_color(self):
-        colors = {}
-        for r in range(self.height):
-            for c in range(self.width):
-                color = self.raw_data[r][c]
-                if color in colors:
-                    colors[color] += 1
-                else:
-                    colors[color] = 1
-        return max(colors, key=colors.get)
-
-    def update_property(self):
-        self.childs = self.pixels + self.objects
-        self.pixels = self.pixels
-        self.objects = self.objects
-
-        self.view = self.raw_data
-
-        self.colorgrid = self.raw_data
-        self.colcoord = self.colorgrid_to_colcoord(self.colorgrid)
-
-        self.color = self.grid_color(self.colorgrid)
-        self.coordinate = self.colcoord_to_coordinate(self.colcoord)
-
-        self.height = len(self.colorgrid)
-        self.width = len(self.colorgrid[0])
-        self.size = (self.height, self.width)
-        self.shape = self.measure_shape(self.colorgrid)
-        # self.area = self.measure_area(self.shape)
-        self.center = self.center_of_grid()
-
-        self.margin = self.margin_of_grid()
-        self.inner = self.inner_of_grid()
-        self.corner = self.corner_of_grid()
-        self.edge = self.edge_of_grid()
-
-        self.left_top = (0, 0)
-        self.right_top = (0, self.width)
-        self.left_bottom = (self.height, 0)
-        self.right_bottom = (self.height, self.width)
-
-        # self.hori_symm = self.grid_horizontal_symmetry()
-        # self.verti_symm = self.grid_vertical_symmetry()
-        # if self.height == self.width:
-        #     self.diag_symm = self.grid_diagonal_symmetry()
-        #     self.anti_symm = self.grid_antidiagonal_symmetry()
-        # else:
-        #     self.diag_symm = False
-        #     self.anti_symm = False
-
-
-
-        # size
-        self.property['size'] = {
-            'height': self.height,
-            'width': self.width
+        return {
+            "size": {
+                "height": self.height,
+                "width": self.width,
+            },
+            "color": color_dict,
+            "contents": self.raw,
         }
 
-        # color
-        # self.property['color'] = {color: True for color in self.color}
-        # self.property['color'].update({'color_count': len(self.color)})
-        self.property['color'] = self.color
+    def save(self, semantic_memory_root: str):
+        """E_G{g}.json 기록 후 하위 Object / Pixel 모두 재귀 save."""
+        folder = node_id_to_folder_path(self.node_id, semantic_memory_root)
+        os.makedirs(folder, exist_ok=True)
+        path = id_to_json_path(self.node_id, semantic_memory_root)
+        with open(path, "w") as f:
+            json.dump({"id": self.node_id, "result": self.to_json()}, f, indent=2)
 
-        # contents (colorgrid; GRID property 3개 → 총점 3)
-        self.property['contents'] = self.colorgrid
+        for obj in self.objects:
+            obj.save(semantic_memory_root)
 
-        # area (GRID level: commented out so score is 0/2, 1/2, 2/2)
-        # self.property['area'] = {int(color): sum(1 for row in self.colorgrid for cell in row if cell == int(color)) for color in self.color}
-        # self.property['area'].update({'total': sum(self.property['area'].values())})
+        for pixel in self.pixels:
+            pixel.save(semantic_memory_root)
 
-        # symmetry (GRID level: commented out)
-        # self.property['symmetry'] = {
-        #     'hori_symm': self.hori_symm,
-        #     'verti_symm': self.verti_symm,
-        #     'diag_symm': self.diag_symm,
-        #     'anti_symm': self.anti_symm
-        # }
-
-
-    @staticmethod
-    def from_json(grid_info:GRIDInfo, parent:ARCKGComponent):
-        ggg = GRID(id=grid_info.id, type=grid_info.type, raw_data=grid_info.raw_data, parent=parent)
-
-        if not grid_info.raw_data or not grid_info.raw_data[0]:
-            ggg.pixels = []
-            ggg.objects = []
-            ggg.update_property()
-            ggg.to_json()
-            return ggg
-
-        pixel_list = []
-        for r in range(len(grid_info.raw_data)):
-            for c in range(len(grid_info.raw_data[0])):
-                pixel_info = PIXELInfo(
-                    id = r * len(grid_info.raw_data[0]) + c,
-                    type = 'pixel',
-                    raw_data = [(grid_info.raw_data[r][c], (r,c))] 
-                )
-                xxx = PIXEL.from_json(pixel_info, parent=ggg)
-                pixel_list.append(xxx)
-            ggg.pixels = pixel_list
-        
-        object_list = []
-        objects_raw = find_all_objects(grid_info.raw_data)
-        for i, obj in enumerate(objects_raw):
-            object_info = OBJECTInfo(
-                id = i, 
-                type = 'object', 
-                raw_data = obj
-            )
-            ooo = OBJECT.from_json(object_info, parent=ggg)
-            object_list.append(ooo)
-        ggg.objects = object_list
-    
-        ggg.update_property()
-        ggg.to_json()
-        return ggg
-    
-    def to_json(self):
-        import os
-        import json
-        from .memory_paths import grid_node_dir, grid_property_path
-
-        # Only save GRID_0 and GRID_1, skip GRID_2+ to prevent intermediate grid folders
-        if self.id > 1:
-            return
-        # Test pair: do not persist output grid (G1) so no answer structure is stored
-        pair = self.parent[0] if self.parent else None
-        if pair and getattr(pair, "type", None) == "test" and self.id == 1:
-            return
-
-        grid_dict = self.property
-        hex_code = self.parent[0].parent.hex_code
-        pair_path_id = self.parent[0].path_id
-        grid_path = grid_node_dir(hex_code, pair_path_id, self.id)
-        if not os.path.exists(grid_path):
-            os.makedirs(grid_path)
-            print(f"[grid.to_json] dir created: {grid_path}  (pair_path_id={pair_path_id}, grid_id={self.id})")
-
-        # GRID property (self-pointing edge): E_G{id}.json
-        prop_path = grid_property_path(hex_code, pair_path_id, self.id)
-        with open(prop_path, 'w') as f:
-            json.dump(grid_dict, f, indent=2)
-        
-        # Update integrated ARCKG JSON
-        # self.update_integrated_arckg_json()
-    
-    def update_integrated_arckg_json(self):
-        """Update the integrated ARCKG JSON with grid information"""
-        import os
-        import json
-        
-        from .memory_paths import task_node_dir
-        arckg_file = f'{task_node_dir(self.parent[0].parent.hex_code)}ARCKG_{self.parent[0].parent.hex_code}.json'
-        
-        # Check if integrated ARCKG file exists
-        if not os.path.exists(arckg_file):
-            return
-        
-        try:
-            with open(arckg_file, 'r') as f:
-                integrated_arckg = json.load(f)
-            
-            # Find the pair and grid data
-            pair_id_str = f"({self.parent[0].parent.hex_code}, {self.parent[0].id}, None, None, None, 'pair')"
-            grid_id_str = f"('{self.parent[0].parent.hex_code}', {self.parent[0].id}, {self.id}, None, None, 'grid')"
-            
-            # Find the pair
-            if str(self.parent[0].id) in integrated_arckg["PAIR_nodes"]:
-                pair_data = integrated_arckg["PAIR_nodes"][str(self.parent[0].id)]
-                if pair_data["id"] == pair_id_str:
-                    # Check if grid already exists
-                    grid_exists = False
-                    if str(self.id) in pair_data["GRID_nodes"]:
-                        grid_data = pair_data["GRID_nodes"][str(self.id)]
-                        if grid_data["id"] == grid_id_str:
-                            # Update existing grid
-                            grid_data["property"] = self.property
-                            grid_exists = True
-                    
-                    # If grid doesn't exist, add it
-                    if not grid_exists:
-                        grid_data = {
-                            "id": grid_id_str,
-                            "type": "GRID",
-                            "data": {},
-                            "property": self.property,
-                            "OBJECT_edges": {},
-                            "OBJECT_nodes": {},
-                            "PIXEL_edges": {},
-                            "PIXEL_nodes": {}
-                        }
-                        pair_data["GRID_nodes"][str(self.id)] = grid_data
-            
-            # Save updated integrated ARCKG JSON
-            with open(arckg_file, 'w') as f:
-                json.dump(integrated_arckg, f, indent=2)
-                
-        except Exception as e:
-            print(f"Error updating integrated ARCKG JSON: {e}")
-
-
-    def __repr__(self):
-        grid_type = "input" if self.id==0 else "output"
-        pair_id = self.parent[0].id
-        task_id = self.parent[0].parent.hex_code
-        return f"GRID({grid_type} of PAIR({pair_id}th pair of TASK({task_id})))"
-        
+    def __repr__(self) -> str:
+        return (f"Grid(id={self.node_id}, "
+                f"size={self.height}×{self.width}, "
+                f"objects={len(self.objects)})")

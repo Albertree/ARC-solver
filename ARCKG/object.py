@@ -1,361 +1,192 @@
-from typing import NamedTuple
-from .ARCKG_component import ARCKGComponent
-from .grid_component import GridComponent
-from .pixel import PIXEL
-from .types.type import PIXELData_Type
+"""
+OBJECT node — GRID 아래 연결 성분(connected component).
+Node ID 형식: T{hex}.P{p}.G{g}.O{o}
+"""
 
-class OBJECTInfo(NamedTuple):
-    id: int
-    type: str
-    raw_data: frozenset
+import json
+import os
 
-class OBJECT(GridComponent):
-    def __init__(self, id:int, type:str, parent:ARCKGComponent, raw_data:frozenset): #, pixel_data:PIXELData_Type):
-        super().__init__(id, type, parent)
-        self.raw_data = raw_data
-        self.property = dict()
-
-    def object_colcoord_to_colorgrid(self, object):
-        object = list(object)
-
-        max_col = 0
-        max_row = 0
-        min_col = 100
-        min_row = 100
-        for n in range(len(object)):
-            if object[n][1][0] > max_col:
-                max_col = object[n][1][0]
-            if object[n][1][1] > max_row:
-                max_row = object[n][1][1] 
-
-            if object[n][1][0] < min_col:
-                min_col = object[n][1][0]
-            if object[n][1][1] < min_row:
-                min_row = object[n][1][1]
-
-        if min_col == 100:
-            min_col = max_col
-        if min_row == 100:
-            min_row = max_row
-        
-        if min_col == 0:
-            col_move = 0
-        else:
-            col_move = min_col
-
-        if min_row == 0:
-            row_move = 0
-        else:
-            row_move = min_row
-
-        colorgrid = [[13 for j in range(max_row - min_row + 1)] for i in range(max_col - min_col + 1)]
-        for n in range(len(object)):
-            colorgrid[object[n][1][0]-(col_move)][object[n][1][1]-(row_move)] = object[n][0]
-        return colorgrid
-
-    def colcoord_to_coordinate(self, colcoord):
-        return [(colcoord[i][1][0], colcoord[i][1][1]) for i in range(len(colcoord))]
+from ARCKG.memory_paths import id_to_json_path, node_id_to_folder_path
 
 
-    def measure_shape(self, object):
-        # return an array of 0 or 1, 0 for value 13, 1 for other values
-        shape = [[0 for j in range(len(object[0]))] for i in range(len(object))]
-        for i in range(len(object)):
-            for j in range(len(object[0])): 
-                if object[i][j] != 13:
-                    shape[i][j] = 1 # 0 for valid color (color between 0 and 9)
-                else:
-                    shape[i][j] = -1 # -1 for no color (color 13)
-        return shape
-    
-    def measure_area(self, shape):
-        return sum([1 for i in range(len(shape)) for j in range(len(shape[0])) if shape[i][j] == 1])
+class Object:
+    """
+    INTENT: hodel objects() 함수로 검출된 하나의 object.
+            colorgrid(bbox 크기, 투명=13)와 격자 내 절대 좌표 pos로 초기화.
+            8개 property(area/color/coordinate/method/position/shape/size/symmetry)를
+            to_json()으로 직렬화한다.
+    MUST NOT: GRID 전체를 저장하지 마. bbox 범위만 가진다.
+    REF: ARC-solver/ARCKG/object.py OBJECT.update_property (line 170)
+         ARC-solver/DSL/object_finder.py find_all_objects (line 62)
+    """
 
-    def absolute_coordinate_of_object(self, coordinate, pos):
-        return [(coordinate[i][0] + pos[0], coordinate[i][1] + pos[1]) for i in range(len(coordinate))]
+    def __init__(self, object_id: str, colorgrid: list, pos: tuple, method: dict):
+        """
+        Args:
+            object_id:  전체 node_id 문자열 (e.g. "T0a.P0.G0.O3")
+            colorgrid:  list[list[int]], bbox 크기. 투명 셀 = 13.
+            pos:        (row_min, col_min) — bbox left_top 절대 좌표
+            method:     {"univalued": bool, "diagonal": bool, "without_bg": bool}
+        """
+        self.node_id = object_id
+        self.colorgrid = colorgrid
+        self.pos = pos
+        self.method = method
+        self.pixels: list = []  # Pixel 객체 목록 (object-level)
 
-    def center_of_grid(self, grid):
-        center = []
-        if len(grid) % 2 == 1:
-            # vertical odd, horizontal odd
-            if len(grid[0]) % 2 == 1:
-                center.append((len(grid) // 2, len(grid[0]) // 2))
-            # vertical odd, horizontal even
-            else:
-                center.append((len(grid) // 2, len(grid[0]) // 2 - 1))
-                center.append((len(grid) // 2, len(grid[0]) // 2))
-        else:
-            # vertical even, horizontal odd
-            if len(grid[0]) % 2 == 1:
-                center.append((len(grid) // 2 - 1, len(grid[0]) // 2))
-                center.append((len(grid) // 2, len(grid[0]) // 2))
-            # vertical even, horizontal even
-            else:
-                center.append((len(grid) // 2 - 1, len(grid[0]) // 2 - 1))
-                center.append((len(grid) // 2 - 1, len(grid[0]) // 2))
-                center.append((len(grid) // 2, len(grid[0]) // 2 - 1))
-                center.append((len(grid) // 2, len(grid[0]) // 2))
-        return center
+        # --- transformation DSL selection 인터페이스 ---
+        h = len(colorgrid)
+        w = len(colorgrid[0]) if colorgrid else 0
+        row_min, col_min = pos
 
-    def margin_of_grid(self, grid):
-        margin = []
-        for i in range(len(grid)):
-            for j in range(len(grid[0])):
-                if i == 0 or i == len(grid) - 1 or j == 0 or j == len(grid[0]) - 1:
-                    margin.append((i, j))
-        return margin
+        # bbox: colorgrid 의 별칭 (transformation.py 에서 selection.bbox 로 접근)
+        self.bbox = colorgrid
 
-    def inner_of_grid(self, grid):
-        inner = []  
-        for i in range(len(grid)):
-            for j in range(len(grid[0])):
-                if i != 0 and i != len(grid) - 1 and j != 0 and j != len(grid[0]) - 1:
-                    inner.append((i, j))
-        return inner
+        # coordinate: 비투명 셀의 절대 (row, col) 목록
+        self.coordinate = [
+            (row_min + r, col_min + c)
+            for r, row in enumerate(colorgrid)
+            for c, cell in enumerate(row)
+            if cell != 13
+        ]
 
-    def corner_of_grid(self, grid):
-        corner = []
-        for i in range(len(grid)):
-            for j in range(len(grid[0])):
-                if (i == 0 or i == len(grid) - 1) and (j == 0 or j == len(grid[0]) - 1):
-                    corner.append((i, j))
-        return corner
+        # bbox 내 전체 (row, col) — teleport 에서 grab 검증에 사용
+        self.bbox_coordinate = [
+            (row_min + r, col_min + c)
+            for r in range(h)
+            for c in range(w)
+        ]
 
-    def edge_of_grid(self, grid):
-        edge = []
-        for i in range(len(grid)):
-            for j in range(len(grid[0])):
-                if i == 0 or i == len(grid) - 1 or j == 0 or j == len(grid[0]) - 1:
-                    if not ((i == 0 or i == len(grid) - 1) and (j == 0 or j == len(grid[0]) - 1)):
-                        edge.append((i, j))
-        return edge
+        # 꼭짓점 절대 좌표
+        self.left_top     = (row_min,         col_min)
+        self.right_top    = (row_min,         col_min + w - 1)
+        self.left_bottom  = (row_min + h - 1, col_min)
+        self.right_bottom = (row_min + h - 1, col_min + w - 1)
 
-    def grid_horizontal_symmetry(self, grid):
-        # Check if the grid is horizontally symmetric
-        rows = len(grid)
-        cols = len(grid[0])
-        for i in range(rows // 2 + 1):
-            if grid[i] != grid[rows - i - 1]:
-                return False
-        return True
+        # --- 하위 호환 속성 (bounding_box, mask, color) ---
+        self.bounding_box = (row_min, col_min, row_min + h - 1, col_min + w - 1)
+        self.mask = [[cell != 13 for cell in row] for row in colorgrid]
+        colors = [cell for row in colorgrid for cell in row if cell != 13]
+        self.color = max(set(colors), key=colors.count) if colors else 0
 
-    def grid_vertical_symmetry(self, grid):
-        # Check if the grid is vertically symmetric
-        rows = len(grid)
-        cols = len(grid[0])
-        for j in range(cols // 2 + 1):
-            for i in range(rows):
-                if grid[i][j] != grid[i][cols - j - 1]:
-                    return False
-        return True
+    # ------------------------------------------------------------------ #
+    #  대칭성 헬퍼 (원본: ARC-solver/ARCKG/object.py)                       #
+    # ------------------------------------------------------------------ #
 
-    def grid_diagonal_symmetry(self, grid):
-        # Check if the grid is symmetric along the main diagonal
-        size = len(grid)
-        for i in range(size):
-            for j in range(i + 1, size):
-                if grid[i][j] != grid[j][i]:
-                    return False
-        return True
-
-    def grid_antidiagonal_symmetry(self, grid):
-        # Check if the grid is symmetric along the anti-diagonal
-        size = len(grid)
-        for i in range(size):
-            for j in range(size - i - 1):
-                if grid[i][j] != grid[size - j - 1][size - i - 1]:
-                    return False
-        return True
-    
-    def update_property(self, object):
-        self.childs = self.pixels
-
-        self.colorgrid = self.object_colcoord_to_colorgrid(object['obj']) 
-        self.colcoord = list(object['obj'])
-        
-        self.view = self.colorgrid
-
-        self.pos = object["pos"]
-        self.color = object["color"]
-        self.method = object["method"]
-        self.coordinate = self.colcoord_to_coordinate(self.colcoord)
-
-        self.height = len(self.colorgrid)
-        self.width = len(self.colorgrid[0])
-        self.size = (self.height, self.width)
-        self.shape = self.measure_shape(self.colorgrid)
-        self.area = self.measure_area(self.shape)
-        self.center = self.absolute_coordinate_of_object(self.center_of_grid(self.colorgrid), self.pos)
-
-        self.margin = self.absolute_coordinate_of_object(self.margin_of_grid(self.colorgrid), self.pos)
-        self.inner = self.absolute_coordinate_of_object(self.inner_of_grid(self.colorgrid), self.pos)
-        self.corner = self.absolute_coordinate_of_object(self.corner_of_grid(self.colorgrid), self.pos)
-        self.edge = self.absolute_coordinate_of_object(self.edge_of_grid(self.colorgrid), self.pos)
-
-        self.left_top = (self.pos[0], self.pos[1])
-        self.right_top = (self.pos[0], self.pos[1] + self.width - 1)
-        self.left_bottom = (self.pos[0] + self.height - 1, self.pos[1])
-        self.right_bottom = (self.pos[0] + self.height - 1, self.pos[1] + self.width - 1)
-
-        self.hori_symm = self.grid_horizontal_symmetry(self.colorgrid) # 상하 대칭
-        self.verti_symm = self.grid_vertical_symmetry(self.colorgrid) # 좌우 대칭
-        if self.height == self.width:
-            self.diag_symm = self.grid_diagonal_symmetry(self.colorgrid)
-            self.anti_symm = self.grid_antidiagonal_symmetry(self.colorgrid)
-        else:
-            self.diag_symm = False
-            self.anti_symm = False
-
-
-        self.property['color'] = self.color
-        self.property['coordinate'] = self.coordinate
-        
-        self.property['pos'] = {
-            'left_top': {
-                'row_index': self.pos[0],
-                'col_index': self.pos[1]
-            },
-            'right_top': {
-                'row_index': self.pos[0],
-                'col_index': self.pos[1] + self.width - 1
-            },
-            'left_bottom': {
-                'row_index': self.pos[0] + self.height - 1,
-                'col_index': self.pos[1]
-            },
-            'right_bottom': {
-                'row_index': self.pos[0] + self.height - 1,
-                'col_index': self.pos[1] + self.width - 1
-            }
-        }
-        self.property['method'] = self.method
-
-        self.property['size'] = {
-            'height': self.height,
-            'width': self.width
-        }
-
-        self.property['shape'] = self.shape
-
-        self.property['area'] = self.area
-
-        # self.property['center'] = self.center
-
-        self.property['symmetry'] = {
-            'hori_symm': self.hori_symm,
-            'verti_symm': self.verti_symm,
-            'diag_symm': self.diag_symm,
-            'anti_symm': self.anti_symm
-        }
-
-    
     @staticmethod
-    def from_json(object_info:OBJECTInfo, parent:ARCKGComponent):
-        ooo = OBJECT(id=object_info.id, type=object_info.type, raw_data=object_info.raw_data, parent=parent)
-        # Set of (row, col) tuples so each grid cell matches at most one object pixel
-        obj_coordinate = {tuple(c) for c in ooo.colcoord_to_coordinate(list(object_info.raw_data['obj']))}
+    def _hori_symmetry(grid: list) -> bool:
+        """좌우(수직 축) 대칭 — 각 행이 뒤집어도 동일."""
+        return all(row == list(reversed(row)) for row in grid)
 
-        pixel_list = []
-        seen_pixel_ids = set()
-        for pixel in parent.pixels:
-            coord = tuple(pixel.coordinate) if not isinstance(pixel.coordinate, tuple) else pixel.coordinate
-            if coord not in obj_coordinate:
-                continue
-            if pixel.id in seen_pixel_ids:
-                continue
-            seen_pixel_ids.add(pixel.id)
-            pixel_list.append(pixel)
-            if ooo not in pixel.parent:
-                pixel.parent.append(ooo)
-        ooo.pixels = pixel_list
-        for pixel in pixel_list:
-            pixel.to_json()
-        ooo.update_property(object_info.raw_data)
-        ooo.to_json()    
-        
-        return ooo
+    @staticmethod
+    def _verti_symmetry(grid: list) -> bool:
+        """상하(수평 축) 대칭 — 뒤집어도 동일."""
+        return grid == list(reversed(grid))
 
-    def to_json(self):
-        import os
-        import json
-        from .memory_paths import object_node_dir, object_property_path
+    @staticmethod
+    def _diag_symmetry(grid: list) -> bool:
+        """주 대각선 대칭 (정사각형 전용)."""
+        n = len(grid)
+        return all(grid[i][j] == grid[j][i] for i in range(n) for j in range(n))
 
-        object_dict = self.property
-        hex_code = self.parent[0].parent[0].parent.hex_code
-        pair_path_id = self.parent[0].parent[0].path_id
-        parent_grid = self.parent[-1]
-        grid_id = parent_grid.id
+    @staticmethod
+    def _anti_symmetry(grid: list) -> bool:
+        """반 대각선 대칭 (정사각형 전용)."""
+        n = len(grid)
+        return all(
+            grid[i][j] == grid[n - 1 - j][n - 1 - i]
+            for i in range(n) for j in range(n)
+        )
 
-        object_path = object_node_dir(hex_code, pair_path_id, 'G', grid_id, self.id)
-        if not os.path.exists(object_path):
-            os.makedirs(object_path)
-            print(f"[object.to_json] dir created: {object_path}  (pair_path_id={pair_path_id}, grid_id={grid_id}, object_id={self.id})")
+    # ------------------------------------------------------------------ #
+    #  직렬화                                                               #
+    # ------------------------------------------------------------------ #
 
-        # OBJECT property (self-pointing edge): E_O{id}.json
-        prop_path = object_property_path(hex_code, pair_path_id, 'G', grid_id, self.id)
-        with open(prop_path, 'w') as f:
-            json.dump(object_dict, f, indent=2)
-        
-        # Update integrated ARCKG JSON
-        # self.update_integrated_arckg_json()
-    
-    def update_integrated_arckg_json(self):
-        """Update the integrated ARCKG JSON with object information"""
-        import os
-        import json
-        
-        from .memory_paths import task_node_dir
-        arckg_file = f'{task_node_dir(self.parent[0].parent[0].parent.hex_code)}ARCKG_{self.parent[0].parent[0].parent.hex_code}.json'
-        
-        # Check if integrated ARCKG file exists
-        if not os.path.exists(arckg_file):
-            return
-        
-        try:
-            with open(arckg_file, 'r') as f:
-                integrated_arckg = json.load(f)
-            
-            # Find the pair, grid, and object data
-            pair_id_str = f"({self.parent[0].parent[0].parent.hex_code}, {self.parent[0].parent[0].id}, None, None, None, 'pair')"
-            grid_id_str = f"('{self.parent[0].parent[0].parent.hex_code}', {self.parent[0].parent[0].id}, {self.parent[0].id}, None, None, 'grid')"
-            object_id_str = f"('{self.parent[0].parent[0].parent.hex_code}', {self.parent[0].parent[0].id}, {self.parent[0].id}, {self.id}, None, 'object')"
-            
-            # Find the pair
-            if str(self.parent[0].parent[0].id) in integrated_arckg["PAIR_nodes"]:
-                pair_data = integrated_arckg["PAIR_nodes"][str(self.parent[0].parent[0].id)]
-                if pair_data["id"] == pair_id_str:
-                    # Find the grid
-                    if str(self.parent[0].id) in pair_data["GRID_nodes"]:
-                        grid_data = pair_data["GRID_nodes"][str(self.parent[0].id)]
-                        if grid_data["id"] == grid_id_str:
-                            # Check if object already exists
-                            object_exists = False
-                            if str(self.id) in grid_data["OBJECT_nodes"]:
-                                obj_data = grid_data["OBJECT_nodes"][str(self.id)]
-                                if obj_data["id"] == object_id_str:
-                                    # Update existing object
-                                    obj_data["property"] = self.property
-                                    object_exists = True
-                            
-                            # If object doesn't exist, add it
-                            if not object_exists:
-                                obj_data = {
-                                    "id": object_id_str,
-                                    "type": "OBJECT",
-                                    "data": {},
-                                    "property": self.property,
-                                    "PIXEL_edges": {},
-                                    "PIXEL_nodes": {}
-                                }
-                                grid_data["OBJECT_nodes"][str(self.id)] = obj_data
-            
-            # Save updated integrated ARCKG JSON
-            with open(arckg_file, 'w') as f:
-                json.dump(integrated_arckg, f, indent=2)
-                
-        except Exception as e:
-            print(f"Error updating integrated ARCKG JSON: {e}")
+    def to_json(self) -> dict:
+        """
+        8개 OBJECT property dict 반환.
 
-    def __repr__(self):
-        color_str = ', '.join([str(c) for c in self.color if self.color[c] == True])
-        return f"OBJECT(Size {self.height}x{self.width} and color {color_str} {self.type}, at {self.pos}, in {self.parent})"
+        area       : bbox 내 비투명(0-9) 셀 수
+        color      : {0: bool, …, 9: bool}
+        coordinate : [[row, col], …] — 비투명 셀의 절대 좌표 목록
+        method     : {"univalued": bool, "diagonal": bool, "without_bg": bool}
+        position   : left_top / right_top / left_bottom / right_bottom
+        shape      : bbox 2D array, 비투명=1, 투명=-1
+        size       : {"height": int, "width": int}
+        symmetry   : {hori_symm / verti_symm / diag_symm / anti_symm}
+        """
+        h = len(self.colorgrid)
+        w = len(self.colorgrid[0]) if self.colorgrid else 0
+        row_min, col_min = self.pos
+
+        # color
+        color_dict = {i: False for i in range(10)}
+        for row in self.colorgrid:
+            for cell in row:
+                if 0 <= cell <= 9:
+                    color_dict[cell] = True
+
+        # coordinate (절대 좌표)
+        coordinate = [
+            [row_min + r, col_min + c]
+            for r, row in enumerate(self.colorgrid)
+            for c, cell in enumerate(row)
+            if cell != 13
+        ]
+
+        # shape: 비투명=1, 투명=-1
+        shape = [
+            [1 if cell != 13 else -1 for cell in row]
+            for row in self.colorgrid
+        ]
+
+        # area
+        area = sum(1 for row in shape for v in row if v == 1)
+
+        # position
+        position = {
+            "left_top":     {"row_index": row_min,         "col_index": col_min},
+            "right_top":    {"row_index": row_min,         "col_index": col_min + w - 1},
+            "left_bottom":  {"row_index": row_min + h - 1, "col_index": col_min},
+            "right_bottom": {"row_index": row_min + h - 1, "col_index": col_min + w - 1},
+        }
+
+        # symmetry
+        hori_symm  = self._hori_symmetry(self.colorgrid)
+        verti_symm = self._verti_symmetry(self.colorgrid)
+        if h == w:
+            diag_symm = self._diag_symmetry(self.colorgrid)
+            anti_symm = self._anti_symmetry(self.colorgrid)
+        else:
+            diag_symm = False
+            anti_symm = False
+
+        return {
+            "area":       area,
+            "color":      color_dict,
+            "coordinate": coordinate,
+            "method":     self.method,
+            "position":   position,
+            "shape":      shape,
+            "size":       {"height": h, "width": w},
+            "symmetry": {
+                "hori_symm":  hori_symm,
+                "verti_symm": verti_symm,
+                "diag_symm":  diag_symm,
+                "anti_symm":  anti_symm,
+            },
+        }
+
+    def save(self, semantic_memory_root: str):
+        """to_json()을 E_O{o}.json으로 기록하고, 하위 Pixel도 모두 save."""
+        folder = node_id_to_folder_path(self.node_id, semantic_memory_root)
+        os.makedirs(folder, exist_ok=True)
+        path = id_to_json_path(self.node_id, semantic_memory_root)
+        with open(path, "w") as f:
+            json.dump({"id": self.node_id, "result": self.to_json()}, f, indent=2)
+        for pixel in self.pixels:
+            pixel.save(semantic_memory_root)
+
+    def __repr__(self) -> str:
+        return (f"Object(id={self.node_id}, color={self.color}, "
+                f"pos={self.pos}, pixels={len(self.pixels)})")

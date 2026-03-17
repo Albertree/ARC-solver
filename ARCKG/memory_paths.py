@@ -1,131 +1,91 @@
 """
-Memory storage path helpers.
-Convention: folders = nodes (N_*), JSON files = edges/properties (E_*).
+Path helpers — 노드 ID와 비교 쌍으로부터 semantic_memory 파일 경로를 계산한다.
 
-LTM roots (SOAR-style):
-- Semantic: semantic_memory/  (node structure, properties, comparison edges)
-- Procedural: procedural_memory/  (production rules, chunks)
-- Episodic: episodic_memory/  (task-solving episodes)
+Node ID 형식: T{hex}.P{p}.G{g}.O{o}.X{x}  (필요한 깊이까지만)
+  예) "T0a1b2c3.P0"          → PAIR 노드
+      "T0a1b2c3.P0.G0"       → GRID 노드
+      "T0a1b2c3.P0.G0.O2"    → OBJECT 노드
+      "T0a1b2c3.P0.G0.O2.X5" → PIXEL 노드 (Object 하위)
 
-Semantic root: semantic_memory/
-- TASK: semantic_memory/N_T{hex}/
-- TASK property (self-edge): semantic_memory/N_T{hex}/E_T{hex}.json
-- PAIR: semantic_memory/N_T{hex}/N_P{pair_id}/  (train: 0,1,2 ; test: a,b,c,...)
-- PAIR property: semantic_memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json
-- GRID: semantic_memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/
-- GRID property: semantic_memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/E_G{grid_id}.json
-- OBJECT: .../N_G{grid_id}/N_O{obj_id}/
-- OBJECT property: .../N_O{obj_id}/E_O{obj_id}.json
-- PIXEL: .../N_X{pixel_id}/ with E_X{pixel_id}.json
+폴더 구조: N_{part}/ 계층
+  semantic_memory_root/N_T{hex}/N_P{p}/N_G{g}/N_O{o}/N_X{x}/
+속성 파일: E_{last_part}.json
+  예) N_G0/E_G0.json
 """
 
-# Semantic memory: node structure, properties, comparison edges (current storage)
-MEMORY_ROOT = "semantic_memory/"
-# Alias for code that referred to "semantic" root by this name
-SEMANTIC_MEMORY_ROOT = MEMORY_ROOT
 
-# Procedural memory: production rules, chunks (condition → operator)
-PROCEDURAL_MEMORY_ROOT = "procedural_memory/"
-
-# Episodic memory: task-solving episodes (state, operator, result sequences)
-EPISODIC_MEMORY_ROOT = "episodic_memory/"
-
-
-def task_node_dir(hex_code: str) -> str:
-    """TASK node folder: semantic_memory/N_T{hex}/"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/"
+def node_id_to_folder_path(node_id: str, semantic_memory_root: str) -> str:
+    """
+    노드 ID → 해당 노드 폴더(N_ 접두어) 절대 경로.
+    파일을 실제로 생성하지 않는다 — 경로 계산만.
+    예) "T0a.P0.G0", "semantic_memory" → "semantic_memory/N_T0a/N_P0/N_G0/"
+    """
+    root = semantic_memory_root.rstrip("/") + "/"
+    parts = node_id.split(".")
+    folder = root
+    for part in parts:
+        folder += f"N_{part}/"
+    return folder
 
 
-def task_property_path(hex_code: str) -> str:
-    """TASK property (self-edge) file: semantic_memory/N_T{hex}/E_T{hex}.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/E_T{hex_code}.json"
+def id_to_json_path(node_id: str, semantic_memory_root: str) -> str:
+    """
+    노드 ID → 속성 JSON 파일 경로 (E_{last_part}.json).
+    파일을 실제로 생성하지 않는다 — 경로 계산만.
+    예) "T0a.P0.G0" → "semantic_memory/N_T0a/N_P0/N_G0/E_G0.json"
+    """
+    folder = node_id_to_folder_path(node_id, semantic_memory_root)
+    last_part = node_id.split(".")[-1]
+    return folder + f"E_{last_part}.json"
 
 
-def pair_node_dir(hex_code: str, pair_id: "int | str") -> str:
-    """PAIR node folder: semantic_memory/N_T{hex}/N_P{pair_id}/ (pair_id: train 0,1,2 or test a,b,c,...)"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/"
+def _lca_node_id(id_a: str, id_b: str):
+    """두 노드 ID의 LCA(Lowest Common Ancestor) 노드 ID를 반환."""
+    parts_a = id_a.split(".")
+    parts_b = id_b.split(".")
+    if parts_a[0] != parts_b[0]:
+        return None
+    common = []
+    for a, b in zip(parts_a, parts_b):
+        if a == b:
+            common.append(a)
+        else:
+            break
+    return ".".join(common) if common else None
 
 
-def pair_property_path(hex_code: str, pair_id: "int | str") -> str:
-    """PAIR property file: semantic_memory/N_T{hex}/N_P{pair_id}/E_P{pair_id}.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/E_P{pair_id}.json"
+def _short_name(node_id: str, lca_id: str) -> str:
+    """LCA 이후의 경로 세그먼트를 이어 붙인 단축 이름을 반환.
+    예) LCA="T0a.P0", node_id="T0a.P0.G0.O2" → "G0O2"
+    """
+    lca_prefix = lca_id + "."
+    if node_id.startswith(lca_prefix):
+        suffix = node_id[len(lca_prefix):]
+        return suffix.replace(".", "")
+    # LCA와 동일한 노드인 경우 마지막 세그먼트만 반환
+    return node_id.split(".")[-1]
 
 
-def grid_node_dir(hex_code: str, pair_id: "int | str", grid_id: int) -> str:
-    """GRID node folder: semantic_memory/N_T{hex}/N_P{pair_id}/N_G{grid_id}/"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_G{grid_id}/"
+def id_pair_to_comparison_path(id_a: str, id_b: str,
+                                semantic_memory_root: str) -> str:
+    """
+    두 노드 ID로부터 비교 엣지 파일 경로를 반환한다.
+    - 1차 비교 (노드 ID): LCA 폴더 아래 E_{short_a}-{short_b}.json
+    - 고차 비교 (id가 이미 'E_...' 형식): E_(E_...)-(E_...).json을 root에 생성
+    경로 계산만 수행하며, 파일을 실제로 생성하지 않는다.
+    """
+    # 고차(higher-order) 비교: 두 edge ID를 괄호로 감싼 형식
+    if id_a.startswith("E_") and id_b.startswith("E_"):
+        edge_name = f"E_({id_a})-({id_b}).json"
+        root = semantic_memory_root.rstrip("/") + "/"
+        return root + edge_name
 
+    lca_id = _lca_node_id(id_a, id_b)
+    if lca_id is None:
+        raise ValueError(f"No LCA found for '{id_a}' and '{id_b}' — different task roots")
 
-def grid_property_path(hex_code: str, pair_id: "int | str", grid_id: int) -> str:
-    """GRID property file: .../N_G{grid_id}/E_G{grid_id}.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_G{grid_id}/E_G{grid_id}.json"
-
-
-def object_node_dir(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int) -> str:
-    """OBJECT node folder. grid_or_tf is 'G' (GRID)."""
-    base = f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_{grid_or_tf}{grid_id}/"
-    return f"{base}N_O{obj_id}/"
-
-
-def object_property_path(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int) -> str:
-    """OBJECT property file: .../N_O{obj_id}/E_O{obj_id}.json"""
-    return f"{object_node_dir(hex_code, pair_id, grid_or_tf, grid_id, obj_id)}E_O{obj_id}.json"
-
-
-def pixel_node_dir(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, pixel_id: int) -> str:
-    """PIXEL node folder under GRID."""
-    base = f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_{grid_or_tf}{grid_id}/"
-    return f"{base}N_X{pixel_id}/"
-
-
-def pixel_property_path(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, pixel_id: int) -> str:
-    """PIXEL property file: .../N_X{pixel_id}/E_X{pixel_id}.json"""
-    return f"{pixel_node_dir(hex_code, pair_id, grid_or_tf, grid_id, pixel_id)}E_X{pixel_id}.json"
-
-
-def pixel_under_object_dir(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int, pixel_id: int) -> str:
-    """PIXEL node folder under OBJECT."""
-    base = f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_id}/N_{grid_or_tf}{grid_id}/N_O{obj_id}/"
-    return f"{base}N_X{pixel_id}/"
-
-
-def pixel_under_object_property_path(hex_code: str, pair_id: "int | str", grid_or_tf: str, grid_id: int, obj_id: int, pixel_id: int) -> str:
-    """PIXEL property file under OBJECT: .../N_O{obj_id}/N_X{pixel_id}/E_X{pixel_id}.json"""
-    return f"{pixel_under_object_dir(hex_code, pair_id, grid_or_tf, grid_id, obj_id, pixel_id)}E_X{pixel_id}.json"
-
-
-# --- Comparison (optional) edge paths: E_* for between-node edges ---
-
-def edge_pair_comparison_path(hex_code: str, pair_num1: str, pair_num2: str, score: int = 0) -> str:
-    """PAIR-PAIR comparison edge. Stored under task: N_T{hex}/E_P{p1}-P{p2}.json (score in content or filename)."""
-    return f"{MEMORY_ROOT}N_T{hex_code}/E_P{pair_num1}-P{pair_num2}.json"
-
-
-def edge_grid_comparison_path(hex_code: str, pair_num: str, grid_num1: str, grid_num2: str, score: int = 0) -> str:
-    """GRID-GRID comparison edge. Under pair: N_T{hex}/N_P{p}/E_G{g1}-G{g2}.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_num}/E_G{grid_num1}-G{grid_num2}.json"
-
-
-def edge_object_comparison_path(hex_code: str, pair_num: str, grid_num: str, obj_num1: str, obj_num2: str, score: int = 0) -> str:
-    """OBJECT-OBJECT comparison edge. Under pair (grid-level edges): N_T{hex}/N_P{p}/E_O{o1}-O{o2}.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_num}/E_O{obj_num1}-O{obj_num2}.json"
-
-
-def edge_pixel_comparison_path_grid(hex_code: str, pair_num: str, grid_num: str, pixel_num1: str, pixel_num2: str, score: int = 0) -> str:
-    """PIXEL-PIXEL comparison (grid direct). Under pair: N_T{hex}/N_P{p}/E_X{x1}-X{x2}.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_num}/E_X{pixel_num1}-X{pixel_num2}.json"
-
-
-def edge_pixel_comparison_path_object(hex_code: str, pair_num: str, grid_num: str, obj_num: str, pixel_num1: str, pixel_num2: str, score: int = 0) -> str:
-    """PIXEL-PIXEL comparison (under object). Under grid: N_T{hex}/N_P{p}/N_G{g}/N_O{o}/E_X{x1}-X{x2}.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/N_P{pair_num}/N_G{grid_num}/N_O{obj_num}/E_X{pixel_num1}-X{pixel_num2}.json"
-
-
-def edge_task_comparison_path(hex_1: str, hex_2: str) -> str:
-    """TASK-TASK comparison edge. At root: semantic_memory/E_T{hex1}-T{hex2}.json"""
-    return f"{MEMORY_ROOT}E_T{hex_1}-T{hex_2}.json"
-
-
-def edge_task_level_comparison_path(hex_code: str, label1: str, label2: str) -> str:
-    """PAIR 간 비교 등 task 노드 바로 아래에 저장할 엣지. 예: N_T{hex}/E_P0G0-P1G0.json"""
-    return f"{MEMORY_ROOT}N_T{hex_code}/E_{label1}-{label2}.json"
+    short_a = _short_name(id_a, lca_id)
+    short_b = _short_name(id_b, lca_id)
+    edge_name = f"E_{short_a}-{short_b}.json"
+    lca_folder = node_id_to_folder_path(lca_id, semantic_memory_root)
+    return lca_folder + edge_name
