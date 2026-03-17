@@ -5,7 +5,7 @@ ARCEnvironment 초기화 → ActiveSoarAgent 초기화 → env.run_benchmark(age
 MUST NOT: 어떤 solve 로직도 여기에 두지 마. 환경 루프만 있어야 한다.
 """
 
-from env.arc_environment import ARCEnvironment
+from arc2_env.arc_environment import ARCEnvironment
 from agent.active_agent import ActiveSoarAgent
 
 
