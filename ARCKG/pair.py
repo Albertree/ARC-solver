@@ -1,123 +1,64 @@
-from typing import NamedTuple
+"""
+PAIR node — TASK 아래 한 예시 쌍 (input grid + output grid).
+Node ID 형식: T{hex}.P{p}  (test는 Pa, Pb, ...)
+"""
 
-from .ARCKG_component import ARCKGComponent
-from .grid import GRID, GRIDInfo
+import json
+import os
 
-class PAIRInfo(NamedTuple):
-    id: int
-    type: str
-    raw_data: dict
+from ARCKG.memory_paths import id_to_json_path, node_id_to_folder_path
 
-class PAIR(ARCKGComponent):
-    def __init__(self, id:int, type:str, raw_data:dict, parent:ARCKGComponent): # , parent:ARCKGComponent, input_grid:ARCKGComponent= None, output_grid:ARCKGComponent=None):
-        super().__init__(id, type)
-        self.raw_data = raw_data
-        self.parent = parent
-        self.property = dict()
-        self.program = []
 
-    def update_property(self):
-        self.childs = [self.input_grid, self.output_grid]
-        self.input_grid = self.childs[0]
-        self.output_grid = self.childs[1]
+class Pair:
+    """
+    INTENT: input_grid와 output_grid 한 쌍을 담는 KG 노드.
+            pair-specific 관측값(관계 결과 캐시 등)을 보유할 수 있다.
+            to_json()으로 E_P{p}.json 속성 파일을 기록한다.
+    MUST NOT: task-level 일반화를 여기에 저장하지 마 (TASK 레이어 책임).
+              input/output 외의 원시 픽셀 좌표를 직접 보유하지 마.
+    REF: ARC-solver/ARCKG/pair.py PAIR (line 12)
+    """
 
-        self.view = [self.input_grid.view, self.output_grid.view]
-        
-        self.property['grid_count'] = len(self.childs)
+    def __init__(self, pair_id: str, input_grid, output_grid=None):
+        """
+        INTENT: pair_id, input_grid(Grid), output_grid(Grid|None)으로 초기화.
+                test pair는 output_grid가 None이다.
+        MUST NOT: 파일 I/O를 생성자에서 수행하지 마.
+        REF: ARC-solver/ARCKG/pair.py PAIR.__init__ (line 13)
+        """
+        self.node_id = pair_id
+        self.input_grid = input_grid
+        self.output_grid = output_grid
+        # 프로그램 생성 후 적재되는 pair-level 프로그램
+        self.program: list = []
 
-    
-    @staticmethod
-    def from_json(pair_info:PAIRInfo, parent:ARCKGComponent):        
-        ppp = PAIR(id=pair_info.id, type=pair_info.type, raw_data=pair_info.raw_data, parent=parent)
+    def to_json(self) -> dict:
+        """
+        PAIR property: grid_count 하나.
+        REF: CLAUDE.md § Edge Creation Timing
+        """
+        return {
+            "grid_count": 2 if self.output_grid is not None else 1,
+        }
 
-        for i, k in enumerate(pair_info.raw_data.keys()):
-            if k == 'input':
-                grid_info = GRIDInfo(
-                    id = i,
-                    type = 'grid', 
-                    raw_data = pair_info.raw_data['input']
-                )
-                ggg = GRID.from_json(grid_info, parent=ppp)
-                ppp.input_grid = ggg
+    def save(self, semantic_memory_root: str):
+        """
+        INTENT: to_json()을 해당 PAIR 노드 폴더에 E_P{p}.json으로 기록한다.
+                저장 위치는 LCA 규칙에 따라 부모 TASK 폴더 아래.
+        MUST NOT: solve 루프 내부에서 호출하지 마.
+        REF: ARCKG/memory_paths.py
+        """
+        folder = node_id_to_folder_path(self.node_id, semantic_memory_root)
+        os.makedirs(folder, exist_ok=True)
+        path = id_to_json_path(self.node_id, semantic_memory_root)
+        with open(path, "w") as f:
+            json.dump({"id": self.node_id, "result": self.to_json()}, f, indent=2)
 
-            elif k == 'output':
-                grid_info = GRIDInfo(
-                    id = i,
-                    type = 'grid', 
-                    raw_data = pair_info.raw_data['output']
-                )
-                ggg = GRID.from_json(grid_info, parent=ppp)
-                ppp.output_grid = ggg
-        
-        ppp.update_property()
-        ppp.to_json()
-        return ppp
-    
-    def to_json(self):
-        import os
-        import json
-        from .memory_paths import pair_node_dir, pair_property_path
+        if self.input_grid is not None:
+            self.input_grid.save(semantic_memory_root)
+        if self.output_grid is not None:
+            self.output_grid.save(semantic_memory_root)
 
-        pair_dict = self.property
-        pair_path = pair_node_dir(self.parent.hex_code, self.id)
-        if not os.path.exists(pair_path):
-            os.makedirs(pair_path)
-
-        # PAIR property (self-pointing edge): E_P{id}.json
-        prop_path = pair_property_path(self.parent.hex_code, self.id)
-        with open(prop_path, 'w') as f:
-            json.dump(pair_dict, f, indent=2)
-        
-        # Update integrated ARCKG JSON
-        # self.update_integrated_arckg_json()
-    
-    def update_integrated_arckg_json(self):
-        """Update the integrated ARCKG JSON with pair information"""
-        import os
-        import json
-        
-        from .memory_paths import task_node_dir
-        arckg_file = f'{task_node_dir(self.parent.hex_code)}ARCKG_{self.parent.hex_code}.json'
-        
-        # Check if integrated ARCKG file exists
-        if not os.path.exists(arckg_file):
-            return
-        
-        try:
-            with open(arckg_file, 'r') as f:
-                integrated_arckg = json.load(f)
-            
-            # Find and update the pair data
-            pair_id_str = f"({self.parent.hex_code}, {self.id}, None, None, None, 'pair')"
-            
-            # Check if pair already exists
-            pair_exists = False
-            if str(self.id) in integrated_arckg["PAIR_nodes"]:
-                pair_data = integrated_arckg["PAIR_nodes"][str(self.id)]
-                if pair_data["id"] == pair_id_str:
-                    # Update existing pair
-                    pair_data["property"] = self.property
-                    pair_exists = True
-            
-            # If pair doesn't exist, add it
-            if not pair_exists:
-                pair_data = {
-                    "id": pair_id_str,
-                    "type": "PAIR",
-                    "data": {},
-                    "property": self.property,
-                    "GRID_edges": {},
-                    "GRID_nodes": {}
-                }
-                integrated_arckg["PAIR_nodes"][str(self.id)] = pair_data
-            
-            # Save updated integrated ARCKG JSON
-            with open(arckg_file, 'w') as f:
-                json.dump(integrated_arckg, f, indent=2)
-                
-        except Exception as e:
-            print(f"Error updating integrated ARCKG JSON: {e}")
-    
-    def __repr__(self):
-        return f"PAIR({self.id}th {self.type} of TASK({self.parent.hex_code}))"
-    
+    def __repr__(self) -> str:
+        out = self.output_grid is not None
+        return f"Pair(id={self.node_id}, has_output={out})"

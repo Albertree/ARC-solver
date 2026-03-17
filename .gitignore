@@ -207,12 +207,14 @@ marimo/_lsp/
 __marimo__/
 
 
-# Memory
+# Memory (SOAR LTM: semantic, procedural, episodic)
 memory/
-semantic_memory/
-procedural_memory/
-episodic_memory/
-
+semantic_memory/*
+!semantic_memory/.gitkeep
+procedural_memory/*
+!procedural_memory/.gitkeep
+episodic_memory/*
+!episodic_memory/.gitkeep
 # Result code
 result_code/
 

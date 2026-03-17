@@ -1,40 +1,10 @@
 """
-ARCKG: ARC Knowledge Graph components and comparison.
+ARCKG — Knowledge Graph 패키지.
 
-Usage:
-  from ARCKG import TASK, PAIR, GRID, compare
-  task = ...
-  compare(task.example_pairs[0].input_grid, task.example_pairs[0].output_grid, save=True)
+Public interface:
+    compare  — 두 KG 노드를 비교해 relation edge를 생성한다
 """
 
-# Comparison first (no dependency on other ARCKG submodules at import time)
-from ARCKG.comparison import (
-    compare,
-    get_comparison_data,
-    get_component_full_id,
-    id_to_json_path,
-    id_pair_to_comparison_path,
-    json_path_to_id,
-    save_comparison_result,
-)
+from ARCKG.comparison import compare
 
-from ARCKG.task import TASK, TASKInfo
-from ARCKG.pair import PAIR, PAIRInfo
-from ARCKG.grid import GRID, GRIDInfo
-from ARCKG.object import OBJECT, OBJECTInfo
-from ARCKG.pixel import PIXEL, PIXELInfo
-
-__all__ = [
-    "TASK", "TASKInfo",
-    "PAIR", "PAIRInfo",
-    "GRID", "GRIDInfo",
-    "OBJECT", "OBJECTInfo",
-    "PIXEL", "PIXELInfo",
-    "compare",
-    "get_comparison_data",
-    "get_component_full_id",
-    "id_to_json_path",
-    "id_pair_to_comparison_path",
-    "json_path_to_id",
-    "save_comparison_result",
-]
+__all__ = ["compare"]
