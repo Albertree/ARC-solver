@@ -11,155 +11,213 @@ SOAR의 4개 구성요소 중 하나.
 [SOAR 강제] WM은 반드시 존재해야 한다.
             모든 내용은 (identifier, attribute, value) triplet으로 표현된다.
             S1(루트)/S2(서브스테이트) 계층 구조를 가진다.
-            S2는 impasse 시 자동 생성, 해결 시 소멸한다.
 
-[설계 자유] WM에 어떤 내용을 담을지 (goal, focus, relations 등 구역 설계)
-            S1에 어떤 필드를 둘지
-            comparison_agenda / pending_comparisons 같은 탐색 제어 구조
+비교 큐·relations·elaborated 등 전용 dict 슬롯과 그걸 채우는 WM 헬퍼는 두지 않는다.
+지식은 triplet/연산자가 직접 추가하는 방식으로만 확장한다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+────────────────────────────────────────────────────────────────
+[설계 메모 — Soar WM vs 본 클래스 필드]  (나중에 간추릴 때 참고)
+
+개념적으로 Soar WM은 **WME 집합**뿐이며, wme_records(+ timetag)가 그 데이터에 해당한다.
+파이썬 구현에서는 집합을 돌리기 위해 **매니저 역할**의 필드가 함께 붙는다.
+
+• 반드시 유지 권장 (엔진/사이클에 필수에 가까움)
+  - _timetag_seq : WME마다 고유·단조 증가 timetag 발급 (Soar 4요소)
+  - _substate_stack : Impasse 시 서브스테이트 스택 — 규칙 평가 순서(상위→최근 하위)
+  - wme_timetags : 집합 순회만으로는 느릴 수 있어, 슬롯별 최신 timetag 인덱스
+
+• 리팩터링 시 제거·대체 검토 가능 (편의/캐시)
+  - s1 : S1은 WME 그래프 안의 식별자일 뿐이나, “루트 포인터”로 두면 구현이 단순함.
+         순수 그래프만 쓰면 entry point 검색으로 대체 가능.
+  - task : WM 밖 캐시. 순수 Soar라면 input-link 등 그래프 탐색으로만 접근하도록 없앨 수 있음.
+
+이 클래스는 “WM 데이터 집합” + “그 집합을 관리·사이클 구동”을 겸한다.
+────────────────────────────────────────────────────────────────
 """
 
+from __future__ import annotations
+
+import copy
+import itertools
+from typing import Any
+
 MAX_SUBSTATE_DEPTH: int = 2
+
+# SOAR 스타일에서 기본적으로 보호하고 싶은 top-level 슬롯들
+_RESERVED_TOP_KEYS = frozenset({"io"})
+
+
+def _is_operator_id(key: str) -> bool:
+    return bool(key) and key[0] == "O" and key[1:].isdigit()
+
+
+class _TrackedS1(dict):
+    """
+    S1 최상위 키 대입 시 timetag를 남긴다.
+    O1/O2… 연산자 노드 dict를 통째로 넣을 때는 하위 키마다 별도 기록한다.
+    """
+
+    __slots__ = ("_wm",)
+
+    def __init__(self, wm: "WorkingMemory", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._wm = wm
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        super().__setitem__(key, value)
+        self._wm._record_wme("S1", key, value)
+        if isinstance(value, dict) and _is_operator_id(key):
+            for sk, sv in value.items():
+                self._wm._record_wme(key, sk, sv)
 
 
 class WorkingMemory:
     """
     [SOAR 강제] WM 클래스는 반드시 존재해야 한다.
                 S1/S2 계층과 triplet 접근 인터페이스(get/set)는 SOAR 프로토콜.
-    [설계 자유] S1에 담는 필드 목록과 초기값은 전적으로 설계 선택.
     """
 
     def __init__(self):
-        """
-        [설계 자유] 어떤 영역(goal / operator / 탐색제어 / 지식 / 결과)을 S1에 둘지.
-        """
-        self.s1 = {
-            # ── [설계 자유] 목표 영역 ─────────────────────────────────
-            "goal": {
-                "type": None,
-                "subgoals": {},          # {test_0: {status, output?}, ...}
-            },
-            # ── [SOAR 강제] 연산자 영역 (operator 상태는 WM에 기록된다) ─
-            "proposed_ops": [],
-            "selected_op":  None,
-            "op_status":    "idle",      # idle | running | success | failure
-            # ── [설계 자유] 탐색 제어 영역 ───────────────────────────
-            "focus": {},                 # {level: str, scope: str}
-            "comparison_agenda": [],     # [{node_a, node_b, context}, ...]
-            "pending_comparisons": [],   # [{node_a, node_b, context}, ...]
-            # ── [설계 자유] 지식 영역 ────────────────────────────────
-            "elaborated":    {},         # Elaborator가 매 사이클 채우는 파생 사실
-            "relations":     {},         # 비교 결과 누적
-            "invariants":    {},         # {attr_path: "unchanged"|"changed"}
-            "diff_patterns": {},         # {attr_path: {type, ...}}
-            "active_rules":  [],         # [{ref, confidence}, ...]
-            # ── [설계 자유] 결과 영역 ────────────────────────────────
-            "found": {},                 # {test_0: grid, ...}
-        }
-        self.task = None                 # [설계 자유] task 참조 (build_wm_from_task가 설정)
-        self._substate_stack: list = []  # [SOAR 강제] S2 서브스테이트 스택
+        # Soar timetag: WME 생성 순서대로 증가하는 정수 (로거에는 안 찍힘)
+        self._timetag_seq = itertools.count(1)
+        # 전체 이력 (디버거/print(wm.wme_records)용)
+        self.wme_records: list[dict[str, Any]] = []
+        # (identifier, attribute) -> 최신 timetag
+        self.wme_timetags: dict[str, int] = {}
 
-    # ------------------------------------------------------------------ #
-    # [SOAR 강제] 현재 활성 상태 접근 — S1/S2 계층 구조
-    # ------------------------------------------------------------------ #
+        self.s1 = _TrackedS1(self)
+        self.s1["type"] = "state"
+        self.s1["superstate"] = None
+        self.s1["io"] = {
+            "input-link": {},
+            "output-link": {},
+        }
+        # 상태는 의미 기억/일화 기억 모듈과 연결될 수 있다.
+        # 자세한 프로토콜은 아직 정의 전이므로 id만 placeholder로 둔다.
+        self.s1["smem"] = {"id": "SM1"}
+        self.s1["epmem"] = {"id": "E1"}
+
+        self.task = None
+        self._substate_stack: list = []
+
+    def _record_wme(self, identifier: str, attribute: str, value: Any) -> int:
+        """내부용: triplet에 대응하는 timetag 부여 (출력은 wm_logger에서 하지 않음)."""
+        tt = next(self._timetag_seq)
+        key = f"{identifier}^{attribute}"
+        self.wme_timetags[key] = tt
+        self.wme_records.append(
+            {
+                "timetag": tt,
+                "identifier": identifier,
+                "attribute": attribute,
+                "value": value,
+            }
+        )
+        return tt
+
+    def register_wme(self, identifier: str, attribute: str, value: Any) -> int:
+        """
+        S1이 아닌 경로(예: input-link.task)에서 수동으로 timetag를 남길 때 사용.
+        """
+        return self._record_wme(identifier, attribute, value)
 
     @property
     def active(self) -> dict:
-        """[SOAR 강제] 현재 활성 상태 (S2 우선, 없으면 S1)."""
         return self._substate_stack[-1] if self._substate_stack else self.s1
 
     @property
     def depth(self) -> int:
-        """[SOAR 강제] 현재 서브스테이트 깊이 (S1=0, S2=1, …)."""
         return len(self._substate_stack)
 
-    # ------------------------------------------------------------------ #
-    # [SOAR 강제] WM 값 접근 — triplet 인터페이스
-    # ------------------------------------------------------------------ #
-
     def get(self, key: str):
-        """
-        [SOAR 강제] WM에서 값을 읽는 인터페이스 (triplet의 value 접근).
-        MUST NOT: 여러 value가 있을 때 임의로 하나를 반환하지 마 — get_list() 사용.
-        """
-        pass
+        return self.active.get(key)
 
     def set(self, key: str, value):
-        """
-        [SOAR 강제] WM에 값을 쓰는 인터페이스.
-        MUST NOT: goal / found 예약 키를 직접 덮어쓰지 마 — 전용 메서드 사용.
-        """
-        pass
+        if key in _RESERVED_TOP_KEYS:
+            raise ValueError(
+                f"WorkingMemory.set: '{key}'는 직접 set하지 마세요."
+            )
+        self.active[key] = value
 
     def get_list(self, key: str) -> list:
-        """[SOAR 강제] WM에서 리스트 값을 읽는 인터페이스. 없으면 빈 리스트."""
-        pass
+        v = self.active.get(key)
+        return v if isinstance(v, list) else []
 
-    def update_dict(self, key: str, sub_key: str, value):
+    def push_substate(
+        self,
+        impasse_type: str,
+        attribute: str,
+        *,
+        items: list[str] | None = None,
+        non_numeric_items: list[str] | None = None,
+    ) -> bool:
         """
-        [SOAR 강제] WM dict 필드에 새 항목을 추가하는 인터페이스.
-        [설계 자유] 어떤 키(relations / invariants 등)에 무엇을 추가할지.
-        """
-        pass
+        임패스 해소를 위한 하위 상태(Substate)를 생성한다.
 
-    # ------------------------------------------------------------------ #
-    # [설계 자유] 목표 영역 헬퍼 — 어떤 subgoal 구조를 쓸지
-    # ------------------------------------------------------------------ #
+        impasse_type:
+            - "tie"
+            - "no-change"
+            - "conflict"
+            - "constraint-failure"
 
-    def init_subgoals(self, test_count: int):
+        Soar 구조를 단순화해 따른다:
+            (Sx ^type state
+                ^impasse <type>
+                ^choices <...>
+                ^attribute <attribute>
+                ^superstate Sy
+                ^item ...              ; 선택적
+                ^item-count N          ; 선택적
+                ^non-numeric ...       ; tie일 때 선택적
+                ^non-numeric-count M
+                ^quiescence t
+                ^reward-link Rk
+                ^smem SMk
+                ^epmem Ek
+                ^svs SVk)
         """
-        [설계 자유] test_count 개수만큼 pending subgoal 초기화.
-                   goal 구조를 어떻게 정의할지는 설계 선택.
-        MUST NOT: 이미 존재하는 subgoal을 덮어쓰지 마.
-        """
-        pass
+        if len(self._substate_stack) >= MAX_SUBSTATE_DEPTH:
+            return False
 
-    def mark_subgoal_solved(self, test_idx: int, output):
-        """[설계 자유] subgoal을 solved로 전환하고 found에 기록."""
-        pass
+        depth = len(self._substate_stack) + 2  # S2부터 시작
+        super_id = "S1" if depth == 2 else f"S{depth-1}"
 
-    def add_dynamic_subgoal(self, name: str, description: str):
-        """
-        [설계 자유] 동적으로 발견된 결핍에 대한 subgoal 추가.
-                   어떤 subgoal을 만들지는 설계 선택.
-        """
-        pass
+        # impasse 종류별 ^choices 기본값
+        if impasse_type == "tie":
+            choices = "multiple"
+        elif impasse_type == "conflict":
+            choices = "multiple"
+        elif impasse_type == "constraint-failure":
+            choices = "constraint-failure"
+        else:
+            # 기본값: no-change 포함
+            choices = "none"
 
-    # ------------------------------------------------------------------ #
-    # [설계 자유] 탐색 제어 헬퍼 — comparison_agenda/pending 구조
-    # ------------------------------------------------------------------ #
+        sub: dict[str, Any] = {
+            "type": "state",
+            "superstate": super_id,
+            "impasse": impasse_type,
+            "choices": choices,
+            "attribute": attribute,
+            "quiescence": True,
+            # 모듈 링크: smem/epmem만 남기고 reward-link, svs는 생략한다.
+            "smem": {"id": f"SM{depth}"},
+            "epmem": {"id": f"E{depth}"},
+        }
 
-    def add_to_agenda(self, node_a, node_b, context: dict = None):
-        """
-        [설계 자유] 비교 예정 항목을 agenda에 추가.
-                   agenda 구조 자체가 이 시스템의 설계 선택.
-        """
-        pass
+        if items:
+            sub["item"] = list(items)
+            sub["item-count"] = len(items)
 
-    def push_pending_comparison(self, node_a, node_b, context: dict = None):
-        """[설계 자유] agenda → pending으로 항목 이동 (SelectTargetOperator 호출)."""
-        pass
+        if non_numeric_items:
+            sub["non-numeric"] = list(non_numeric_items)
+            sub["non-numeric-count"] = len(non_numeric_items)
 
-    def pop_pending_comparison(self) -> dict:
-        """[설계 자유] pending에서 항목 꺼내기 (CompareOperator 호출)."""
-        pass
+        self._substate_stack.append(sub)
+        return True
 
-    # ------------------------------------------------------------------ #
-    # [SOAR 강제] 서브스테이트 관리 — impasse 메커니즘
-    # ------------------------------------------------------------------ #
-
-    def push_substate(self, subgoal: str, trigger: str) -> bool:
-        """
-        [SOAR 강제] impasse 발생 시 substate를 생성하는 메커니즘.
-                   trigger: "failure" | "no_candidates"
-        [설계 자유] subgoal 내용(어떤 목표로 substate를 열지).
-        MUST NOT: MAX_SUBSTATE_DEPTH를 초과한 push를 허용하지 마.
-        """
-        pass
-
-    def pop_substate(self, result=None):
-        """
-        [SOAR 강제] substate 해결 시 소멸시키는 메커니즘.
-        [설계 자유] result를 상위 상태에 어떻게 전달할지.
-        """
-        pass
+    def pop_substate(self, result: Any = None) -> None:
+        if not self._substate_stack:
+            return
+        self._substate_stack.pop()

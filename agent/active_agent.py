@@ -9,6 +9,7 @@ from agent.elaboration_rules import build_elaborator
 from agent.rules import build_proposer
 from agent.memory import load_rules_from_ltm, chunk_from_substate, save_rule_to_ltm
 from agent.agent_common import build_wm_from_task, goal_satisfied, answers_from_wm
+from agent.wm_logger import reset_wm_snapshot
 
 
 class ActiveSoarAgent:
@@ -33,17 +34,19 @@ class ActiveSoarAgent:
 
         흐름:
           1. 새 태스크이면 _submission_count 리셋
-          2. WorkingMemory 생성
-          3. build_wm_from_task(task, wm)
-          4. LTM rule 로드 → wm.s1["active_rules"] 초기화
-          5. elaborator = build_elaborator()
-          6. proposer   = build_proposer()
-          7. run_cycle(wm, elaborator, proposer, max_steps=50)
-          8. answers = answers_from_wm(wm)
-          9. _submission_count += 1
-          10. return answers
+          2. reset_wm_snapshot() 호출  ← 태스크 경계마다 diff 상태 초기화
+          3. WorkingMemory 생성
+          4. build_wm_from_task(task, wm)
+          5. LTM rule 로드 → wm.s1["active_rules"] 초기화
+          6. elaborator = build_elaborator()
+          7. proposer   = build_proposer()
+          8. run_cycle(wm, elaborator, proposer, max_steps=50)
+          9. answers = answers_from_wm(wm)
+          10. _submission_count += 1
+          11. return answers
         """
-        pass
+        reset_wm_snapshot()
+        raise NotImplementedError("ActiveSoarAgent.solve() not implemented yet.")
 
     def on_substate_resolved(self, substate: dict, task_hex: str):
         """
@@ -51,7 +54,7 @@ class ActiveSoarAgent:
         [설계 자유] chunk 결과를 어떻게 저장할지.
         MUST NOT: solve 루프 내부에서 직접 호출하지 마 — cycle.py가 호출.
         """
-        pass
+        raise NotImplementedError("ActiveSoarAgent.on_substate_resolved() not implemented.")
 
     @property
     def can_retry(self) -> bool:

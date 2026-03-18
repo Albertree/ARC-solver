@@ -6,6 +6,7 @@ python run_task.py
 import sys
 import traceback
 
+
 TASK_HEX = "08ed6ac7"
 
 
@@ -13,78 +14,58 @@ def main():
     print(f"=== run_task: {TASK_HEX} ===\n")
 
     # 1. 태스크 로드
-    print("[1] 태스크 로드...")
+    print("[*] 태스크 로드...")
     try:
+        from basics.viz import show_task
         from managers.arc_manager import ARCManager
+
         manager = ARCManager(data_root="data", semantic_memory_root="semantic_memory")
         task = manager.load_task(TASK_HEX)
         print(f"    Task: {task}")
-        print(f"    example_pairs: {len(task.example_pairs)}")
-        print(f"    test_pairs:    {len(task.test_pairs)}")
+        show_task(task)
+
     except Exception:
         print("[!] 태스크 로드 실패:")
         traceback.print_exc()
         sys.exit(1)
 
-    # 2. WM 초기화
-    print("\n[2] WorkingMemory 초기화...")
+    print("\n[*] WM + SOAR cycle (Elaborate → Propose → Select → Apply)...")
     try:
         from agent.wm import WorkingMemory
-        from agent.agent_common import build_wm_from_task
-        wm = WorkingMemory()
-        build_wm_from_task(task, wm)
-        print(f"    goal:     {wm.get('goal')}")
-        print(f"    subgoals: {wm.get('subgoals')}")
-    except Exception:
-        print("[!] WM 초기화 실패:")
-        traceback.print_exc()
-        sys.exit(1)
-
-    # 3. Elaborator / Proposer 생성
-    print("\n[3] Elaborator / Proposer 생성...")
-    try:
+        from agent.wm_logger import print_wm_triplets, reset_wm_snapshot
+        from agent.io import inject_arc_task
         from agent.elaboration_rules import build_elaborator
         from agent.rules import build_proposer
+        from agent.cycle import run_cycle
+
+        wm = WorkingMemory()
+
+        # 2-1. 초기 WM 뼈대 덤프 (Soar 0th cycle 직전 상태)
+        reset_wm_snapshot(wm)
+        print_wm_triplets(wm, label="Initial WM (before input)", step=0)
+
+        # 2-2. 환경 input function: task를 input-link로 주입
+        inject_arc_task(task, wm)
+        print_wm_triplets(wm, label="After input-link injection (before cycle)", step=0)
+
         elaborator = build_elaborator()
         proposer = build_proposer()
-        print(f"    elaborator: {elaborator}")
-        print(f"    proposer:   {proposer}")
+        # S1에 goal이 없으면 stop_on_goal은 사실상 무시됨(_s1_goal_satisfied가 False).
+        # max_steps=0: cycle 루프를 돌지 않고 바로 빠져나오게 해서
+        # Step 1 elaborate 이전에서 강제로 break 된 상태를 본다.
+        out = run_cycle(
+            wm,
+            elaborator,
+            proposer,
+            max_steps=1,
+            stop_on_goal=True,
+            log_wm=True,
+        )
+        print(f"\n[cycle] {out}")
     except Exception:
-        print("[!] Elaborator/Proposer 생성 실패:")
+        print("[!] WM / cycle 실패:")
         traceback.print_exc()
         sys.exit(1)
-
-    # 4. 사이클 실행
-    print("\n[4] run_cycle (max_steps=50)...")
-    try:
-        from agent.cycle import run_cycle
-        run_cycle(wm, elaborator, proposer, max_steps=50)
-        print("    사이클 완료")
-    except Exception:
-        print("[!] 사이클 실패:")
-        traceback.print_exc()
-        sys.exit(1)
-
-    # 5. 결과 추출
-    print("\n[5] 결과 추출...")
-    try:
-        from agent.agent_common import answers_from_wm
-        answers = answers_from_wm(wm)
-        if answers is None:
-            print("    answers: None (answers_from_wm 미구현)")
-        else:
-            print(f"    answers: {len(answers)} grids")
-            for i, g in enumerate(answers):
-                if g is None:
-                    print(f"      test_{i}: None")
-                else:
-                    print(f"      test_{i}: {len(g)}x{len(g[0]) if g else 0}")
-    except Exception:
-        print("[!] 결과 추출 실패:")
-        traceback.print_exc()
-        sys.exit(1)
-
-    print("\n=== 완료 ===")
 
 
 if __name__ == "__main__":

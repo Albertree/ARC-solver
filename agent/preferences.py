@@ -11,12 +11,21 @@ preferences — 오퍼레이터 선택 우선순위.
 """
 
 # [설계 자유] 우선순위 순서. operator.name과 일치해야 한다.
+# 파이프라인 순서: select_target/compare(compare 단계) →
+#                 extract_pattern(collect 단계) →
+#                 generalize →
+#                 descend(impasse 해소용, generalize 실패 시 우선) →
+#                 predict →
+#                 verify/submit
 PREFERENCE_ORDER: list = [
+    "solve-task",
     "select_target",
     "compare",
     "extract_pattern",
     "generalize",
+    "descend",
     "predict",
+    "verify",
     "submit",
 ]
 
@@ -28,4 +37,12 @@ def select_operator(candidates: list, wm) -> object:
     MUST NOT: 무작위 선택을 사용하지 마 — 결정적 선택.
               동순위 발생 시 candidates 목록 순서를 tiebreak로 사용.
     """
-    pass
+    if not candidates:
+        return None
+    rank = {name: i for i, name in enumerate(PREFERENCE_ORDER)}
+
+    def sort_key(op: object) -> tuple[int, int]:
+        name = getattr(op, "name", "") or ""
+        return (rank.get(name, 10_000), candidates.index(op))
+
+    return min(candidates, key=sort_key)

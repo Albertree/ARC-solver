@@ -12,12 +12,15 @@ rules — SOAR Production Memory의 Propose 규칙.
 """
 
 from agent.active_operators import (
+    SolveTaskOperator,
     SelectTargetOperator,
     CompareOperator,
     ExtractPatternOperator,
     GeneralizeOperator,
+    DescendOperator,
     PredictOperator,
     SubmitOperator,
+    VerifyOperator,
 )
 
 
@@ -35,14 +38,35 @@ class ProductionRule:
 
     def condition(self, wm) -> bool:
         """[설계 자유] elaborated facts만 읽어 발화 조건 판단."""
-        pass
+        raise NotImplementedError(
+            f"{self.__class__.__name__}.condition() must be implemented."
+        )
 
     def propose(self, wm) -> object:
         """[설계 자유] 조건 충족 시 Operator 인스턴스 반환. None 반환 금지."""
-        pass
+        raise NotImplementedError(
+            f"{self.__class__.__name__}.propose() must be implemented."
+        )
 
 
 # ── 구체 ProductionRule 구현 — 전부 [설계 자유] ───────────────────────
+
+
+class SolveTaskRule(ProductionRule):
+    """
+    S1에 ^current-task가 있고 아직 ^operator가 없을 때 solve-task를 제안한다.
+    """
+
+    def __init__(self):
+        super().__init__("rule_solve_task")
+
+    def condition(self, wm) -> bool:
+        state = wm.s1
+        return bool(state.get("current-task")) and "operator" not in state
+
+    def propose(self, wm):
+        return SolveTaskOperator()
+
 
 class SelectTargetRule(ProductionRule):
     """[설계 자유] elaborated["needs_target_selection"] → SelectTargetOperator."""
@@ -51,7 +75,7 @@ class SelectTargetRule(ProductionRule):
         super().__init__("rule_select_target")
 
     def condition(self, wm) -> bool:
-        pass
+        raise NotImplementedError("SelectTargetRule.condition() not implemented.")
 
     def propose(self, wm):
         return SelectTargetOperator()
@@ -64,7 +88,7 @@ class CompareRule(ProductionRule):
         super().__init__("rule_compare")
 
     def condition(self, wm) -> bool:
-        pass
+        raise NotImplementedError("CompareRule.condition() not implemented.")
 
     def propose(self, wm):
         return CompareOperator()
@@ -77,7 +101,7 @@ class ExtractPatternRule(ProductionRule):
         super().__init__("rule_extract_pattern")
 
     def condition(self, wm) -> bool:
-        pass
+        raise NotImplementedError("ExtractPatternRule.condition() not implemented.")
 
     def propose(self, wm):
         return ExtractPatternOperator()
@@ -90,7 +114,7 @@ class GeneralizeRule(ProductionRule):
         super().__init__("rule_generalize")
 
     def condition(self, wm) -> bool:
-        pass
+        raise NotImplementedError("GeneralizeRule.condition() not implemented.")
 
     def propose(self, wm):
         return GeneralizeOperator()
@@ -103,7 +127,7 @@ class PredictRule(ProductionRule):
         super().__init__("rule_predict")
 
     def condition(self, wm) -> bool:
-        pass
+        raise NotImplementedError("PredictRule.condition() not implemented.")
 
     def propose(self, wm):
         return PredictOperator()
@@ -116,10 +140,33 @@ class SubmitRule(ProductionRule):
         super().__init__("rule_submit")
 
     def condition(self, wm) -> bool:
-        pass
+        raise NotImplementedError("SubmitRule.condition() not implemented.")
 
     def propose(self, wm):
         return SubmitOperator()
+
+
+class VerifyRule(ProductionRule):
+    """
+    [설계 자유] verify 연산을 위한 ProductionRule.
+
+    인지 수준의 verify(predicted_output, constraints)에 대응하며,
+    elaborated["all_outputs_found"]와 같은 고수준 제약 판단이 끝났을 때
+    VerifyOperator를 제안한다.
+
+    기본 설계에서는 SubmitRule과 동일한 발화 조건을 사용하지만,
+    필요하다면 나중에 제약 검사를 더 세분화할 수 있다.
+    """
+
+    def __init__(self):
+        super().__init__("rule_verify")
+
+    def condition(self, wm) -> bool:
+        """[설계 자유] 현재는 SubmitRule과 동일한 플래그 사용을 가정."""
+        raise NotImplementedError("VerifyRule.condition() not implemented.")
+
+    def propose(self, wm):
+        return VerifyOperator()
 
 
 class Proposer:
@@ -133,18 +180,36 @@ class Proposer:
         self._rules = rules
 
     def propose(self, wm) -> list:
-        """[SOAR 강제] 발화하는 모든 규칙의 operator 후보 목록 반환."""
-        pass
+        """발화한 규칙이 낸 오퍼레이터 인스턴스 목록. NotImplemented 규칙은 건너뜀."""
+        candidates: list = []
+        for rule in self._rules:
+            try:
+                if not rule.condition(wm):
+                    continue
+                op = rule.propose(wm)
+            except NotImplementedError:
+                continue
+            if op is not None:
+                candidates.append(op)
+        return candidates
 
 
 def build_proposer() -> Proposer:
     """[설계 자유] 어떤 ProductionRule을 등록할지. ActiveSoarAgent.solve() 시 생성."""
     rules = [
+        SolveTaskRule(),
+        # compare: SelectTarget + Compare
         SelectTargetRule(),
         CompareRule(),
+        # collect
         ExtractPatternRule(),
+        # generalize
         GeneralizeRule(),
+        # descend (DescendRule는 elaboration 설계 이후 추가 예정)
+        # predict
         PredictRule(),
+        # verify
         SubmitRule(),
+        VerifyRule(),
     ]
     return Proposer(rules)

@@ -19,7 +19,7 @@ def chunk_from_substate(substate: dict) -> dict:
                trigger, ops_applied, result, confidence 등.
     MUST NOT: 실패한 substate를 chunk하지 마.
     """
-    pass
+    raise NotImplementedError("chunk_from_substate() not implemented.")
 
 
 def save_rule_to_ltm(rule: dict, task_hex: str,
@@ -30,7 +30,7 @@ def save_rule_to_ltm(rule: dict, task_hex: str,
                반환값: ref 경로 (active_rules에 사용).
     MUST NOT: 기존 rule 파일을 덮어쓰지 마 — n 증가로 새 파일 생성.
     """
-    pass
+    raise NotImplementedError("save_rule_to_ltm() not implemented.")
 
 
 def load_rules_from_ltm(task_hex: str, semantic_memory_root: str) -> list:
@@ -40,4 +40,4 @@ def load_rules_from_ltm(task_hex: str, semantic_memory_root: str) -> list:
     MUST NOT: solve 루프 내부에서 호출하지 마 — solve() 시작 전 1회만.
     REF: CLAUDE.md § Memory System Design Target (LTM → WM: one load at session start)
     """
-    pass
+    raise NotImplementedError("load_rules_from_ltm() not implemented.")
