@@ -211,13 +211,16 @@ class AllComparisonsDoneRule(ElaborationRule):
 
 class ReadyForPatternExtractionRule(ElaborationRule):
     """
-    [설계 자유] all_comparisons_done == True AND
-               invariants + diff_patterns 모두 비어있으면
-               elaborated["ready_for_pattern_extraction"] = True 도출.
+    matching-results가 있고 아직 invariants가 없으면
+    ready_for_pattern_extraction = True를 도출한다.
     """
+    i_support = True
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("ReadyForPatternExtractionRule.condition() not implemented.")
+        state = wm.active
+        has_matching = state.get("matching-results") is not None
+        no_invariants = state.get("invariants") is None
+        return has_matching and no_invariants
 
     def derive(self, wm) -> dict:
         return {"ready_for_pattern_extraction": True}
@@ -273,7 +276,7 @@ def build_elaborator() -> Elaborator:
         NeedsTargetSelectionRule("needs_target_selection"),
         HasPendingComparisonRule("has_pending_comparison"),
         AllComparisonsDoneRule("all_comparisons_done"),
-        # ReadyForPatternExtractionRule("ready_for_pattern_extraction"),
+        ReadyForPatternExtractionRule("ready_for_pattern_extraction"),
         # ReadyForGeneralizationRule("ready_for_generalization"),
         # ReadyForPredictionRule("ready_for_prediction"),
         # AllOutputsFoundRule("all_outputs_found"),

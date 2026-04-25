@@ -393,7 +393,89 @@ class ExtractPatternOperator(Operator):
         return state.get("ready_for_pattern_extraction") is True
 
     def effect(self, wm):
-        raise NotImplementedError("ExtractPatternOperator.effect() not implemented.")
+        matching_results = wm.get("matching-results")
+        compare_results = wm.get("compare-results") or []
+        if not matching_results:
+            return None
+
+        # Object 레벨 비교 결과를 (id1, id2) → result로 인덱싱
+        obj_result_index = {}
+        for entry in compare_results:
+            if entry["level"] == "OBJECT":
+                key = (entry["id1"], entry["id2"])
+                obj_result_index[key] = entry["result"]
+
+        # 8개 OBJECT property
+        obj_properties = [
+            "area", "color", "coordinate", "method",
+            "position", "shape", "size", "symmetry",
+        ]
+
+        # pair별 matched 쌍에서 COMM/DIFF 패턴 추출 (score 내림차순으로 이미 정렬됨)
+        all_pair_patterns = {}
+        for pair_id, mr in matching_results.items():
+            pair_patterns = []
+            for match in mr["matched"]:
+                key = (match["id1"], match["id2"])
+                result = obj_result_index.get(key)
+                if not result:
+                    continue
+                res = result.get("result", {})
+                cat = res.get("category", {})
+                score = match["score"]
+
+                pattern = {"score": score, "id1": match["id1"], "id2": match["id2"]}
+                for prop in obj_properties:
+                    prop_result = cat.get(prop, {})
+                    prop_type = prop_result.get("type", "DIFF")
+                    pattern[prop] = prop_type
+                pair_patterns.append(pattern)
+            all_pair_patterns[pair_id] = pair_patterns
+
+        # score 가중치 기반 invariant/transformation 결정
+        # 여러 쌍에서 반복적으로 COMM인 property → invariant
+        # 특정 쌍에서만 DIFF인 property → transformation 대상 후보
+        property_comm_counts = {prop: 0 for prop in obj_properties}
+        property_diff_counts = {prop: 0 for prop in obj_properties}
+        total_matched_pairs = 0
+
+        for pair_id, patterns in all_pair_patterns.items():
+            for pattern in patterns:
+                total_matched_pairs += 1
+                num, denom = _parse_score(pattern["score"])
+                weight = num / denom if denom > 0 else 0
+                for prop in obj_properties:
+                    if pattern[prop] == "COMM":
+                        property_comm_counts[prop] += weight
+                    else:
+                        property_diff_counts[prop] += weight
+
+        invariants = []
+        transform_targets = []
+        for prop in obj_properties:
+            comm = property_comm_counts[prop]
+            diff = property_diff_counts[prop]
+            total = comm + diff
+            if total == 0:
+                continue
+            if comm > diff:
+                invariants.append({"property": prop, "comm_weight": comm, "diff_weight": diff})
+            elif diff > 0:
+                transform_targets.append({"property": prop, "comm_weight": comm, "diff_weight": diff})
+
+        wm.set("invariants", invariants)
+        wm.set("transform-targets", transform_targets)
+        wm.set("pair-patterns", all_pair_patterns)
+
+        inv_names = [i["property"] for i in invariants]
+        tf_names = [t["property"] for t in transform_targets]
+
+        return {
+            "action": f"ExtractPattern operator가 {total_matched_pairs}개 matched 쌍에서 패턴 추출",
+            "meaning": f"invariants: {inv_names}, transformation targets: {tf_names}",
+            "reason": "matching-results가 완성되고 아직 invariants가 없었으므로 ExtractPattern이 선택됨",
+            "storage": "WM 슬롯 (S1 ^invariants), (S1 ^transform-targets), (S1 ^pair-patterns)",
+        }
 
 
 class DescendOperator(Operator):

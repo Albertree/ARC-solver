@@ -101,13 +101,13 @@ class CompareRule(ProductionRule):
 
 
 class ExtractPatternRule(ProductionRule):
-    """[설계 자유] elaborated["ready_for_pattern_extraction"] → ExtractPatternOperator."""
+    """ready_for_pattern_extraction == True → ExtractPatternOperator."""
 
     def __init__(self):
         super().__init__("rule_extract_pattern")
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("ExtractPatternRule.condition() not implemented.")
+        return wm.active.get("ready_for_pattern_extraction") is True
 
     def propose(self, wm):
         return ExtractPatternOperator()
