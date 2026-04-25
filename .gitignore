@@ -207,6 +207,12 @@ marimo/_lsp/
 __marimo__/
 
 
+# Claude Code
+.claude/
+
+# Eval results (run_MMDD_HHMM/ 폴더들)
+eval_result/
+
 # Memory (SOAR LTM: semantic, procedural, episodic)
 memory/
 semantic_memory/*
