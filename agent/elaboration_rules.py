@@ -21,6 +21,9 @@ class ElaborationRule:
     MUST NOT: WM을 수정하지 마 — 파생 사실 dict 반환만.
     """
 
+    # i_support = True → 조건이 거짓이 되면 파생 사실을 자동 철회
+    i_support: bool = False
+
     def __init__(self, name: str):
         self.name = name
 
@@ -56,6 +59,7 @@ class Elaborator:
     def run(self, wm):
         """
         [SOAR 강제] fixed-point 반복 엔진 — 사이클마다 호출됨.
+        i-support: 조건이 거짓이 되면 파생 사실을 자동 철회한다.
         """
         iterations = 0
         while iterations < self.MAX_ITERATIONS:
@@ -72,23 +76,39 @@ class Elaborator:
                 del state["current-task"]
                 changed = True
 
-            # --- 각 규칙 적용 (파생 사실 추가/갱신) ---
+            # --- 각 규칙 적용 (파생 사실 추가/갱신 + i-support 철회) ---
             for rule in self._rules:
                 try:
-                    if not rule.condition(wm):
-                        continue
-                    delta = rule.derive(wm)
+                    cond = rule.condition(wm)
                 except NotImplementedError:
-                    # 아직 구현되지 않은 규칙은 건너뛴다.
                     continue
-                if not delta:
-                    continue
-                for key, value in delta.items():
-                    # 동일한 값이면 변경으로 보지 않는다.
-                    if key in state and state[key] == value:
+
+                if cond:
+                    try:
+                        delta = rule.derive(wm)
+                    except NotImplementedError:
                         continue
-                    state[key] = value
-                    changed = True
+                    if not delta:
+                        continue
+                    for key, value in delta.items():
+                        if key in state and state[key] == value:
+                            continue
+                        state[key] = value
+                        changed = True
+                else:
+                    # i-support 철회: 조건이 거짓이면 파생 사실 제거
+                    if not getattr(rule, "i_support", False):
+                        continue
+                    try:
+                        delta = rule.derive(wm)
+                    except NotImplementedError:
+                        continue
+                    if not delta:
+                        continue
+                    for key in delta:
+                        if key in state:
+                            del state[key]
+                            changed = True
 
             if not changed:
                 break
@@ -141,6 +161,7 @@ class NeedsTargetSelectionRule(ElaborationRule):
     current-task가 있고, 아직 pending-compare가 설정되지 않았으면
     needs_target_selection = True를 도출한다.
     """
+    i_support = True
 
     def condition(self, wm) -> bool:
         state = wm.active
@@ -157,6 +178,7 @@ class HasPendingComparisonRule(ElaborationRule):
     pending-compare 리스트에 항목이 있으면
     has_pending_comparison = True를 도출한다.
     """
+    i_support = True
 
     def condition(self, wm) -> bool:
         state = wm.active
@@ -172,6 +194,7 @@ class AllComparisonsDoneRule(ElaborationRule):
     pending-compare가 빈 리스트이고 compare-results가 있으면
     all_comparisons_done = True를 도출한다.
     """
+    i_support = True
 
     def condition(self, wm) -> bool:
         state = wm.active

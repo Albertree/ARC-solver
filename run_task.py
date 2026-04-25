@@ -62,7 +62,7 @@ def main():
             wm,
             elaborator,
             proposer,
-            max_steps=50,
+            max_steps=200,
             stop_on_goal=True,
             log_wm=True,
             trace_logger=trace_logger,

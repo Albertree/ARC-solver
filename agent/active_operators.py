@@ -112,6 +112,7 @@ class CompareOperator(Operator):
     """
     대기 중인 비교 한 건을 수행하고 결과를 WM에 추가한다.
     GRID/OBJECT 레벨을 모두 처리한다.
+    all_comparisons_done 후 Object Matching도 수행한다.
     """
 
     def __init__(self, compare_fn=None):
@@ -120,9 +121,19 @@ class CompareOperator(Operator):
 
     def precondition(self, wm) -> bool:
         state = wm.active
-        return state.get("has_pending_comparison") is True
+        if state.get("has_pending_comparison") is True:
+            return True
+        if (state.get("all_comparisons_done") is True
+                and state.get("matching-results") is None):
+            return True
+        return False
 
     def effect(self, wm):
+        # 모든 비교 완료 후 Object Matching 수행
+        if (wm.get("all_comparisons_done") is True
+                and wm.get("matching-results") is None):
+            return self._do_object_matching(wm)
+
         pending = wm.get("pending-compare")
         if not pending:
             return None
@@ -235,6 +246,137 @@ class CompareOperator(Operator):
             "reason": f"pending-compare에 {pair_id}의 OBJECT 비교 항목이 있었으므로 Compare가 선택됨",
             "storage": f"{save_path}",
         }
+
+
+    def _do_object_matching(self, wm):
+        """
+        Object Matching: M×N 비교 결과를 pair별로 그룹화하고,
+        score 내림차순 정렬 → threshold(5/8) 분기 → 동점 처리 → branching.
+        """
+        compare_results = wm.get("compare-results") or []
+        task = wm.task
+
+        # pair별로 OBJECT 레벨 결과 그룹화
+        pair_obj_results = {}
+        for entry in compare_results:
+            if entry["level"] != "OBJECT":
+                continue
+            pid = entry["pair_id"]
+            if pid not in pair_obj_results:
+                pair_obj_results[pid] = []
+            pair_obj_results[pid].append(entry)
+
+        matching_results = {}
+        interpretation_parts = []
+
+        for pair_id, obj_results in pair_obj_results.items():
+            # score 파싱 및 내림차순 정렬
+            scored = []
+            for entry in obj_results:
+                res = entry["result"].get("result", {})
+                score_str = res.get("score", "0/0")
+                num, denom = _parse_score(score_str)
+                scored.append({
+                    "id1": entry["id1"],
+                    "id2": entry["id2"],
+                    "score": score_str,
+                    "score_num": num,
+                    "score_denom": denom,
+                    "score_ratio": num / denom if denom > 0 else 0,
+                    "result": entry["result"],
+                })
+            scored.sort(key=lambda x: x["score_ratio"], reverse=True)
+
+            # threshold 분기: > 5/8 = matching, <= 5/8 = non-matching
+            threshold = MATCH_THRESHOLD_NUMERATOR / MATCH_THRESHOLD_DENOMINATOR
+            matched = []
+            unmatched = []
+            used_a = set()
+            used_b = set()
+
+            for item in scored:
+                if item["score_ratio"] > threshold:
+                    # greedy matching: 이미 매칭된 object는 제외
+                    if item["id1"] not in used_a and item["id2"] not in used_b:
+                        matched.append(item)
+                        used_a.add(item["id1"])
+                        used_b.add(item["id2"])
+                    else:
+                        # 동점 처리: 1차·2차 relation 추가 확인
+                        # 이미 사용된 object와 동일 score면 branching 후보
+                        unmatched.append(item)
+                else:
+                    unmatched.append(item)
+
+            # 동점 처리: matched 중 동일 score 쌍 확인
+            branches = []
+            score_groups = {}
+            for item in matched:
+                s = item["score_str"] if "score_str" in item else item["score"]
+                if s not in score_groups:
+                    score_groups[s] = []
+                score_groups[s].append(item)
+            for s, group in score_groups.items():
+                if len(group) > 1:
+                    branches.append({
+                        "score": s,
+                        "candidates": [
+                            {"id1": g["id1"], "id2": g["id2"]}
+                            for g in group
+                        ],
+                    })
+
+            # creation/deletion/split/merge 케이스 분류
+            all_obj_a = set()
+            all_obj_b = set()
+            for entry in obj_results:
+                all_obj_a.add(entry["id1"])
+                all_obj_b.add(entry["id2"])
+
+            unmatched_a = all_obj_a - used_a  # G0 objects not matched → deleted
+            unmatched_b = all_obj_b - used_b  # G1 objects not matched → created
+
+            matching_results[pair_id] = {
+                "matched": [
+                    {"id1": m["id1"], "id2": m["id2"], "score": m["score"]}
+                    for m in matched
+                ],
+                "unmatched_input": list(unmatched_a),   # deletion candidates
+                "unmatched_output": list(unmatched_b),   # creation candidates
+                "branches": branches,
+                "all_scores_sorted": [
+                    {"id1": s["id1"], "id2": s["id2"], "score": s["score"]}
+                    for s in scored
+                ],
+            }
+
+            n_match = len(matched)
+            n_del = len(unmatched_a)
+            n_cre = len(unmatched_b)
+            n_branch = len(branches)
+            interpretation_parts.append(
+                f"{pair_id}: {n_match} matched, "
+                f"{n_del} deleted, {n_cre} created, "
+                f"{n_branch} branching points"
+            )
+
+        wm.set("matching-results", matching_results)
+
+        return {
+            "action": f"Object Matching 수행: {len(pair_obj_results)}개 pair의 M×N 결과 처리",
+            "meaning": "; ".join(interpretation_parts),
+            "reason": "all_comparisons_done이 True이고 matching-results가 아직 없었으므로",
+            "storage": "WM 슬롯 (S1 ^matching-results)",
+        }
+
+
+def _parse_score(score_str: str) -> tuple[int, int]:
+    """'X/N' 형식의 score를 (numerator, denominator) 튜플로 파싱."""
+    try:
+        parts = score_str.split("/")
+        return int(parts[0]), int(parts[1])
+    except (ValueError, IndexError):
+        return 0, 0
 
 
 class ExtractPatternOperator(Operator):

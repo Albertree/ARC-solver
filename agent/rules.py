@@ -82,13 +82,19 @@ class SelectTargetRule(ProductionRule):
 
 
 class CompareRule(ProductionRule):
-    """has_pending_comparison == True → CompareOperator."""
+    """has_pending_comparison OR (all_comparisons_done AND no matching) → CompareOperator."""
 
     def __init__(self):
         super().__init__("rule_compare")
 
     def condition(self, wm) -> bool:
-        return wm.active.get("has_pending_comparison") is True
+        state = wm.active
+        if state.get("has_pending_comparison") is True:
+            return True
+        if (state.get("all_comparisons_done") is True
+                and state.get("matching-results") is None):
+            return True
+        return False
 
     def propose(self, wm):
         return CompareOperator()
