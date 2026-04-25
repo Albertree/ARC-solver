@@ -763,17 +763,21 @@ class PredictOperator(Operator):
                 }, f, indent=2)
 
         # 3. Application: 우선순위 높은 rule부터 시도
+        from agent.apply_rule import apply_learned_rule
+
         applied_rule = None
+        predicted_grid = None
         for cand in retrieval_candidates:
             rule = cand["rule"]
             transformation = rule.get("transformation", {})
             target_prop = transformation.get("target")
 
             if target_prop:
-                # 규칙 적용: test input에서 transformation 수행
-                # 현재는 변환 결과를 기록만 (실제 DSL 적용은 향후)
-                applied_rule = cand
-                break
+                # 규칙 적용: 실제 output grid 생성
+                predicted_grid = apply_learned_rule(task, wm)
+                if predicted_grid is not None:
+                    applied_rule = cand
+                    break
 
         if not applied_rule:
             return {
@@ -787,6 +791,7 @@ class PredictOperator(Operator):
         test_sg["status"] = "solved"
         test_sg["applied_rule"] = applied_rule["rule"]["rule_id"]
         test_sg["retrieval_score"] = applied_rule["retrieval_score"]
+        test_sg["predicted_output"] = predicted_grid
 
         # found 기록
         found = wm.get("found") or {}
@@ -794,6 +799,7 @@ class PredictOperator(Operator):
             "rule_id": applied_rule["rule"]["rule_id"],
             "retrieval_score": applied_rule["retrieval_score"],
             "confidence": applied_rule["confidence"],
+            "predicted_output": predicted_grid,
         }
         wm.set("found", found)
         wm.set("goal", goal)
