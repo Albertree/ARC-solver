@@ -8,7 +8,7 @@ import sys
 import traceback
 
 
-TASK_HEX = "08ed6ac7"
+TASK_HEX = "easy0014"
 
 
 def main():
@@ -131,15 +131,24 @@ def _verify_results(task, found, print_side_by_side_fn):
             continue
 
         # expected output 로드
+        import os
         expected = None
-        data_path = f"data/ARC_AGI/training/{task.task_hex}.json"
-        try:
-            with open(data_path) as f:
-                raw = json.load(f)
-            if i < len(raw["test"]):
-                expected = raw["test"][i].get("output")
-        except Exception:
-            pass
+        candidates = [
+            f"data/ARC_AGI/training/{task.task_hex}.json",
+            f"data/ARC_AGI/evaluation/{task.task_hex}.json",
+            f"data/ARC_easy/{task.task_hex}.json",
+            f"data/{task.task_hex}.json",
+        ]
+        for data_path in candidates:
+            if os.path.exists(data_path):
+                try:
+                    with open(data_path) as f:
+                        raw = json.load(f)
+                    if i < len(raw["test"]):
+                        expected = raw["test"][i].get("output")
+                    break
+                except Exception:
+                    pass
 
         # 시각화: test input | predicted | expected
         print("  [Test Input]    [Predicted]    [Expected]")
