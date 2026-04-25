@@ -69,26 +69,26 @@ class SolveTaskRule(ProductionRule):
 
 
 class SelectTargetRule(ProductionRule):
-    """[설계 자유] elaborated["needs_target_selection"] → SelectTargetOperator."""
+    """needs_target_selection == True → SelectTargetOperator."""
 
     def __init__(self):
         super().__init__("rule_select_target")
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("SelectTargetRule.condition() not implemented.")
+        return wm.active.get("needs_target_selection") is True
 
     def propose(self, wm):
         return SelectTargetOperator()
 
 
 class CompareRule(ProductionRule):
-    """[설계 자유] elaborated["has_pending_comparison"] → CompareOperator."""
+    """has_pending_comparison == True → CompareOperator."""
 
     def __init__(self):
         super().__init__("rule_compare")
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("CompareRule.condition() not implemented.")
+        return wm.active.get("has_pending_comparison") is True
 
     def propose(self, wm):
         return CompareOperator()
@@ -197,7 +197,7 @@ class Proposer:
 def build_proposer() -> Proposer:
     """[설계 자유] 어떤 ProductionRule을 등록할지. ActiveSoarAgent.solve() 시 생성."""
     rules = [
-        SolveTaskRule(),
+        # SolveTaskRule은 추상 오퍼레이터이므로 직접 사이클에서 구체 operator가 동작한다.
         # compare: SelectTarget + Compare
         SelectTargetRule(),
         CompareRule(),

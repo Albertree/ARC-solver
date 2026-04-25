@@ -29,41 +29,64 @@ def main():
         traceback.print_exc()
         sys.exit(1)
 
+    # 2. WM + SOAR cycle with trace logging
     print("\n[*] WM + SOAR cycle (Elaborate → Propose → Select → Apply)...")
     try:
         from agent.wm import WorkingMemory
-        from agent.wm_logger import print_wm_triplets, reset_wm_snapshot
+        from agent.wm_logger import reset_wm_snapshot
         from agent.io import inject_arc_task
+        from agent.agent_common import build_wm_from_task
         from agent.elaboration_rules import build_elaborator
         from agent.rules import build_proposer
         from agent.cycle import run_cycle
+        from agent.trace_logger import TraceLogger
 
         wm = WorkingMemory()
-
-        # 2-1. 초기 WM 뼈대 덤프 (Soar 0th cycle 직전 상태)
         reset_wm_snapshot(wm)
-        print_wm_triplets(wm, label="Initial WM (before input)", step=0)
 
-        # 2-2. 환경 input function: task를 input-link로 주입
+        # 환경 input function: task를 input-link로 주입
         inject_arc_task(task, wm)
-        print_wm_triplets(wm, label="After input-link injection (before cycle)", step=0)
+
+        # goal / focus / subgoals 설정
+        wm.s1["goal"] = {}
+        build_wm_from_task(task, wm)
 
         elaborator = build_elaborator()
         proposer = build_proposer()
-        # S1에 goal이 없으면 stop_on_goal은 사실상 무시됨(_s1_goal_satisfied가 False).
-        # max_steps=0: cycle 루프를 돌지 않고 바로 빠져나오게 해서
-        # Step 1 elaborate 이전에서 강제로 break 된 상태를 본다.
+
+        # Trace logger 시작
+        trace_logger = TraceLogger(TASK_HEX)
+        trace_logger.start()
+
         out = run_cycle(
             wm,
             elaborator,
             proposer,
-            max_steps=1,
+            max_steps=50,
             stop_on_goal=True,
             log_wm=True,
+            trace_logger=trace_logger,
         )
+
+        # [결과] 블록 출력
+        goal = wm.s1.get("goal", {})
+        subgoals = goal.get("subgoals", {})
+        success = all(
+            sg.get("status") == "solved"
+            for sg in subgoals.values()
+            if isinstance(sg, dict)
+        )
+        rule_id = "없음 (Phase 0 — 규칙 생성 전)"
+        output_info = "없음 (Phase 0 — 예측 전)"
+        trace_logger.write_result(success, rule_id, output_info)
+
+        trace_logger.stop()
+
         print(f"\n[cycle] {out}")
+        print(f"[log] Trace log saved to: {trace_logger.log_path}")
+
     except Exception:
-        print("[!] WM / cycle 실패:")
+        print("[!] WM / cycle ��패:")
         traceback.print_exc()
         sys.exit(1)
 

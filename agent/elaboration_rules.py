@@ -138,13 +138,15 @@ class InputTaskToStateRule(ElaborationRule):
 
 class NeedsTargetSelectionRule(ElaborationRule):
     """
-    [설계 자유] comparison_agenda에 미처리 항목이 있고
-               pending_comparisons가 비어있으면
-               elaborated["needs_target_selection"] = True 도출.
+    current-task가 있고, 아직 pending-compare가 설정되지 않았으면
+    needs_target_selection = True를 도출한다.
     """
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("NeedsTargetSelectionRule.condition() not implemented.")
+        state = wm.active
+        has_task = bool(state.get("current-task"))
+        no_pending = state.get("pending-compare") is None
+        return has_task and no_pending
 
     def derive(self, wm) -> dict:
         return {"needs_target_selection": True}
@@ -152,12 +154,14 @@ class NeedsTargetSelectionRule(ElaborationRule):
 
 class HasPendingComparisonRule(ElaborationRule):
     """
-    [설계 자유] pending_comparisons 큐에 항목이 있으면
-               elaborated["has_pending_comparison"] = True 도출.
+    pending-compare 리스트에 항목이 있으면
+    has_pending_comparison = True를 도출한다.
     """
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("HasPendingComparisonRule.condition() not implemented.")
+        state = wm.active
+        pending = state.get("pending-compare")
+        return isinstance(pending, list) and len(pending) > 0
 
     def derive(self, wm) -> dict:
         return {"has_pending_comparison": True}
@@ -165,13 +169,18 @@ class HasPendingComparisonRule(ElaborationRule):
 
 class AllComparisonsDoneRule(ElaborationRule):
     """
-    [설계 자유] agenda와 pending이 모두 비어있고
-               모든 필수 비교가 relations에 존재하면
-               elaborated["all_comparisons_done"] = True 도출.
+    pending-compare가 빈 리스트이고 compare-results가 있으면
+    all_comparisons_done = True를 도출한다.
     """
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("AllComparisonsDoneRule.condition() not implemented.")
+        state = wm.active
+        pending = state.get("pending-compare")
+        results = state.get("compare-results")
+        return (
+            isinstance(pending, list) and len(pending) == 0
+            and isinstance(results, list) and len(results) > 0
+        )
 
     def derive(self, wm) -> dict:
         return {"all_comparisons_done": True}
@@ -236,12 +245,11 @@ def build_elaborator() -> Elaborator:
     [설계 자유] 어떤 ElaborationRule을 등록할지.
                ActiveSoarAgent.solve() 호출 시 생성.
     """
-    # 현재는 입력 태스크를 상태로 끌어오는 규칙만 활성화해 둔다.
     rules = [
         InputTaskToStateRule("elaborate_input_task"),
-        # NeedsTargetSelectionRule("needs_target_selection"),
-        # HasPendingComparisonRule("has_pending_comparison"),
-        # AllComparisonsDoneRule("all_comparisons_done"),
+        NeedsTargetSelectionRule("needs_target_selection"),
+        HasPendingComparisonRule("has_pending_comparison"),
+        AllComparisonsDoneRule("all_comparisons_done"),
         # ReadyForPatternExtractionRule("ready_for_pattern_extraction"),
         # ReadyForGeneralizationRule("ready_for_generalization"),
         # ReadyForPredictionRule("ready_for_prediction"),
