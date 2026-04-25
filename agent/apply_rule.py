@@ -19,14 +19,11 @@ def apply_learned_rule(task, wm) -> list[list[int]] | None:
     example pair의 compare 결과에서 DIFF→DSL 시퀀스를 생성하고
     test input에 적용하여 predicted output grid를 반환한다.
     """
-    matching_results = wm.get("matching-results") or {}
-    compare_results = wm.get("compare-results") or []
-
-    # matching/compare 결과가 없으면 example에서 직접 계산
-    if not matching_results:
-        matching_results = _build_matching_from_examples(task)
-    if not compare_results:
-        compare_results = _build_compare_from_examples(task)
+    # DSL 적용에는 항상 lenient matching 사용 (threshold 없이 greedy)
+    # Phase 1의 5/8 threshold는 분석용이며, 실제 변환 적용에서는
+    # 색상+위치 동시 변환(score=5/8) 등을 놓치지 않도록 한다
+    matching_results = _build_matching_from_examples(task)
+    compare_results = wm.get("compare-results") or _build_compare_from_examples(task)
 
     # example pair에서 DSL 시퀀스 추출
     dsl_sequences = _extract_dsl_sequences(task, matching_results, compare_results)
@@ -84,6 +81,10 @@ def _extract_dsl_sequences(task, matching_results, compare_results) -> list[dict
             in_obj = input_objs.get(match["id1"])
             out_obj = output_objs.get(match["id2"])
             if not in_obj or not out_obj:
+                continue
+
+            # 배경 object(color 0) 쌍은 건너뛴다
+            if in_obj.color == 0 and out_obj.color == 0:
                 continue
 
             # compare 결과에서 DIFF category 추출
@@ -242,15 +243,20 @@ def _extract_transform_pattern(dsl_sequences, task):
             if not in_obj or not out_obj:
                 continue
 
+            # 배경 object는 건너뛴다
+            if in_obj and in_obj.color == 0 and out_obj and out_obj.color == 0:
+                continue
+
             for step in obj_seq["dsl_steps"]:
                 if step.get("diff_property") == "color" and "comp1" in step and "comp2" in step:
-                    all_color_diffs.append({
-                        "comp1": step["comp1"],
-                        "comp2": step["comp2"],
-                    })
+                    # 배경색(0) 관련 변환은 무시
+                    if step["comp1"] != 0 or step["comp2"] != 0:
+                        all_color_diffs.append({
+                            "comp1": step["comp1"],
+                            "comp2": step["comp2"],
+                        })
                 elif step.get("diff_property") == "coordinate":
                     if step.get("action") == "paint_new":
-                        # delta 계산: output pos - input pos
                         in_coords = sorted(in_obj.coordinate)
                         out_coords = sorted(out_obj.coordinate)
                         if in_coords and out_coords:
@@ -298,6 +304,14 @@ def _extract_transform_pattern(dsl_sequences, task):
             result["color_diffs"] = all_color_diffs
             return result
 
+        # 대각선 슬라이딩 패턴 확인: delta = min(dist_to_bottom, dist_to_right)
+        slide = _detect_diagonal_slide(all_coord_diffs, task)
+        if slide:
+            result["type"] = "diagonal_slide"
+            result["slide_direction"] = slide
+            result["color_diffs"] = all_color_diffs
+            return result
+
         # fallback: 첫 example의 delta 사용
         result["type"] = "relative_move"
         result["delta"] = deltas[0]
@@ -313,27 +327,78 @@ def _extract_transform_pattern(dsl_sequences, task):
     return None
 
 
+def _detect_diagonal_slide(coord_diffs, task):
+    """
+    대각선 슬라이딩 패턴 감지: 각 object가 대각선으로 이동하되
+    delta = min(edge까지 거리들)로 결정되는 패턴.
+    예: (1,4) in 6x6 → min(5-1, 5-4) = 1 → delta=(1,1) → (2,5)
+    """
+    gh, gw = None, None
+    for pair in task.example_pairs:
+        if pair.output_grid is not None:
+            gh = pair.output_grid.height
+            gw = pair.output_grid.width
+            break
+    if gh is None:
+        return None
+
+    # (dr_sign, dc_sign) 방향을 추론: 가장 빈번한 방향
+    directions = [(+1, +1), (+1, -1), (-1, +1), (-1, -1)]
+    for dr_sign, dc_sign in directions:
+        all_match = True
+        for d in coord_diffs:
+            in_obj = d["in_obj"]
+            out_obj = d["out_obj"]
+            ir, ic = in_obj.pos[0], in_obj.pos[1]
+            oh = len(in_obj.colorgrid)
+            ow = len(in_obj.colorgrid[0]) if in_obj.colorgrid else 0
+
+            # 각 방향에서 edge까지 거리 계산
+            if dr_sign > 0:
+                dist_r = (gh - oh) - ir
+            else:
+                dist_r = ir
+            if dc_sign > 0:
+                dist_c = (gw - ow) - ic
+            else:
+                dist_c = ic
+
+            expected_delta = min(dist_r, dist_c)
+            expected_pos = (ir + dr_sign * expected_delta, ic + dc_sign * expected_delta)
+
+            if out_obj.pos != expected_pos:
+                all_match = False
+                break
+
+        if all_match:
+            return {"dr_sign": dr_sign, "dc_sign": dc_sign}
+
+    return None
+
+
 def _detect_anchor(coord_diffs, task):
     """output 좌표가 grid 코너에 정렬되는지 확인."""
+    gh, gw = None, None
     for pair in task.example_pairs:
         if pair.output_grid is None:
             continue
         gh = pair.output_grid.height
         gw = pair.output_grid.width
         break
-    else:
+    if gh is None:
         return None
 
-    all_br = True
-    for d in coord_diffs:
-        out_obj = d["out_obj"]
-        oh = len(out_obj.colorgrid)
-        ow = len(out_obj.colorgrid[0]) if out_obj.colorgrid else 0
-        if out_obj.pos != (gh - oh, gw - ow):
-            all_br = False
-            break
-    if all_br:
-        return "bottom_right"
+    # 각 코너 확인
+    anchors = {
+        "bottom_right": lambda obj: obj.pos == (gh - len(obj.colorgrid), gw - (len(obj.colorgrid[0]) if obj.colorgrid else 0)),
+        "top_left": lambda obj: obj.pos == (0, 0),
+        "top_right": lambda obj: obj.pos == (0, gw - (len(obj.colorgrid[0]) if obj.colorgrid else 0)),
+        "bottom_left": lambda obj: obj.pos == (gh - len(obj.colorgrid), 0),
+    }
+
+    for anchor_name, check_fn in anchors.items():
+        if all(check_fn(d["out_obj"]) for d in coord_diffs):
+            return anchor_name
 
     return None
 
@@ -345,12 +410,8 @@ def _apply_transform_to_object(grid, obj, transform_info, test_grid):
     gw = len(grid[0]) if gh > 0 else 0
 
     if ttype == "color_only":
-        # 색상만 변경: comp1→comp2 매핑
         color_diffs = transform_info.get("color_diffs", [])
-        color_map = {}
-        for cd in color_diffs:
-            color_map[cd["comp1"]] = cd["comp2"]
-        new_color = color_map.get(obj.color, obj.color)
+        new_color = _resolve_color(obj.color, color_diffs)
         grid = coloring(grid, [[r, c] for r, c in obj.coordinate], new_color)
 
     elif ttype == "color_ordering":
@@ -363,11 +424,8 @@ def _apply_transform_to_object(grid, obj, transform_info, test_grid):
         new_coords = [[r + dr, c + dc] for r, c in obj.coordinate]
         # 색상 변환 확인
         color_diffs = transform_info.get("color_diffs", [])
-        color_map = {cd["comp1"]: cd["comp2"] for cd in color_diffs}
-        new_color = color_map.get(obj.color, obj.color)
-        # 이전 위치 지우기
+        new_color = _resolve_color(obj.color, color_diffs)
         grid = coloring(grid, old_coords, 13)
-        # 새 위치에 칠하기
         grid = coloring(grid, new_coords, new_color)
 
     elif ttype == "anchor_move":
@@ -386,16 +444,54 @@ def _apply_transform_to_object(grid, obj, transform_info, test_grid):
             return grid
 
         old_coords = [[r, c] for r, c in obj.coordinate]
-        # delta 계산
         base_r, base_c = obj.pos
         new_coords = [[r - base_r + new_r, c - base_c + new_c] for r, c in obj.coordinate]
         color_diffs = transform_info.get("color_diffs", [])
-        color_map = {cd["comp1"]: cd["comp2"] for cd in color_diffs}
-        new_color = color_map.get(obj.color, obj.color)
+        new_color = _resolve_color(obj.color, color_diffs)
+        grid = coloring(grid, old_coords, 13)
+        grid = coloring(grid, new_coords, new_color)
+
+    elif ttype == "diagonal_slide":
+        slide = transform_info["slide_direction"]
+        dr_sign = slide["dr_sign"]
+        dc_sign = slide["dc_sign"]
+        ir, ic = obj.pos
+        oh = len(obj.colorgrid)
+        ow = len(obj.colorgrid[0]) if obj.colorgrid else 0
+        dist_r = ((gh - oh) - ir) if dr_sign > 0 else ir
+        dist_c = ((gw - ow) - ic) if dc_sign > 0 else ic
+        delta = min(dist_r, dist_c)
+        old_coords = [[r, c] for r, c in obj.coordinate]
+        new_coords = [[r + dr_sign * delta, c + dc_sign * delta] for r, c in obj.coordinate]
+        color_diffs = transform_info.get("color_diffs", [])
+        new_color = _resolve_color(obj.color, color_diffs)
         grid = coloring(grid, old_coords, 13)
         grid = coloring(grid, new_coords, new_color)
 
     return grid
+
+
+def _resolve_color(input_color: int, color_diffs: list) -> int:
+    """
+    color_diffs에서 input_color에 대응하는 출력 색상을 결정한다.
+    1. 직접 매핑 (comp1→comp2) 존재하면 사용
+    2. 모든 comp2가 동일하면 constant output color 사용
+    3. 없으면 input_color 유지
+    """
+    if not color_diffs:
+        return input_color
+
+    # 직접 매핑
+    color_map = {cd["comp1"]: cd["comp2"] for cd in color_diffs}
+    if input_color in color_map:
+        return color_map[input_color]
+
+    # constant output color: 모든 comp2가 동일
+    comp2_values = set(cd["comp2"] for cd in color_diffs)
+    if len(comp2_values) == 1:
+        return comp2_values.pop()
+
+    return input_color
 
 
 # ---------------------------------------------------------------------------
