@@ -114,13 +114,13 @@ class ExtractPatternRule(ProductionRule):
 
 
 class GeneralizeRule(ProductionRule):
-    """[설계 자유] elaborated["ready_for_generalization"] → GeneralizeOperator."""
+    """ready_for_generalization == True → GeneralizeOperator."""
 
     def __init__(self):
         super().__init__("rule_generalize")
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("GeneralizeRule.condition() not implemented.")
+        return wm.active.get("ready_for_generalization") is True
 
     def propose(self, wm):
         return GeneralizeOperator()

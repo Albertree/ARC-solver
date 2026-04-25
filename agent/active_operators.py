@@ -498,6 +498,7 @@ class GeneralizeOperator(Operator):
     """
     WM에 모인 불변/차이 패턴을 일반화 함수에 전달해
     추상 규칙을 생성하고 procedural_memory에 저장한다.
+    2차 compare로 pair 간 공통 패턴을 추출하고 anti-unification을 수행한다.
     """
 
     def __init__(self, generalize_fn=None, save_fn=None):
@@ -510,7 +511,154 @@ class GeneralizeOperator(Operator):
         return state.get("ready_for_generalization") is True
 
     def effect(self, wm):
-        raise NotImplementedError("GeneralizeOperator.effect() not implemented.")
+        import json
+        import os
+
+        compare_results = wm.get("compare-results") or []
+        matching_results = wm.get("matching-results") or {}
+        invariants = wm.get("invariants") or []
+        transform_targets = wm.get("transform-targets") or []
+        task = wm.task
+
+        # 1. pair별 1차 GRID 비교 결과 수집
+        pair_grid_results = {}
+        for entry in compare_results:
+            if entry["level"] == "GRID":
+                pair_grid_results[entry["pair_id"]] = entry["result"]
+
+        pair_ids = list(pair_grid_results.keys())
+        if len(pair_ids) < 2:
+            # 단일 pair면 2차 비교 불가, 1차 결과로만 규칙 생성
+            return self._single_pair_rule(wm, pair_ids, invariants, transform_targets)
+
+        # 2. 2차 엣지 생성: compare(pair0_result, pair1_result)
+        second_order_results = []
+        for i in range(len(pair_ids)):
+            for j in range(i + 1, len(pair_ids)):
+                result_i = pair_grid_results[pair_ids[i]]
+                result_j = pair_grid_results[pair_ids[j]]
+                second_order = compare(
+                    result_i, result_j,
+                    save=True,
+                    semantic_memory_root="semantic_memory",
+                )
+                second_order_results.append({
+                    "pair_i": pair_ids[i],
+                    "pair_j": pair_ids[j],
+                    "result": second_order,
+                })
+
+        # 3. Anti-unification: 2차 비교에서 COMM → signature, DIFF → "?"
+        # signature 구축
+        signature = {}
+        transformation_targets = []
+        for inv in invariants:
+            signature[inv["property"]] = {"type": "COMM"}
+        for tf in transform_targets:
+            signature[tf["property"]] = {"type": "DIFF"}
+            transformation_targets.append(tf["property"])
+
+        # 2차 비교 결과로 signature 보강
+        for so in second_order_results:
+            so_result = so["result"].get("result", {})
+            so_cat = so_result.get("category", {})
+            # category 내부의 각 property별 2차 비교 결과 확인
+            for prop_name, prop_result in so_cat.items():
+                if isinstance(prop_result, dict):
+                    prop_type = prop_result.get("type", "DIFF")
+                    if prop_name in signature:
+                        # 2차에서 DIFF면 변수로 치환
+                        if prop_type == "DIFF":
+                            signature[prop_name] = {"type": "DIFF", "variable": "?"}
+
+        # 4. procedural_memory에 JSON 저장
+        rule_id = self._next_rule_id()
+        rule = {
+            "rule_id": rule_id,
+            "order": 2,
+            "signature": signature,
+            "transformation": {
+                "target": transformation_targets[0] if transformation_targets else "?",
+                "action": "DIFF",
+                "variable": "?",
+            },
+            "source_pairs": pair_ids,
+            "confidence": len(pair_ids),
+        }
+
+        os.makedirs("procedural_memory", exist_ok=True)
+        rule_path = f"procedural_memory/{rule_id}.json"
+        with open(rule_path, "w") as f:
+            json.dump(rule, f, indent=2)
+
+        # WM에 active_rules 등록
+        wm.set("active_rules", [{
+            "ref": rule_path,
+            "confidence": rule["confidence"],
+            "rule": rule,
+        }])
+
+        return {
+            "action": f"Generalize operator가 {len(pair_ids)}개 pair에서 2차 compare 후 anti-unification 수행",
+            "meaning": (
+                f"규칙 {rule_id} 생성: signature={list(signature.keys())}, "
+                f"transformation target={transformation_targets}, confidence={rule['confidence']}"
+            ),
+            "reason": "invariants와 transform-targets가 완성되고 아직 active_rules가 없었으므로",
+            "storage": f"procedural_memory/{rule_id}.json, WM 슬롯 (S1 ^active_rules)",
+        }
+
+    def _single_pair_rule(self, wm, pair_ids, invariants, transform_targets):
+        """단일 pair인 경우: 2차 비교 없이 1차 패턴으로 규칙 생성 (confidence=1)."""
+        import json, os
+
+        signature = {}
+        transformation_targets_list = []
+        for inv in invariants:
+            signature[inv["property"]] = {"type": "COMM"}
+        for tf in transform_targets:
+            signature[tf["property"]] = {"type": "DIFF", "variable": "?"}
+            transformation_targets_list.append(tf["property"])
+
+        rule_id = self._next_rule_id()
+        rule = {
+            "rule_id": rule_id,
+            "order": 1,
+            "signature": signature,
+            "transformation": {
+                "target": transformation_targets_list[0] if transformation_targets_list else "?",
+                "action": "DIFF",
+                "variable": "?",
+            },
+            "source_pairs": pair_ids,
+            "confidence": 1,
+        }
+
+        os.makedirs("procedural_memory", exist_ok=True)
+        rule_path = f"procedural_memory/{rule_id}.json"
+        with open(rule_path, "w") as f:
+            json.dump(rule, f, indent=2)
+
+        wm.set("active_rules", [{
+            "ref": rule_path,
+            "confidence": rule["confidence"],
+            "rule": rule,
+        }])
+
+        return {
+            "action": f"Generalize operator가 단일 pair에서 1차 규칙 생성 (confidence=1)",
+            "meaning": f"규칙 {rule_id} 생성: signature={list(signature.keys())}",
+            "reason": "pair가 1개뿐이므로 2차 비교 없이 1차 패턴으로 규칙 생성",
+            "storage": f"procedural_memory/{rule_id}.json, WM 슬롯 (S1 ^active_rules)",
+        }
+
+    @staticmethod
+    def _next_rule_id() -> str:
+        """procedural_memory/ 내 기존 규칙 수를 기반으로 다음 rule_id를 생성."""
+        import os, glob
+        existing = glob.glob("procedural_memory/R_*.json")
+        n = len(existing) + 1
+        return f"R_{n:03d}"
 
 
 class PredictOperator(Operator):

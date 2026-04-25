@@ -228,12 +228,17 @@ class ReadyForPatternExtractionRule(ElaborationRule):
 
 class ReadyForGeneralizationRule(ElaborationRule):
     """
-    [설계 자유] invariants와 diff_patterns가 모두 채워져 있으면
-               elaborated["ready_for_generalization"] = True 도출.
+    invariants와 transform-targets가 모두 채워져 있고
+    아직 active_rules가 없으면 ready_for_generalization = True 도출.
     """
+    i_support = True
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("ReadyForGeneralizationRule.condition() not implemented.")
+        state = wm.active
+        has_inv = isinstance(state.get("invariants"), list)
+        has_tf = isinstance(state.get("transform-targets"), list)
+        no_rules = state.get("active_rules") is None
+        return has_inv and has_tf and no_rules
 
     def derive(self, wm) -> dict:
         return {"ready_for_generalization": True}
@@ -277,7 +282,7 @@ def build_elaborator() -> Elaborator:
         HasPendingComparisonRule("has_pending_comparison"),
         AllComparisonsDoneRule("all_comparisons_done"),
         ReadyForPatternExtractionRule("ready_for_pattern_extraction"),
-        # ReadyForGeneralizationRule("ready_for_generalization"),
+        ReadyForGeneralizationRule("ready_for_generalization"),
         # ReadyForPredictionRule("ready_for_prediction"),
         # AllOutputsFoundRule("all_outputs_found"),
     ]
