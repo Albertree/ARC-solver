@@ -51,6 +51,13 @@ def main():
         wm.s1["goal"] = {}
         build_wm_from_task(task, wm)
 
+        # LTM에서 기존 rule 로드 (E-01 retrieval 지원)
+        from agent.memory import load_rules_from_ltm
+        existing_rules = load_rules_from_ltm(TASK_HEX, "semantic_memory")
+        if existing_rules:
+            wm.s1["active_rules"] = existing_rules
+            print(f"    Loaded {len(existing_rules)} existing rules from procedural_memory")
+
         elaborator = build_elaborator()
         proposer = build_proposer()
 

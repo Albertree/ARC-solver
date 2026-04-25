@@ -700,18 +700,26 @@ class PredictOperator(Operator):
         if not test_input:
             return None
 
-        # 1. test input에 대해 1차 비교 수행 (test input의 properties 추출)
-        # test input의 object properties를 분석하여 pattern 구성
-        # 여기서는 test input grid의 비교 결과 대신 invariant pattern을 사용
+        # 1. 새 문제의 1차 pattern 구성
+        # 분석이 완료된 경우 invariant/transform-target 사용
+        # 분석이 없는 경우 (pre-loaded rules) rule의 signature 구조를 사용
         invariants = wm.get("invariants") or []
         transform_targets = wm.get("transform-targets") or []
 
-        # 새 문제의 1차 pattern 구성 (invariant = COMM, transform = DIFF)
         problem_pattern = {}
-        for inv in invariants:
-            problem_pattern[inv["property"]] = {"type": "COMM"}
-        for tf in transform_targets:
-            problem_pattern[tf["property"]] = {"type": "DIFF"}
+        if invariants or transform_targets:
+            for inv in invariants:
+                problem_pattern[inv["property"]] = {"type": "COMM"}
+            for tf in transform_targets:
+                problem_pattern[tf["property"]] = {"type": "DIFF"}
+        else:
+            # 분석 없이 retrieval: 모든 property를 rule signature에서 가져와 매칭
+            # 이 경우 모든 rule의 signature type과 정확히 일치하는지 확인
+            for rule_entry in active_rules:
+                sig = rule_entry.get("rule", {}).get("signature", {})
+                for prop, val in sig.items():
+                    if prop not in problem_pattern:
+                        problem_pattern[prop] = {"type": val.get("type", "DIFF")}
 
         # 2. 3차 compare: retrieval
         retrieval_candidates = []
