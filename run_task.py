@@ -90,8 +90,12 @@ def main():
 
         trace_logger.stop()
 
+        # Episodic memory 저장
+        from agent.memory import save_episode
+        episode_path = save_episode(TASK_HEX, wm, success)
         print(f"\n[cycle] {out}")
         print(f"[log] Trace log saved to: {trace_logger.log_path}")
+        print(f"[episodic] Episode saved to: {episode_path}")
 
     except Exception:
         print("[!] WM / cycle ��패:")
