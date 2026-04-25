@@ -1,67 +1,460 @@
 """
-apply_rule — 학습된 규칙을 test input에 적용하여 output grid를 생성한다.
+apply_rule — DIFF→DSL 파이프라인.
 
-compare 결과에서 발견한 transformation을 실제 grid에 적용하는 모듈.
-transformation 함수를 하드코딩하지 않고, example pair에서 패턴을 추출하여 적용한다.
+compare() 결과에서 DIFF property를 감지하고, comp1/comp2 실제 값으로부터
+DSL 인자를 계산하여 coloring/make_grid 시퀀스를 생성한다.
+
+모든 transformation은 coloring(selection, color)과 make_grid(h, w, color)의
+조합으로 표현된다. 다른 transformation 함수를 추가하지 않는다.
 """
 
 from __future__ import annotations
 
 import copy
-from typing import Any
+from dsl.primitives import coloring, make_grid
 
 
 def apply_learned_rule(task, wm) -> list[list[int]] | None:
     """
-    example pair에서 학습한 변환 규칙을 test input에 적용하여
-    predicted output grid를 반환한다.
-
-    지원하는 변환 유형:
-    1. color 변환: object 색상 변경 (ordering 기반)
-    2. coordinate/position 변환: object 위치 이동
+    example pair의 compare 결과에서 DIFF→DSL 시퀀스를 생성하고
+    test input에 적용하여 predicted output grid를 반환한다.
     """
     matching_results = wm.get("matching-results") or {}
-    transform_targets = wm.get("transform-targets") or []
+    compare_results = wm.get("compare-results") or []
 
-    # transform_targets가 없으면 active_rules의 signature에서 추출
-    if not transform_targets:
-        active_rules = wm.get("active_rules") or []
-        for rule_entry in active_rules:
-            rule = rule_entry.get("rule", {})
-            sig = rule.get("signature", {})
-            for prop, val in sig.items():
-                if isinstance(val, dict) and val.get("type") == "DIFF":
-                    transform_targets.append({"property": prop})
-
-    # matching_results가 없으면 example pair에서 직접 matching 수행
+    # matching/compare 결과가 없으면 example에서 직접 계산
     if not matching_results:
         matching_results = _build_matching_from_examples(task)
+    if not compare_results:
+        compare_results = _build_compare_from_examples(task)
 
-    if not transform_targets:
+    # example pair에서 DSL 시퀀스 추출
+    dsl_sequences = _extract_dsl_sequences(task, matching_results, compare_results)
+    if not dsl_sequences:
         return None
 
-    target_props = [t["property"] for t in transform_targets]
+    # test input에 적용
+    results = []
+    for test_pair in task.test_pairs:
+        predicted = _apply_dsl_to_test(
+            test_pair.input_grid, dsl_sequences, task, matching_results, compare_results
+        )
+        results.append(predicted)
 
-    # 변환 유형 판별 및 적용
-    if "color" in target_props and "coordinate" not in target_props and "position" not in target_props:
-        return _apply_color_transformation(task, matching_results)
-    elif "coordinate" in target_props or "position" in target_props:
-        return _apply_position_transformation(task, matching_results, target_props)
-    else:
-        # 일반 변환: example에서 직접 패턴 추출 시도
-        return _apply_general_transformation(task, matching_results, target_props)
+    # 첫 번째 test만 반환 (multi-test는 향후 확장)
+    return results[0] if results else None
 
 
 # ---------------------------------------------------------------------------
-# Matching fallback (규칙만 로드된 경우 example에서 직접 매칭)
+# DIFF → DSL 시퀀스 추출
+# ---------------------------------------------------------------------------
+
+def _extract_dsl_sequences(task, matching_results, compare_results) -> list[dict]:
+    """
+    각 example pair의 matched object별 DIFF property에서 DSL 시퀀스를 생성한다.
+
+    반환: [
+        {
+            "pair_id": "T...P0",
+            "object_sequences": [
+                {"match": {...}, "dsl_steps": [{"fn": "coloring", "selection": ..., "color": ...}, ...]}
+            ]
+        }
+    ]
+    """
+    # compare_results를 (id1, id2) → result 인덱스
+    obj_results = {}
+    for entry in compare_results:
+        if entry.get("level") == "OBJECT":
+            key = (entry["id1"], entry["id2"])
+            obj_results[key] = entry["result"]
+
+    all_sequences = []
+    for pair in task.example_pairs:
+        if pair.output_grid is None:
+            continue
+
+        pair_matching = matching_results.get(pair.node_id, {})
+        matched = pair_matching.get("matched", [])
+        input_objs = {o.node_id: o for o in pair.input_grid.objects}
+        output_objs = {o.node_id: o for o in pair.output_grid.objects}
+
+        obj_seqs = []
+        for match in matched:
+            in_obj = input_objs.get(match["id1"])
+            out_obj = output_objs.get(match["id2"])
+            if not in_obj or not out_obj:
+                continue
+
+            # compare 결과에서 DIFF category 추출
+            result_key = (match["id1"], match["id2"])
+            cmp_result = obj_results.get(result_key)
+
+            dsl_steps = _diff_to_dsl(in_obj, out_obj, cmp_result)
+            if dsl_steps:
+                obj_seqs.append({"match": match, "dsl_steps": dsl_steps})
+
+        if obj_seqs:
+            all_sequences.append({
+                "pair_id": pair.node_id,
+                "object_sequences": obj_seqs,
+            })
+
+    return all_sequences
+
+
+def _diff_to_dsl(in_obj, out_obj, cmp_result) -> list[dict]:
+    """
+    한 쌍의 matched object에서 DIFF property를 감지하고
+    comp1/comp2 값으로부터 DSL 시퀀스를 생성한다.
+    """
+    dsl_steps = []
+
+    if cmp_result is None:
+        # compare 결과 없으면 직접 비교
+        cmp_result = _quick_compare(in_obj, out_obj)
+
+    cat = cmp_result.get("result", {}).get("category", {})
+
+    # --- color DIFF → coloring(coords, comp2_color) ---
+    color_cat = cat.get("color", {})
+    if color_cat.get("type") == "DIFF":
+        out_coords = [[r, c] for r, c in out_obj.coordinate]
+        out_color = out_obj.color
+        dsl_steps.append({
+            "fn": "coloring",
+            "selection": out_coords,
+            "color": out_color,
+            "diff_property": "color",
+            "comp1": in_obj.color,
+            "comp2": out_color,
+        })
+
+    # --- coordinate DIFF → coloring(old, 13) + coloring(new, color) ---
+    coord_cat = cat.get("coordinate", {})
+    if coord_cat.get("type") == "DIFF":
+        comp1_coords = coord_cat.get("comp1", [[r, c] for r, c in in_obj.coordinate])
+        comp2_coords = coord_cat.get("comp2", [[r, c] for r, c in out_obj.coordinate])
+        obj_color = out_obj.color
+
+        # 이전 위치 지우기 (투명)
+        dsl_steps.append({
+            "fn": "coloring",
+            "selection": comp1_coords,
+            "color": 13,
+            "diff_property": "coordinate",
+            "action": "erase_old",
+        })
+        # 새 위치에 칠하기
+        dsl_steps.append({
+            "fn": "coloring",
+            "selection": comp2_coords,
+            "color": obj_color,
+            "diff_property": "coordinate",
+            "action": "paint_new",
+        })
+
+    # --- size DIFF → make_grid + coloring ---
+    size_cat = cat.get("size", {})
+    if size_cat.get("type") == "DIFF":
+        size_detail = size_cat.get("category", {})
+        comp2_h = size_detail.get("height", {}).get("comp2", out_obj.pos[0])
+        comp2_w = size_detail.get("width", {}).get("comp2", out_obj.pos[1])
+        if isinstance(comp2_h, int) and isinstance(comp2_w, int):
+            dsl_steps.append({
+                "fn": "make_grid",
+                "height": comp2_h,
+                "width": comp2_w,
+                "color": 0,
+                "diff_property": "size",
+            })
+            # 새 크기 grid에 object 색칠
+            out_coords = [[r, c] for r, c in out_obj.coordinate]
+            dsl_steps.append({
+                "fn": "coloring",
+                "selection": out_coords,
+                "color": out_obj.color,
+                "diff_property": "size",
+                "action": "repaint",
+            })
+
+    return dsl_steps
+
+
+# ---------------------------------------------------------------------------
+# Test input에 DSL 적용
+# ---------------------------------------------------------------------------
+
+def _apply_dsl_to_test(test_grid, dsl_sequences, task, matching_results, compare_results):
+    """
+    example에서 추출한 DSL 시퀀스를 test input에 적용한다.
+
+    핵심: example DSL에서 delta/패턴을 추출하고, test object에 동일 delta를 적용한다.
+    """
+    test_objs = [o for o in test_grid.objects if o.color != 0]
+    if not test_objs:
+        return None
+
+    # example에서 공통 변환 패턴(delta) 추출
+    transform_info = _extract_transform_pattern(dsl_sequences, task)
+    if not transform_info:
+        return None
+
+    grid = copy.deepcopy(test_grid.raw)
+
+    # color ordering: 여러 object에 순서대로 다른 색 부여하는 패턴
+    if transform_info["type"] == "color_ordering":
+        return _apply_color_ordering_dsl(grid, test_objs, dsl_sequences, task, matching_results)
+
+    for obj in test_objs:
+        grid = _apply_transform_to_object(grid, obj, transform_info, test_grid)
+
+    return grid
+
+
+def _extract_transform_pattern(dsl_sequences, task):
+    """
+    example DSL 시퀀스에서 공통 변환 패턴을 추출한다.
+    comp1/comp2 실제 값으로부터 delta, target_pos 등을 계산한다.
+    """
+    if not dsl_sequences:
+        return None
+
+    # 모든 example의 모든 object DSL step을 수집
+    all_color_diffs = []
+    all_coord_diffs = []
+
+    input_objs_map = {}
+    output_objs_map = {}
+    for pair in task.example_pairs:
+        if pair.output_grid is None:
+            continue
+        for o in pair.input_grid.objects:
+            input_objs_map[o.node_id] = o
+        for o in pair.output_grid.objects:
+            output_objs_map[o.node_id] = o
+
+    for seq in dsl_sequences:
+        for obj_seq in seq["object_sequences"]:
+            match = obj_seq["match"]
+            in_obj = input_objs_map.get(match["id1"])
+            out_obj = output_objs_map.get(match["id2"])
+            if not in_obj or not out_obj:
+                continue
+
+            for step in obj_seq["dsl_steps"]:
+                if step.get("diff_property") == "color" and "comp1" in step and "comp2" in step:
+                    all_color_diffs.append({
+                        "comp1": step["comp1"],
+                        "comp2": step["comp2"],
+                    })
+                elif step.get("diff_property") == "coordinate":
+                    if step.get("action") == "paint_new":
+                        # delta 계산: output pos - input pos
+                        in_coords = sorted(in_obj.coordinate)
+                        out_coords = sorted(out_obj.coordinate)
+                        if in_coords and out_coords:
+                            dr = out_coords[0][0] - in_coords[0][0]
+                            dc = out_coords[0][1] - in_coords[0][1]
+                            all_coord_diffs.append({
+                                "delta": (dr, dc),
+                                "grid_h": None,
+                                "grid_w": None,
+                                "in_obj": in_obj,
+                                "out_obj": out_obj,
+                            })
+
+    result = {"type": "unknown", "steps": []}
+
+    # color 변환만 있는 경우
+    if all_color_diffs and not all_coord_diffs:
+        # 여러 object가 각각 다른 comp2를 가지면 → color ordering
+        comp2_values = set(cd["comp2"] for cd in all_color_diffs)
+        if len(comp2_values) > 1:
+            result["type"] = "color_ordering"
+            result["color_diffs"] = all_color_diffs
+            return result
+        # 모두 같은 comp2 → 단순 color 변환
+        result["type"] = "color_only"
+        result["color_diffs"] = all_color_diffs
+        return result
+
+    # coordinate 변환이 있는 경우
+    if all_coord_diffs:
+        deltas = [d["delta"] for d in all_coord_diffs]
+
+        # 모든 delta가 동일한지 확인 (relative move)
+        if len(set(deltas)) == 1:
+            result["type"] = "relative_move"
+            result["delta"] = deltas[0]
+            result["color_diffs"] = all_color_diffs
+            return result
+
+        # anchor 패턴 확인: output이 grid 경계 정렬인지
+        anchor = _detect_anchor(all_coord_diffs, task)
+        if anchor:
+            result["type"] = "anchor_move"
+            result["anchor"] = anchor
+            result["color_diffs"] = all_color_diffs
+            return result
+
+        # fallback: 첫 example의 delta 사용
+        result["type"] = "relative_move"
+        result["delta"] = deltas[0]
+        result["color_diffs"] = all_color_diffs
+        return result
+
+    # color ordering 패턴 (08ed6ac7 유형)
+    if all_color_diffs:
+        result["type"] = "color_ordering"
+        result["color_diffs"] = all_color_diffs
+        return result
+
+    return None
+
+
+def _detect_anchor(coord_diffs, task):
+    """output 좌표가 grid 코너에 정렬되는지 확인."""
+    for pair in task.example_pairs:
+        if pair.output_grid is None:
+            continue
+        gh = pair.output_grid.height
+        gw = pair.output_grid.width
+        break
+    else:
+        return None
+
+    all_br = True
+    for d in coord_diffs:
+        out_obj = d["out_obj"]
+        oh = len(out_obj.colorgrid)
+        ow = len(out_obj.colorgrid[0]) if out_obj.colorgrid else 0
+        if out_obj.pos != (gh - oh, gw - ow):
+            all_br = False
+            break
+    if all_br:
+        return "bottom_right"
+
+    return None
+
+
+def _apply_transform_to_object(grid, obj, transform_info, test_grid):
+    """단일 test object에 변환 패턴을 적용."""
+    ttype = transform_info["type"]
+    gh = len(grid)
+    gw = len(grid[0]) if gh > 0 else 0
+
+    if ttype == "color_only":
+        # 색상만 변경: comp1→comp2 매핑
+        color_diffs = transform_info.get("color_diffs", [])
+        color_map = {}
+        for cd in color_diffs:
+            color_map[cd["comp1"]] = cd["comp2"]
+        new_color = color_map.get(obj.color, obj.color)
+        grid = coloring(grid, [[r, c] for r, c in obj.coordinate], new_color)
+
+    elif ttype == "color_ordering":
+        # 여러 object 색상 순서 변경은 상위에서 처리 (단일 object 적용 아님)
+        pass
+
+    elif ttype == "relative_move":
+        dr, dc = transform_info["delta"]
+        old_coords = [[r, c] for r, c in obj.coordinate]
+        new_coords = [[r + dr, c + dc] for r, c in obj.coordinate]
+        # 색상 변환 확인
+        color_diffs = transform_info.get("color_diffs", [])
+        color_map = {cd["comp1"]: cd["comp2"] for cd in color_diffs}
+        new_color = color_map.get(obj.color, obj.color)
+        # 이전 위치 지우기
+        grid = coloring(grid, old_coords, 13)
+        # 새 위치에 칠하기
+        grid = coloring(grid, new_coords, new_color)
+
+    elif ttype == "anchor_move":
+        anchor = transform_info["anchor"]
+        oh = len(obj.colorgrid)
+        ow = len(obj.colorgrid[0]) if obj.colorgrid else 0
+        if anchor == "bottom_right":
+            new_r, new_c = gh - oh, gw - ow
+        elif anchor == "top_left":
+            new_r, new_c = 0, 0
+        elif anchor == "top_right":
+            new_r, new_c = 0, gw - ow
+        elif anchor == "bottom_left":
+            new_r, new_c = gh - oh, 0
+        else:
+            return grid
+
+        old_coords = [[r, c] for r, c in obj.coordinate]
+        # delta 계산
+        base_r, base_c = obj.pos
+        new_coords = [[r - base_r + new_r, c - base_c + new_c] for r, c in obj.coordinate]
+        color_diffs = transform_info.get("color_diffs", [])
+        color_map = {cd["comp1"]: cd["comp2"] for cd in color_diffs}
+        new_color = color_map.get(obj.color, obj.color)
+        grid = coloring(grid, old_coords, 13)
+        grid = coloring(grid, new_coords, new_color)
+
+    return grid
+
+
+# ---------------------------------------------------------------------------
+# Color ordering (08ed6ac7 유형) — DSL 기반 재구현
+# ---------------------------------------------------------------------------
+
+def _apply_color_ordering_dsl(grid, test_objects, dsl_sequences, task, matching_results):
+    """
+    여러 object의 색상을 ordering 기반으로 변환.
+    compare 결과의 comp1/comp2에서 색상 매핑을 추출.
+    """
+    input_objs_map = {}
+    output_objs_map = {}
+    for pair in task.example_pairs:
+        if pair.output_grid is None:
+            continue
+        for o in pair.input_grid.objects:
+            input_objs_map[o.node_id] = o
+        for o in pair.output_grid.objects:
+            output_objs_map[o.node_id] = o
+
+    # example에서 area→output_color 매핑 추출
+    area_color_maps = []
+    for seq in dsl_sequences:
+        area_map = {}
+        for obj_seq in seq["object_sequences"]:
+            match = obj_seq["match"]
+            in_obj = input_objs_map.get(match["id1"])
+            out_obj = output_objs_map.get(match["id2"])
+            if in_obj and out_obj and in_obj.color != out_obj.color:
+                area_map[len(in_obj.coordinate)] = out_obj.color
+        if area_map:
+            area_color_maps.append(area_map)
+
+    if not area_color_maps:
+        return grid
+
+    # area 내림차순으로 test objects 정렬
+    sorted_test = sorted(test_objects, key=lambda o: len(o.coordinate), reverse=True)
+
+    # 첫 example의 area→color를 참조하여 순서별 색상 결정
+    ref_map = area_color_maps[0]
+    ref_sorted = sorted(ref_map.keys(), reverse=True)
+    color_sequence = [ref_map[a] for a in ref_sorted]
+
+    for rank, obj in enumerate(sorted_test):
+        new_color = color_sequence[rank] if rank < len(color_sequence) else rank + 1
+        grid = coloring(grid, [[r, c] for r, c in obj.coordinate], new_color)
+
+    return grid
+
+
+# ---------------------------------------------------------------------------
+# Matching/Compare fallback (규칙만 로드된 경우)
 # ---------------------------------------------------------------------------
 
 def _build_matching_from_examples(task) -> dict:
-    """
-    분석 단계 없이 example pair에서 직접 object matching을 수행한다.
-    input/output object를 1:1 greedy matching한다.
-    """
-    from ARCKG.comparison import compare
+    """example pair에서 직접 object matching을 수행한다."""
+    from ARCKG.comparison import compare as kg_compare
 
     matching_results = {}
     for pair in task.example_pairs:
@@ -70,11 +463,10 @@ def _build_matching_from_examples(task) -> dict:
         input_objs = pair.input_grid.objects
         output_objs = pair.output_grid.objects
 
-        # M×N compare, score 계산
         scored = []
         for io in input_objs:
             for oo in output_objs:
-                result = compare(io, oo)
+                result = kg_compare(io, oo)
                 res = result.get("result", {})
                 score_str = res.get("score", "0/0")
                 parts = score_str.split("/")
@@ -83,13 +475,10 @@ def _build_matching_from_examples(task) -> dict:
                 except (ValueError, IndexError):
                     num, denom = 0, 0
                 scored.append({
-                    "id1": io.node_id,
-                    "id2": oo.node_id,
-                    "score": score_str,
-                    "ratio": num / denom if denom > 0 else 0,
+                    "id1": io.node_id, "id2": oo.node_id,
+                    "score": score_str, "ratio": num / denom if denom > 0 else 0,
                 })
 
-        # greedy matching (score 내림차순)
         scored.sort(key=lambda x: x["ratio"], reverse=True)
         used_a, used_b = set(), set()
         matched = []
@@ -105,321 +494,32 @@ def _build_matching_from_examples(task) -> dict:
             "unmatched_output": [o.node_id for o in output_objs if o.node_id not in used_b],
             "branches": [],
         }
-
     return matching_results
 
 
-# ---------------------------------------------------------------------------
-# Color Transformation (08ed6ac7 유형)
-# ---------------------------------------------------------------------------
+def _build_compare_from_examples(task) -> list:
+    """example pair에서 직접 compare 결과를 생성한다."""
+    from ARCKG.comparison import compare as kg_compare
 
-def _apply_color_transformation(task, matching_results):
-    """object 색상을 ordering 기반으로 변환."""
-    example_patterns = _extract_color_patterns(task, matching_results)
-    if not example_patterns:
-        return None
-
-    ordering_criterion, color_sequence = _discover_color_ordering(example_patterns)
-    if ordering_criterion is None:
-        return None
-
-    for test_pair in task.test_pairs:
-        test_grid = test_pair.input_grid
-        predicted = _apply_color_to_test(test_grid, ordering_criterion, color_sequence)
-        if predicted is not None:
-            return predicted
-    return None
-
-
-def _extract_color_patterns(task, matching_results):
-    patterns = []
+    results = []
     for pair in task.example_pairs:
         if pair.output_grid is None:
             continue
-        pair_matching = matching_results.get(pair.node_id, {})
-        matched = pair_matching.get("matched", [])
-        input_objs = {o.node_id: o for o in pair.input_grid.objects}
-        output_objs = {o.node_id: o for o in pair.output_grid.objects}
 
-        pair_data = []
-        for match in matched:
-            in_obj = input_objs.get(match["id1"])
-            out_obj = output_objs.get(match["id2"])
-            if not in_obj or not out_obj:
-                continue
-            if in_obj.color == out_obj.color:
-                continue
-            pair_data.append({
-                "input_area": len(in_obj.coordinate),
-                "input_height": len(in_obj.colorgrid),
-                "input_width": len(in_obj.colorgrid[0]) if in_obj.colorgrid else 0,
-                "input_color": in_obj.color,
-                "output_color": out_obj.color,
-                "input_pos_row": in_obj.pos[0],
-                "input_pos_col": in_obj.pos[1],
-            })
-        if pair_data:
-            patterns.append(pair_data)
-    return patterns
+        # Grid level
+        grid_result = kg_compare(pair.input_grid, pair.output_grid, save=True, semantic_memory_root="semantic_memory")
+        results.append({"pair_id": pair.node_id, "id1": pair.input_grid.node_id, "id2": pair.output_grid.node_id, "level": "GRID", "result": grid_result})
+
+        # Object level
+        for io in pair.input_grid.objects:
+            for oo in pair.output_grid.objects:
+                obj_result = kg_compare(io, oo, save=True, semantic_memory_root="semantic_memory")
+                results.append({"pair_id": pair.node_id, "id1": io.node_id, "id2": oo.node_id, "level": "OBJECT", "result": obj_result})
+
+    return results
 
 
-def _discover_color_ordering(example_patterns):
-    criteria = [
-        ("input_area", True),
-        ("input_height", True),
-        ("input_pos_col", False),
-        ("input_pos_row", False),
-    ]
-    for criterion_key, reverse in criteria:
-        consistent = True
-        reference_sequence = None
-        for pair_data in example_patterns:
-            sorted_data = sorted(pair_data, key=lambda x: x[criterion_key], reverse=reverse)
-            sequence = [d["output_color"] for d in sorted_data]
-            if reference_sequence is None:
-                reference_sequence = sequence
-            elif sequence != reference_sequence:
-                consistent = False
-                break
-        if consistent and reference_sequence:
-            return criterion_key, reference_sequence
-    if example_patterns:
-        pair_data = example_patterns[0]
-        sorted_data = sorted(pair_data, key=lambda x: x["input_area"], reverse=True)
-        sequence = [d["output_color"] for d in sorted_data]
-        return "input_area", sequence
-    return None, None
-
-
-def _apply_color_to_test(test_grid, ordering_criterion, color_sequence):
-    test_objects = test_grid.objects
-    if not test_objects:
-        return None
-    target_objects = [obj for obj in test_objects if obj.color != 0]
-    if not target_objects:
-        return None
-
-    reverse = ordering_criterion in ("input_area", "input_height")
-    key_map = {
-        "input_area": lambda o: len(o.coordinate),
-        "input_height": lambda o: len(o.colorgrid),
-        "input_width": lambda o: len(o.colorgrid[0]) if o.colorgrid else 0,
-        "input_pos_col": lambda o: o.pos[1],
-        "input_pos_row": lambda o: o.pos[0],
-    }
-    sort_key = key_map.get(ordering_criterion, key_map["input_area"])
-    sorted_objects = sorted(target_objects, key=sort_key, reverse=reverse)
-
-    output = copy.deepcopy(test_grid.raw)
-    for rank, obj in enumerate(sorted_objects):
-        new_color = color_sequence[rank] if rank < len(color_sequence) else rank + 1
-        for r, c in obj.coordinate:
-            if 0 <= r < len(output) and 0 <= c < len(output[0]):
-                output[r][c] = new_color
-    return output
-
-
-# ---------------------------------------------------------------------------
-# Position/Coordinate Transformation (easy0014 유형)
-# ---------------------------------------------------------------------------
-
-def _apply_position_transformation(task, matching_results, target_props):
-    """
-    object 위치를 변환한다.
-    example pair에서 input→output 위치 변화 패턴을 추출하고 test에 적용한다.
-    """
-    # example pair에서 위치 변환 패턴 추출
-    move_patterns = []
-    for pair in task.example_pairs:
-        if pair.output_grid is None:
-            continue
-        pair_matching = matching_results.get(pair.node_id, {})
-        matched = pair_matching.get("matched", [])
-        input_objs = {o.node_id: o for o in pair.input_grid.objects}
-        output_objs = {o.node_id: o for o in pair.output_grid.objects}
-
-        grid_h = pair.input_grid.height
-        grid_w = pair.input_grid.width
-
-        for match in matched:
-            in_obj = input_objs.get(match["id1"])
-            out_obj = output_objs.get(match["id2"])
-            if not in_obj or not out_obj:
-                continue
-
-            in_coords = set(tuple(c) for c in in_obj.coordinate)
-            out_coords = set(tuple(c) for c in out_obj.coordinate)
-            if in_coords == out_coords:
-                continue  # 위치 변화 없음
-
-            move_patterns.append({
-                "input_pos": in_obj.pos,
-                "output_pos": out_obj.pos,
-                "input_coords": sorted(in_obj.coordinate),
-                "output_coords": sorted(out_obj.coordinate),
-                "input_color": in_obj.color,
-                "output_color": out_obj.color,
-                "input_colorgrid": in_obj.colorgrid,
-                "grid_h": grid_h,
-                "grid_w": grid_w,
-                "obj_h": len(in_obj.colorgrid),
-                "obj_w": len(in_obj.colorgrid[0]) if in_obj.colorgrid else 0,
-            })
-
-    if not move_patterns:
-        return None
-
-    # 패턴 분석: 모든 example에서 공통된 이동 규칙 발견
-    move_rule = _discover_move_rule(move_patterns)
-    if move_rule is None:
-        return None
-
-    # test input에 적용
-    for test_pair in task.test_pairs:
-        predicted = _apply_move_to_test(test_pair.input_grid, move_rule)
-        if predicted is not None:
-            return predicted
-    return None
-
-
-def _discover_move_rule(move_patterns: list[dict]) -> dict | None:
-    """
-    위치 변환 규칙을 발견한다.
-
-    지원 패턴:
-    1. absolute: 모든 object가 같은 절대 위치로 이동
-    2. relative: 모든 object가 같은 방향/거리로 이동
-    3. anchor: grid의 특정 위치(코너 등)로 이동
-    """
-    if not move_patterns:
-        return None
-
-    # 1. absolute 이동: 모든 output_pos가 동일한지 확인
-    output_positions = [tuple(p["output_pos"]) for p in move_patterns]
-    if len(set(output_positions)) == 1:
-        # 모든 example에서 같은 절대 위치로 이동
-        # 그런데 grid 크기 대비 상대 위치인지 확인
-        abs_pos = output_positions[0]
-        # grid 코너 체크
-        for p in move_patterns:
-            gh, gw = p["grid_h"], p["grid_w"]
-            oh, ow = p["obj_h"], p["obj_w"]
-            if abs_pos == (gh - oh, gw - ow):
-                # 우하단 코너 정렬
-                return {"type": "anchor", "anchor": "bottom_right"}
-            elif abs_pos == (0, 0):
-                return {"type": "anchor", "anchor": "top_left"}
-            elif abs_pos == (0, gw - ow):
-                return {"type": "anchor", "anchor": "top_right"}
-            elif abs_pos == (gh - oh, 0):
-                return {"type": "anchor", "anchor": "bottom_left"}
-        # 그냥 절대 위치
-        return {"type": "absolute", "target_pos": abs_pos}
-
-    # 2. relative 이동: delta가 동일한지 확인
-    deltas = []
-    for p in move_patterns:
-        dr = p["output_pos"][0] - p["input_pos"][0]
-        dc = p["output_pos"][1] - p["input_pos"][1]
-        deltas.append((dr, dc))
-    if len(set(deltas)) == 1:
-        return {"type": "relative", "delta": deltas[0]}
-
-    # 3. anchor 패턴: output이 grid 경계에 정렬되는지 확인
-    # output_pos가 grid 크기에 의존적인지 체크
-    all_bottom_right = True
-    for p in move_patterns:
-        gh, gw = p["grid_h"], p["grid_w"]
-        oh, ow = p["obj_h"], p["obj_w"]
-        expected_pos = (gh - oh, gw - ow)
-        if tuple(p["output_pos"]) != expected_pos:
-            all_bottom_right = False
-            break
-    if all_bottom_right:
-        return {"type": "anchor", "anchor": "bottom_right"}
-
-    return None
-
-
-def _apply_move_to_test(test_grid, move_rule: dict) -> list[list[int]] | None:
-    """이동 규칙을 test input에 적용하여 output grid를 생성."""
-    test_objects = test_grid.objects
-    if not test_objects:
-        return None
-
-    target_objects = [obj for obj in test_objects if obj.color != 0]
-    if not target_objects:
-        return None
-
-    grid_h = test_grid.height
-    grid_w = test_grid.width
-    output = [[0] * grid_w for _ in range(grid_h)]  # 빈 grid
-
-    for obj in target_objects:
-        obj_h = len(obj.colorgrid)
-        obj_w = len(obj.colorgrid[0]) if obj.colorgrid else 0
-
-        if move_rule["type"] == "anchor":
-            anchor = move_rule["anchor"]
-            if anchor == "bottom_right":
-                new_row = grid_h - obj_h
-                new_col = grid_w - obj_w
-            elif anchor == "top_left":
-                new_row, new_col = 0, 0
-            elif anchor == "top_right":
-                new_row = 0
-                new_col = grid_w - obj_w
-            elif anchor == "bottom_left":
-                new_row = grid_h - obj_h
-                new_col = 0
-            else:
-                continue
-        elif move_rule["type"] == "absolute":
-            new_row, new_col = move_rule["target_pos"]
-        elif move_rule["type"] == "relative":
-            dr, dc = move_rule["delta"]
-            new_row = obj.pos[0] + dr
-            new_col = obj.pos[1] + dc
-        else:
-            continue
-
-        # object의 colorgrid를 새 위치에 그린다
-        for r, row in enumerate(obj.colorgrid):
-            for c, cell in enumerate(row):
-                if cell != 13:  # 투명이 아닌 셀
-                    out_r = new_row + r
-                    out_c = new_col + c
-                    if 0 <= out_r < grid_h and 0 <= out_c < grid_w:
-                        output[out_r][out_c] = cell
-
-    return output
-
-
-# ---------------------------------------------------------------------------
-# General Transformation (fallback)
-# ---------------------------------------------------------------------------
-
-def _apply_general_transformation(task, matching_results, target_props):
-    """
-    일반 변환: example에서 input→output 직접 매핑을 추출하고 적용한다.
-    color + position 동시 변환 등을 처리한다.
-    """
-    # color와 position 모두 변하는 경우
-    if "color" in target_props and ("coordinate" in target_props or "position" in target_props):
-        # position 변환 우선 시도 (색상은 보존)
-        result = _apply_position_transformation(task, matching_results, target_props)
-        if result is not None:
-            return result
-
-    # 각 target property별 개별 처리 시도
-    for prop in target_props:
-        if prop == "color":
-            result = _apply_color_transformation(task, matching_results)
-            if result is not None:
-                return result
-        elif prop in ("coordinate", "position"):
-            result = _apply_position_transformation(task, matching_results, target_props)
-            if result is not None:
-                return result
-
-    return None
+def _quick_compare(in_obj, out_obj):
+    """compare 결과가 없을 때 빠른 비교."""
+    from ARCKG.comparison import compare as kg_compare
+    return kg_compare(in_obj, out_obj)
