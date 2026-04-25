@@ -21,7 +21,7 @@ python run.py (--task HEX... | --seq FILE | --split {training,evaluation,easy})
               [--n N] [--seed SEED]
               [--max-steps N] [--max-attempts N] [--time-budget SEC]
               [--sm-root PATH] [--trace-out PATH] [--log-out PATH]
-              [--log-wm] [--quiet]
+              [--log-wm] [--quiet] [--out-dir DIR]
 ```
 
 | arg | default | 설명 |
@@ -37,14 +37,15 @@ python run.py (--task HEX... | --seq FILE | --split {training,evaluation,easy})
 | `--time-budget` | None | 에피소드 시간 제한(초) |
 | `--sm-root` | `semantic_memory` | semantic_memory 경로 (train 전용) |
 | `--trace-out PATH` | None | trace JSON 저장 |
-| `--log-out PATH` | None | 결과 로그 저장 (train, stdout 기본) |
-| `--log-wm` | False | WM triplet 로그 출력 |
+| `--log-out PATH` | None | 결과 요약 로그 저장 (train, stdout 기본) |
+| `--log-wm` | True | WM triplet 로그 출력 |
 | `--quiet` | False | 진행 출력 억제 |
+| `--out-dir DIR` | `run_logs` | 전체 stdout을 `MMDD_HHMM.log`로 저장할 폴더. `none`으로 끄기 |
 
 **예시**
 
 ```bash
-# 단일 태스크 (show_task 자동 출력)
+# 단일 태스크 (show_task 자동 출력, run_logs/MMDD_HHMM.log 자동 저장)
 python run.py --task 08ed6ac7
 
 # 복수 태스크
@@ -61,6 +62,42 @@ python run.py --seq my_tasks.txt --log-wm
 
 # trace 저장
 python run.py --task 08ed6ac7 --trace-out out/trace.json
+
+# 출력 파일 저장 끄기
+python run.py --task 08ed6ac7 --out-dir none
+```
+
+**로그 저장 동작**
+
+| 모드 | 저장 위치 | 내용 |
+|------|-----------|------|
+| train | `run_logs/MMDD_HHMM.log` | 전체 stdout (WM 로그 포함, show_task 그리드 제외) |
+| eval | `eval_result/run_MMDD_HHMM/run.log` | 전체 stdout (WM 로그 포함, show_task 그리드 제외) |
+
+- 로그 첫 부분에 실행 시각, 명령어, mode, tasks, 주요 args가 헤더로 기록된다.
+- show_task의 ANSI 그리드는 터미널에만 출력되고 로그 파일에는 포함되지 않는다.
+- train 모드에서 `--out-dir none`으로 파일 저장을 끌 수 있다.
+
+**로그 헤더 예시**
+
+```
+==============================================================
+  [ARC-solver] 2026-04-26 05:30:17
+  cmd  : run.py --task 08ed6ac7 --log-wm
+  mode : train
+  tasks: 08ed6ac7  (n=1)
+  steps: max_steps=50  max_attempts=3
+  log  : log_wm=True  quiet=False
+==============================================================
+```
+
+**run_logs 폴더 구조**
+
+```
+run_logs/
+  0426_0452.log    ← train 모드 전체 stdout (show_task 제외)
+  0426_0510.log
+  ...
 ```
 
 **eval 결과 폴더 구조**
@@ -71,7 +108,7 @@ eval_result/
     semantic_memory/     ← 빈 상태에서 시작 (원본 memory 불변)
     episodic_memory/
     procedural_memory/
-    run.log              ← 실행 메타 + 태스크별 결과 + 요약
+    run.log              ← 헤더 + WM 로그 + 태스크별 결과 (전체 stdout)
   run_0426_0411/         ← 다음 eval 실행 (독립)
     ...
 ```
@@ -270,11 +307,16 @@ tasks = mgr.load_all_tasks(split="easy")
 
 ### `print_wm_triplets(wm, label="", step=0)`
 
-WM 상태를 SOAR triplet 형식으로 출력한다. 이전 호출 이후 변경된 WME를 색상으로 구분한다.
+WM 상태를 SOAR triplet 형식으로 출력한다. 이전 호출 이후 변경된 WME를 기호로 구분한다.
 
-- 초록: 추가/변경된 WME
-- 빨강: 제거된 WME
-- 기본: 변화 없는 WME
+```
++  (S1 ^current-task 08ed6ac7)   ← 추가/변경된 WME
+-  (S1 ^old-attr val)            ← 제거된 WME
+   (S1 ^type state               ← 변화 없는 WME
+       ^superstate nil)
+```
+
+모든 줄은 기호(`+`/`-`/` `) + 공백 2칸으로 시작하며 ANSI 코드 없이 순수 텍스트로 출력된다.
 
 ```python
 from agent.wm_logger import print_wm_triplets, reset_wm_snapshot
@@ -292,8 +334,8 @@ print_wm_triplets(wm, "태스크 주입 후", step=1)
 
 | 호출 방법 | 동작 |
 |-----------|------|
-| `reset_wm_snapshot()` | 스냅샷 비움 → 다음 print에서 전체 초록 |
-| `reset_wm_snapshot(wm)` | 현재 WM 상태를 기준점으로 → 변화 없음 = 기본 색 |
+| `reset_wm_snapshot()` | 스냅샷 비움 → 다음 print에서 전체 `+` |
+| `reset_wm_snapshot(wm)` | 현재 WM 상태를 기준점으로 → 변화 없음 = 공백 prefix |
 
 태스크 경계마다 `reset_wm_snapshot()`을 호출하면 이전 태스크의 WME가 다음 태스크 출력에 섞이지 않는다.
 

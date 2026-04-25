@@ -7,13 +7,16 @@
 # ──────────────────────────────────────────────────────────
 
 # 단일 태스크
-python run.py --task 08ed6ac7
+# python run.py --task 08ed6ac7
 
 # 복수 태스크
-# python run.py --task 08ed6ac7 007bbfb7
+python run.py --task 08ed6ac7 007bbfb7
 
-# 단일 태스크 + WM 로그
+# 단일 태스크 + WM 로그 (run_logs/MMDD_HHMM.log 자동 저장)
 # python run.py --task 08ed6ac7 --log-wm
+
+# 단일 태스크 + WM 로그 + 저장 끄기
+# python run.py --task 08ed6ac7 --log-wm --out-dir none
 
 # 단일 태스크 + 스텝 수 조정
 # python run.py --task 08ed6ac7 --max-steps 1
@@ -32,6 +35,8 @@ python run.py --task 08ed6ac7
 # ──────────────────────────────────────────────────────────
 
 # python run.py --mode eval --task 08ed6ac7
+
+# python run.py --mode eval --task 08ed6ac7 007bbfb7
 
 # python run.py --mode eval --split evaluation --n 20 --seed 0
 

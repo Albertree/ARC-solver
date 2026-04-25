@@ -29,13 +29,16 @@ from basics.viz import show_task
 # ── 기본값 (자주 바꾸는 값은 여기서 수정) ──────────────────
 DEFAULT_TASK         = "08ed6ac7"        # --task/--seq/--split 미지정 시 사용
 DEFAULT_MODE         = "train"           # "train" | "eval"
-DEFAULT_MAX_STEPS    = 50                # SOAR 사이클 최대 스텝 수
-DEFAULT_MAX_ATTEMPTS = 3                 # 태스크당 최대 제출 횟수 (arc2_env 기본값 오버라이드)
-DEFAULT_TIME_BUDGET  = None              # 에피소드 시간 제한(초), None=무제한
-DEFAULT_SM_ROOT      = "semantic_memory" # train 모드 semantic_memory 경로
-DEFAULT_SEED         = 42               # --n 랜덤 선택 시드
-DEFAULT_LOG_WM       = True             # WM triplet 로그 출력
-DEFAULT_QUIET        = False            # 진행 출력 억제
+DEFAULT_MAX_STEPS    = 50                # --max-steps  : SOAR 사이클 최대 스텝 수
+DEFAULT_MAX_ATTEMPTS = 3                 # --max-attempts: 태스크당 최대 제출 횟수
+DEFAULT_TIME_BUDGET  = None              # --time-budget : 에피소드 시간 제한(초), None=무제한
+DEFAULT_SM_ROOT      = "semantic_memory" # --sm-root    : train 모드 semantic_memory 경로
+DEFAULT_SEED         = 42                # --seed       : --n 랜덤 선택 시드
+DEFAULT_TRACE_OUT    = None              # --trace-out  : trace JSON 저장 경로, None=저장 안 함
+DEFAULT_LOG_OUT      = None              # --log-out    : 결과 로그 파일 경로, None=stdout만
+DEFAULT_LOG_WM       = True              # --log-wm     : WM triplet 로그 출력
+DEFAULT_QUIET        = False             # --quiet      : 진행 출력 억제
+DEFAULT_OUT_DIR      = "run_logs"        # --out-dir    : 전체 출력 저장 폴더, None=저장 안 함
 # ────────────────────────────────────────────────────────
 
 
@@ -92,12 +95,12 @@ def _parse_args():
         help=f"semantic_memory 루트 경로 (train 모드 전용, default: {DEFAULT_SM_ROOT})",
     )
     p.add_argument(
-        "--trace-out", metavar="PATH", dest="trace_out",
-        help="실행 trace JSON 저장 경로",
+        "--trace-out", metavar="PATH", dest="trace_out", default=DEFAULT_TRACE_OUT,
+        help=f"실행 trace JSON 저장 경로 (default: {DEFAULT_TRACE_OUT})",
     )
     p.add_argument(
-        "--log-out", metavar="PATH", dest="log_out",
-        help="결과 로그 파일 경로 (train 모드, 미지정 시 stdout만)",
+        "--log-out", metavar="PATH", dest="log_out", default=DEFAULT_LOG_OUT,
+        help=f"결과 로그 파일 경로 (train 모드, default: {DEFAULT_LOG_OUT}=stdout만)",
     )
     p.add_argument(
         "--log-wm", action="store_true", dest="log_wm", default=DEFAULT_LOG_WM,
@@ -106,6 +109,10 @@ def _parse_args():
     p.add_argument(
         "--quiet", action="store_true", default=DEFAULT_QUIET,
         help=f"진행률 출력 억제 (default: {DEFAULT_QUIET})",
+    )
+    p.add_argument(
+        "--out-dir", metavar="DIR", dest="out_dir", default=DEFAULT_OUT_DIR,
+        help=f"전체 stdout을 MMDD_HHMM.log 파일로 저장할 폴더 (default: {DEFAULT_OUT_DIR}, none=저장 안 함)",
     )
     return p.parse_args()
 
@@ -162,6 +169,33 @@ def _append_log(path: Path, text: str):
         f.write(text + "\n")
 
 
+class _Tee:
+    """stdout을 터미널과 파일에 동시에 기록한다. ANSI 코드 그대로 보존."""
+
+    def __init__(self, path: Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self._file = open(path, "w", encoding="utf-8")
+        self._stdout = sys.stdout
+
+    def write(self, data: str):
+        self._stdout.write(data)
+        self._file.write(data)
+
+    def flush(self):
+        self._stdout.flush()
+        self._file.flush()
+
+    def close(self):
+        sys.stdout = self._stdout
+        self._file.close()
+
+    def fileno(self):
+        return self._stdout.fileno()
+
+    def isatty(self):
+        return self._stdout.isatty()
+
+
 def _run_single_verbose(env: ARCEnvironment, agent: ActiveSoarAgent,
                         task_id: str, log_path, quiet: bool):
     """단일 태스크: show_task 후 풀기. 재시도 지원."""
@@ -171,7 +205,13 @@ def _run_single_verbose(env: ARCEnvironment, agent: ActiveSoarAgent,
         return
 
     if not quiet:
+        # show_task의 ANSI 그리드는 터미널에만 출력 (로그 파일 제외)
+        tee = sys.stdout if isinstance(sys.stdout, _Tee) else None
+        if tee:
+            sys.stdout = tee._stdout
         show_task(task)
+        if tee:
+            sys.stdout = tee
 
     t0 = time.perf_counter()
     attempts = 0
@@ -229,22 +269,57 @@ def _run_benchmark_with_log(env: ARCEnvironment, agent: ActiveSoarAgent,
     return results
 
 
+def _print_run_header(args, task_list) -> None:
+    """로그 최상단에 실행 정보를 출력한다."""
+    import sys as _sys
+    w = 62
+    print("=" * w)
+    print(f"  [ARC-solver] {datetime.now():%Y-%m-%d %H:%M:%S}")
+    print(f"  cmd  : {' '.join(_sys.argv)}")
+    print(f"  mode : {args.mode}")
+    if len(task_list) <= 6:
+        print(f"  tasks: {' '.join(task_list)}  (n={len(task_list)})")
+    else:
+        preview = ' '.join(task_list[:3])
+        print(f"  tasks: {preview} … (n={len(task_list)})")
+    print(f"  steps: max_steps={args.max_steps}  max_attempts={args.max_attempts}", end="")
+    if args.time_budget:
+        print(f"  time_budget={args.time_budget}s", end="")
+    print()
+    print(f"  log  : log_wm={args.log_wm}  quiet={args.quiet}")
+    print("=" * w)
+    print()
+
+
 def main():
     args = _parse_args()
     task_list = _build_task_list(args)
 
+    try:
+        _main(args, task_list)
+    except Exception:
+        raise
+
+
+def _main(args, task_list):
+    """실제 실행 로직."""
+
     log_path = None
+    tee = None
 
     if args.mode == "eval":
         run_dir, mem_roots = _prepare_eval_run()
         log_path = run_dir / "run.log"
-        _append_log(log_path,
-            f"[run] {datetime.now():%Y-%m-%d %H:%M:%S}  "
-            f"mode=eval  tasks={len(task_list)}  max_steps={args.max_steps}\n"
-            + "-" * 62
-        )
+
+        # eval 모드: run.log에 전체 stdout tee (WM 로그 포함)
+        tee = _Tee(log_path)
+        sys.stdout = tee
+
+        _print_run_header(args, task_list)
         if not args.quiet:
             print(f"[eval] 결과 경로: {run_dir}")
+        print()
+
     else:
         mem_roots = {
             "semantic_memory_root": args.sm_root,
@@ -254,6 +329,14 @@ def main():
         if args.log_out:
             log_path = Path(args.log_out)
             log_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # train 모드: run_logs/MMDD_HHMM.log에 tee
+        if args.out_dir and args.out_dir.lower() != "none":
+            out_path = Path(args.out_dir) / f"{datetime.now():%m%d_%H%M}.log"
+            tee = _Tee(out_path)
+            sys.stdout = tee
+            print(f"[run-log] {out_path}")
+            _print_run_header(args, task_list)
 
     env = ARCEnvironment(
         task_list=task_list,
@@ -271,12 +354,15 @@ def main():
 
     if len(task_list) == 1:
         env.reset(task_list=task_list)
-        _run_single_verbose(env, agent, task_list[0], log_path, args.quiet)
+        _run_single_verbose(env, agent, task_list[0], log_path if args.mode != "eval" else None, args.quiet)
     else:
-        _run_benchmark_with_log(env, agent, log_path, args.quiet)
+        _run_benchmark_with_log(env, agent, log_path if args.mode != "eval" else None, args.quiet)
 
     if args.trace_out:
         env.save_trace(args.trace_out)
+
+    if tee:
+        tee.close()
 
 
 if __name__ == "__main__":

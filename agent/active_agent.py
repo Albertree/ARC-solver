@@ -9,7 +9,8 @@ from agent.elaboration_rules import build_elaborator
 from agent.rules import build_proposer
 from agent.memory import load_rules_from_ltm, chunk_from_substate, save_rule_to_ltm
 from agent.agent_common import build_wm_from_task, goal_satisfied, answers_from_wm
-from agent.wm_logger import reset_wm_snapshot
+from agent.io import inject_arc_task
+from agent.wm_logger import reset_wm_snapshot, print_wm_triplets
 
 
 class ActiveSoarAgent:
@@ -45,26 +46,34 @@ class ActiveSoarAgent:
 
         흐름:
           1. 새 태스크이면 _submission_count 리셋
-          2. reset_wm_snapshot() 호출  ← 태스크 경계마다 diff 상태 초기화
-          3. WorkingMemory 생성
-          4. build_wm_from_task(task, wm)
-          5. LTM rule 로드 → wm.s1["active_rules"] 초기화
-          6. elaborator = build_elaborator()
-          7. proposer   = build_proposer()
-          8. run_cycle(wm, elaborator, proposer, max_steps=50)
-          9. answers = answers_from_wm(wm)
-          10. _submission_count += 1
-          11. return answers
+          2. WorkingMemory 생성 후 reset_wm_snapshot() 호출
+          3. log_wm 활성 시 "Initial WM (before input)" 출력
+          4. inject_arc_task(task, wm) — input-link에 task_hex 주입
+          5. log_wm 활성 시 "After input-link injection" 출력
+          6. LTM rule 로드 → wm.s1["active_rules"] 초기화
+          7. elaborator = build_elaborator()
+          8. proposer   = build_proposer()
+          9. run_cycle(wm, elaborator, proposer, max_steps, stop_on_goal=True)
+          10. log_wm 활성 시 [cycle] 요약 출력
+          11. answers = answers_from_wm(wm)
+          12. _submission_count += 1
+          13. return answers
         """
         task_hex = getattr(task, "task_hex", None)
         if task_hex != self._current_task_hex:
             self._current_task_hex = task_hex
             self._submission_count = 0
 
-        reset_wm_snapshot()
-
         wm = WorkingMemory()
-        build_wm_from_task(task, wm)
+        reset_wm_snapshot(wm)
+
+        if self._log_wm:
+            print_wm_triplets(wm, label="Initial WM (before input)", step=0)
+
+        inject_arc_task(task, wm)
+
+        if self._log_wm:
+            print_wm_triplets(wm, label="After input-link injection (before cycle)", step=0)
 
         try:
             rules = load_rules_from_ltm(task_hex, self.semantic_memory_root)
@@ -74,7 +83,17 @@ class ActiveSoarAgent:
 
         elaborator = build_elaborator()
         proposer = build_proposer()
-        run_cycle(wm, elaborator, proposer, max_steps=self._max_steps, log_wm=self._log_wm)
+        out = run_cycle(
+            wm,
+            elaborator,
+            proposer,
+            max_steps=self._max_steps,
+            stop_on_goal=True,
+            log_wm=self._log_wm,
+        )
+
+        if self._log_wm:
+            print(f"\n[cycle] {out}")
 
         answers = answers_from_wm(wm)
         self._submission_count += 1

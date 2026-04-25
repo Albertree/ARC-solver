@@ -212,6 +212,7 @@ __marimo__/
 
 # Eval results (run_MMDD_HHMM/ 폴더들)
 eval_result/
+run_logs/
 
 # Memory (SOAR LTM: semantic, procedural, episodic)
 memory/
