@@ -679,7 +679,20 @@ class PredictOperator(Operator):
 
         active_rules = wm.get("active_rules") or []
         task = wm.task
-        if not active_rules or not task:
+        if not task:
+            return None
+
+        # procedural_memory에서 기존 규칙도 retrieval 후보에 추가
+        from agent.memory import load_rules_from_ltm
+        existing_rules = load_rules_from_ltm(task.task_hex, "semantic_memory")
+        # 중복 제거: rule_id 기준
+        seen_ids = {r["rule"]["rule_id"] for r in active_rules if isinstance(r, dict) and "rule" in r}
+        for er in existing_rules:
+            if isinstance(er, dict) and "rule" in er and er["rule"]["rule_id"] not in seen_ids:
+                active_rules.append(er)
+                seen_ids.add(er["rule"]["rule_id"])
+
+        if not active_rules:
             return None
 
         goal = wm.get("goal") or {}

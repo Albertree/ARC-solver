@@ -8,7 +8,7 @@ import sys
 import traceback
 
 
-TASK_HEX = "easy0015"
+TASK_HEX = "00dbd492"
 
 
 def main():
@@ -52,12 +52,9 @@ def main():
         wm.s1["goal"] = {}
         build_wm_from_task(task, wm)
 
-        # LTM에서 기존 rule 로드 (E-01 retrieval 지원)
-        from agent.memory import load_rules_from_ltm
-        existing_rules = load_rules_from_ltm(TASK_HEX, "semantic_memory")
-        if existing_rules:
-            wm.s1["active_rules"] = existing_rules
-            print(f"    Loaded {len(existing_rules)} existing rules from procedural_memory")
+        # 기존 규칙은 시작 시 로드하지 않는다.
+        # Predict 단계에서 procedural_memory로부터 retrieval한다.
+        # (시작 시 로드하면 새 태스크의 분석 파이프라인이 건너뛰어진다)
 
         elaborator = build_elaborator()
         proposer = build_proposer()
@@ -70,7 +67,7 @@ def main():
             wm,
             elaborator,
             proposer,
-            max_steps=200,
+            max_steps=500,
             stop_on_goal=True,
             log_wm=True,
             trace_logger=trace_logger,

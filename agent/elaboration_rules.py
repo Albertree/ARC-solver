@@ -158,9 +158,9 @@ class InputTaskToStateRule(ElaborationRule):
 
 class NeedsTargetSelectionRule(ElaborationRule):
     """
-    current-task가 있고, 아직 pending-compare가 설정되지 않았고,
-    active_rules도 없으면 needs_target_selection = True를 도출한다.
-    (active_rules가 이미 있으면 분석 단계를 건너뛴다.)
+    current-task가 있고, 아직 pending-compare가 설정되지 않았으면
+    needs_target_selection = True를 도출한다.
+    새 태스크는 항상 전체 분석 파이프라인을 실행해야 한다.
     """
     i_support = True
 
@@ -168,8 +168,7 @@ class NeedsTargetSelectionRule(ElaborationRule):
         state = wm.active
         has_task = bool(state.get("current-task"))
         no_pending = state.get("pending-compare") is None
-        no_rules = not state.get("active_rules")
-        return has_task and no_pending and no_rules
+        return has_task and no_pending
 
     def derive(self, wm) -> dict:
         return {"needs_target_selection": True}
