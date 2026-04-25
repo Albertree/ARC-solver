@@ -23,6 +23,20 @@ def apply_learned_rule(task, wm) -> list[list[int]] | None:
     matching_results = wm.get("matching-results") or {}
     transform_targets = wm.get("transform-targets") or []
 
+    # transform_targets가 없으면 active_rules의 signature에서 추출
+    if not transform_targets:
+        active_rules = wm.get("active_rules") or []
+        for rule_entry in active_rules:
+            rule = rule_entry.get("rule", {})
+            sig = rule.get("signature", {})
+            for prop, val in sig.items():
+                if isinstance(val, dict) and val.get("type") == "DIFF":
+                    transform_targets.append({"property": prop})
+
+    # matching_results가 없으면 example pair에서 직접 matching 수행
+    if not matching_results:
+        matching_results = _build_matching_from_examples(task)
+
     if not transform_targets:
         return None
 
@@ -36,6 +50,63 @@ def apply_learned_rule(task, wm) -> list[list[int]] | None:
     else:
         # 일반 변환: example에서 직접 패턴 추출 시도
         return _apply_general_transformation(task, matching_results, target_props)
+
+
+# ---------------------------------------------------------------------------
+# Matching fallback (규칙만 로드된 경우 example에서 직접 매칭)
+# ---------------------------------------------------------------------------
+
+def _build_matching_from_examples(task) -> dict:
+    """
+    분석 단계 없이 example pair에서 직접 object matching을 수행한다.
+    input/output object를 1:1 greedy matching한다.
+    """
+    from ARCKG.comparison import compare
+
+    matching_results = {}
+    for pair in task.example_pairs:
+        if pair.output_grid is None:
+            continue
+        input_objs = pair.input_grid.objects
+        output_objs = pair.output_grid.objects
+
+        # M×N compare, score 계산
+        scored = []
+        for io in input_objs:
+            for oo in output_objs:
+                result = compare(io, oo)
+                res = result.get("result", {})
+                score_str = res.get("score", "0/0")
+                parts = score_str.split("/")
+                try:
+                    num, denom = int(parts[0]), int(parts[1])
+                except (ValueError, IndexError):
+                    num, denom = 0, 0
+                scored.append({
+                    "id1": io.node_id,
+                    "id2": oo.node_id,
+                    "score": score_str,
+                    "ratio": num / denom if denom > 0 else 0,
+                })
+
+        # greedy matching (score 내림차순)
+        scored.sort(key=lambda x: x["ratio"], reverse=True)
+        used_a, used_b = set(), set()
+        matched = []
+        for item in scored:
+            if item["id1"] not in used_a and item["id2"] not in used_b:
+                matched.append(item)
+                used_a.add(item["id1"])
+                used_b.add(item["id2"])
+
+        matching_results[pair.node_id] = {
+            "matched": [{"id1": m["id1"], "id2": m["id2"], "score": m["score"]} for m in matched],
+            "unmatched_input": [o.node_id for o in input_objs if o.node_id not in used_a],
+            "unmatched_output": [o.node_id for o in output_objs if o.node_id not in used_b],
+            "branches": [],
+        }
+
+    return matching_results
 
 
 # ---------------------------------------------------------------------------
