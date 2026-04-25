@@ -198,3 +198,51 @@ def compare(a, b, save: bool = False, semantic_memory_root: str = None) -> dict:
             json.dump(comparison, f, indent=2)
 
     return comparison
+
+
+# ---------------------------------------------------------------------------
+# Retrieval Compare (3차 엣지용 — type 필드만 대조, wildcard 처리)
+# ---------------------------------------------------------------------------
+
+def compare_for_retrieval(problem_result: dict, rule_signature: dict) -> dict:
+    """
+    Retrieval용 비교: 새 문제의 1차 COMM/DIFF 결과와 rule의 signature를 대조한다.
+
+    규칙:
+    - comp1/comp2 실제 값은 무시하고 type 필드(COMM/DIFF)만 대조한다.
+    - signature 측 값이 "?"이거나 해당 필드가 존재하지 않으면 항상 COMM 처리.
+
+    반환값: {"type": ..., "score": "X/N", "category": {...}}
+    compare() 입출력 형식(dict→dict)을 변경하지 않는다.
+    """
+    all_keys = sorted(set(list(problem_result.keys()) + list(rule_signature.keys())))
+    if not all_keys:
+        return {"type": "COMM", "score": "0/0", "category": {}}
+
+    category = {}
+    for key in all_keys:
+        prob = problem_result.get(key, {})
+        sig = rule_signature.get(key, {})
+
+        # signature에 해당 key가 없거나 variable이 "?" → COMM
+        if not sig or sig.get("variable") == "?":
+            category[key] = {"type": "COMM"}
+            continue
+
+        # type 필드만 비교
+        prob_type = prob.get("type", "DIFF") if isinstance(prob, dict) else "DIFF"
+        sig_type = sig.get("type", "DIFF") if isinstance(sig, dict) else "DIFF"
+
+        if prob_type == sig_type:
+            category[key] = {"type": "COMM"}
+        else:
+            category[key] = {"type": "DIFF"}
+
+    comm = sum(1 for v in category.values() if v.get("type") == "COMM")
+    total = len(category)
+    overall = "COMM" if comm == total else "DIFF"
+    return {
+        "type": overall,
+        "score": f"{comm}/{total}",
+        "category": category,
+    }

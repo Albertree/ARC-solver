@@ -246,13 +246,22 @@ class ReadyForGeneralizationRule(ElaborationRule):
 
 class ReadyForPredictionRule(ElaborationRule):
     """
-    [설계 자유] active_rules가 비어있지 않고
-               pending test subgoal이 하나 이상 있으면
-               elaborated["ready_for_prediction"] = True 도출.
+    active_rules가 비어있지 않고 pending test subgoal이 하나 이상 있으면
+    ready_for_prediction = True를 도출한다.
     """
+    i_support = True
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("ReadyForPredictionRule.condition() not implemented.")
+        state = wm.active
+        rules = state.get("active_rules")
+        if not isinstance(rules, list) or len(rules) == 0:
+            return False
+        goal = state.get("goal") or {}
+        subgoals = goal.get("subgoals") or {}
+        for sg in subgoals.values():
+            if isinstance(sg, dict) and sg.get("status") == "pending":
+                return True
+        return False
 
     def derive(self, wm) -> dict:
         return {"ready_for_prediction": True}
@@ -260,12 +269,20 @@ class ReadyForPredictionRule(ElaborationRule):
 
 class AllOutputsFoundRule(ElaborationRule):
     """
-    [설계 자유] 모든 test subgoal이 solved이면
-               elaborated["all_outputs_found"] = True 도출.
+    모든 test subgoal이 solved이면 all_outputs_found = True 도출.
     """
+    i_support = True
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("AllOutputsFoundRule.condition() not implemented.")
+        state = wm.active
+        goal = state.get("goal") or {}
+        subgoals = goal.get("subgoals") or {}
+        if not subgoals:
+            return False
+        for sg in subgoals.values():
+            if isinstance(sg, dict) and sg.get("status") != "solved":
+                return False
+        return True
 
     def derive(self, wm) -> dict:
         return {"all_outputs_found": True}
@@ -283,7 +300,7 @@ def build_elaborator() -> Elaborator:
         AllComparisonsDoneRule("all_comparisons_done"),
         ReadyForPatternExtractionRule("ready_for_pattern_extraction"),
         ReadyForGeneralizationRule("ready_for_generalization"),
-        # ReadyForPredictionRule("ready_for_prediction"),
-        # AllOutputsFoundRule("all_outputs_found"),
+        ReadyForPredictionRule("ready_for_prediction"),
+        AllOutputsFoundRule("all_outputs_found"),
     ]
     return Elaborator(rules)

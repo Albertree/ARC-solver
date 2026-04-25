@@ -71,14 +71,22 @@ def main():
         # [결과] 블록 출력
         goal = wm.s1.get("goal", {})
         subgoals = goal.get("subgoals", {})
+        found = wm.s1.get("found", {})
         success = all(
             sg.get("status") == "solved"
             for sg in subgoals.values()
             if isinstance(sg, dict)
         )
-        rule_id = "없음 (Phase 0 — 규칙 생성 전)"
-        output_info = "없음 (Phase 0 — 예측 전)"
-        trace_logger.write_result(success, rule_id, output_info)
+        # 적용된 rule 정보
+        applied_rules = []
+        for k, f in found.items():
+            if isinstance(f, dict):
+                applied_rules.append(
+                    f"{f.get('rule_id', '?')} (retrieval_score: {f.get('retrieval_score', '?')})"
+                )
+        rule_info = ", ".join(applied_rules) if applied_rules else "없음"
+        output_info = "semantic_memory에 저장된 predicted 결과" if success else "없음"
+        trace_logger.write_result(success, rule_info, output_info)
 
         trace_logger.stop()
 

@@ -127,26 +127,26 @@ class GeneralizeRule(ProductionRule):
 
 
 class PredictRule(ProductionRule):
-    """[설계 자유] elaborated["ready_for_prediction"] → PredictOperator."""
+    """ready_for_prediction == True → PredictOperator."""
 
     def __init__(self):
         super().__init__("rule_predict")
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("PredictRule.condition() not implemented.")
+        return wm.active.get("ready_for_prediction") is True
 
     def propose(self, wm):
         return PredictOperator()
 
 
 class SubmitRule(ProductionRule):
-    """[설계 자유] elaborated["all_outputs_found"] → SubmitOperator."""
+    """all_outputs_found == True → SubmitOperator."""
 
     def __init__(self):
         super().__init__("rule_submit")
 
     def condition(self, wm) -> bool:
-        raise NotImplementedError("SubmitRule.condition() not implemented.")
+        return wm.active.get("all_outputs_found") is True
 
     def propose(self, wm):
         return SubmitOperator()
