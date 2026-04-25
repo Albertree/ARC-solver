@@ -17,12 +17,28 @@
 ## 실행
 
 ```bash
-# 전체 벤치마크
-python main.py
+# 단일 태스크 (show_task 자동 출력)
+python run.py --task 08ed6ac7
 
-# 단일 태스크 실험 (에러 추적용)
-python run_task.py
+# 복수 태스크
+python run.py --task 08ed6ac7 007bbfb7
+
+# eval 모드 (eval_result/run_MMDD_HHMM/ 격리 실행)
+python run.py --mode eval --task 08ed6ac7
+
+# split 전체 또는 랜덤 N개
+python run.py --split training --n 10 --seed 0
+
+# 시퀀스 파일 + WM 로그
+python run.py --seq my_tasks.txt --log-wm
+
+# 메모리 초기화 (dry-run → --confirm으로 실제 실행)
+python init.py
+python init.py --confirm
 ```
+
+전체 옵션: `python run.py --help`  
+함수 레퍼런스: [`docs/REFERENCE.md`](docs/REFERENCE.md)
 
 ---
 

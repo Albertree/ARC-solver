@@ -19,6 +19,8 @@ def _grids_equal(a: list, b: list) -> bool:
     """두 그리드(list[list[int]])가 pixel-exact로 같은지 비교."""
     if a is b:
         return True
+    if a is None or b is None:
+        return False
     if len(a) != len(b):
         return False
     for row_a, row_b in zip(a, b):
@@ -42,6 +44,7 @@ class ARCEnvironment:
         time_budget_sec: float = None,
         enable_trace: bool = True,
         max_attempts_per_task: int = DEFAULT_MAX_ATTEMPTS_PER_TASK,
+        semantic_memory_root: str = "semantic_memory",
     ):
         """
         Args:
@@ -49,17 +52,18 @@ class ARCEnvironment:
             time_budget_sec: 에피소드 전체 시간 제한(초). None이면 무제한.
             enable_trace: step마다 trace 기록 여부.
             max_attempts_per_task: 태스크당 최대 제출 횟수(agent.can_retry와 연동).
+            semantic_memory_root: 태스크 로드 시 ARCKG 속성 파일을 저장할 경로.
         """
         self._time_budget_sec = time_budget_sec
         self._enable_trace = enable_trace
         self._max_attempts_per_task = max_attempts_per_task
+        self._semantic_memory_root = semantic_memory_root
         self._trace: list = []
         self._episode_start_time = None
 
         # task 순서 결정
         if task_list is None:
-            index_to_hex, _ = ARCManager._build_task_mapping()
-            self._task_ids = [index_to_hex[i] for i in sorted(index_to_hex)]
+            self._task_ids = []
         else:
             self._task_ids = list(task_list)
 
@@ -316,7 +320,10 @@ class ARCEnvironment:
 
         task_id = self._episode_task_ids[self._current_index]
         try:
-            self._current_task = ARCManager.from_hex_code(task_id)
+            self._current_task = ARCManager.from_hex_code(
+                task_id,
+                semantic_memory_root=self._semantic_memory_root,
+            )
             self._attempts_left = self._max_attempts_per_task
             return self._current_task
         except (FileNotFoundError, Exception):

@@ -133,6 +133,16 @@ class ARCManager:
             pairs.append(pair)
         return pairs
 
+    @classmethod
+    def from_hex_code(
+        cls,
+        task_hex: str,
+        data_root: str = "data",
+        semantic_memory_root: str = "semantic_memory",
+    ) -> "Task":
+        """hex ID로 단일 태스크를 로드해 반환한다."""
+        return cls(data_root, semantic_memory_root).load_task(task_hex)
+
     def load_all_tasks(self, split: str = "training") -> list:
         """
         INTENT: data_root/{split}/ 아래 모든 태스크 파일을 순회하며

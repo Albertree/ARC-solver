@@ -21,9 +21,20 @@ class ActiveSoarAgent:
               solve() 1회 = 1 제출.
     """
 
-    def __init__(self, semantic_memory_root: str = "semantic_memory"):
-        """[설계 자유] semantic_memory_root 경로, 제출 횟수 카운터."""
+    def __init__(
+        self,
+        semantic_memory_root: str = "semantic_memory",
+        episodic_memory_root: str = "episodic_memory",
+        procedural_memory_root: str = "procedural_memory",
+        max_steps: int = 50,
+        log_wm: bool = False,
+    ):
+        """[설계 자유] memory 루트 경로 3개, 사이클 파라미터, 제출 횟수 카운터."""
         self.semantic_memory_root = semantic_memory_root
+        self.episodic_memory_root = episodic_memory_root
+        self.procedural_memory_root = procedural_memory_root
+        self._max_steps = max_steps
+        self._log_wm = log_wm
         self._submission_count: int = 0
         self._current_task_hex: str = None
 
@@ -45,8 +56,29 @@ class ActiveSoarAgent:
           10. _submission_count += 1
           11. return answers
         """
+        task_hex = getattr(task, "task_hex", None)
+        if task_hex != self._current_task_hex:
+            self._current_task_hex = task_hex
+            self._submission_count = 0
+
         reset_wm_snapshot()
-        raise NotImplementedError("ActiveSoarAgent.solve() not implemented yet.")
+
+        wm = WorkingMemory()
+        build_wm_from_task(task, wm)
+
+        try:
+            rules = load_rules_from_ltm(task_hex, self.semantic_memory_root)
+        except NotImplementedError:
+            rules = []
+        wm.s1["active_rules"] = rules
+
+        elaborator = build_elaborator()
+        proposer = build_proposer()
+        run_cycle(wm, elaborator, proposer, max_steps=self._max_steps, log_wm=self._log_wm)
+
+        answers = answers_from_wm(wm)
+        self._submission_count += 1
+        return answers
 
     def on_substate_resolved(self, substate: dict, task_hex: str):
         """

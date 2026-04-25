@@ -9,7 +9,8 @@ def build_wm_from_task(task, wm) -> None:
     goal·subgoals·focus·operator 상태만 직접 설정한다.
     """
     wm.task = task
-    goal = wm.s1["goal"]
+    goal = {}
+    wm.s1["goal"] = goal
     n_test = len(task.test_pairs)
     n_ex = len(task.example_pairs)
 
