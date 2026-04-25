@@ -16,17 +16,13 @@ def build_wm_from_task(task, wm) -> None:
 
     goal["type"] = "solve_arc_task"
     goal["task_hex"] = task.task_hex
-    goal["description"] = (
-        f"ARC task {task.task_hex}: infer rule from {n_ex} example pair(s), "
-        f"predict output for {n_test} test input(s)."
-    )
     goal["phase"] = "analyze_examples"
     goal["subgoals"] = {}
     for i, pair in enumerate(task.test_pairs):
         goal["subgoals"][f"test_{i}"] = {
             "status": "pending",
             "pair_node_id": pair.node_id,
-            "input_grid": pair.input_grid,
+            "input_grid_id": pair.input_grid.node_id,
             "output": None,
         }
 

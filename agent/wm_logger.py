@@ -362,7 +362,6 @@ def _grouped_lines(
 
         first = group[0]
         base_indent = _indent_for_depth(first.depth)
-        cont_indent = base_indent + (" " * (len(ident) + 2))
 
         def _proposal_suffix(e: _WME) -> str:
             if ident != "S1" or e.attribute != "operator":
@@ -371,38 +370,15 @@ def _grouped_lines(
             return f" {sym}" if sym else ""
 
         if ident == "S1":
-            if len(group) == 1:
-                e0 = group[0]
-                a = _s1_show_attr(e0.attribute)
-                text = f"{base_indent}({ident} ^{a} {e0.value}{_proposal_suffix(e0)})"
-                lines.append((text, e0.path_key))
-            else:
-                e0 = group[0]
-                a0 = _s1_show_attr(e0.attribute)
-                first_text = f"{base_indent}({ident} ^{a0} {e0.value}{_proposal_suffix(e0)}"
-                lines.append((first_text, e0.path_key))
-                for k in range(1, len(group) - 1):
-                    e = group[k]
-                    a = _s1_show_attr(e.attribute)
-                    mid = f"{cont_indent}^{a} {e.value}{_proposal_suffix(e)}"
-                    lines.append((mid, e.path_key))
-                el = group[-1]
-                al = _s1_show_attr(el.attribute)
-                last_text = f"{cont_indent}^{al} {el.value}{_proposal_suffix(el)})"
-                lines.append((last_text, el.path_key))
+            for e in group:
+                a = _s1_show_attr(e.attribute)
+                text = f"{base_indent}({ident} ^{a} {e.value}{_proposal_suffix(e)})"
+                lines.append((text, e.path_key))
             continue
 
-        if len(group) == 1:
-            text = f"{base_indent}({ident} ^{first.attribute} {first.value})"
-            lines.append((text, first.path_key))
-        else:
-            first_text = f"{base_indent}({ident} ^{first.attribute} {first.value}"
-            lines.append((first_text, first.path_key))
-            for k in range(1, len(group) - 1):
-                e = group[k]
-                lines.append((f"{cont_indent}^{e.attribute} {e.value}", e.path_key))
-            last = group[-1]
-            lines.append((f"{cont_indent}^{last.attribute} {last.value})", last.path_key))
+        for e in group:
+            text = f"{base_indent}({ident} ^{e.attribute} {e.value})"
+            lines.append((text, e.path_key))
 
     return lines
 

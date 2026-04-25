@@ -34,6 +34,8 @@ DEFAULT_MAX_ATTEMPTS = 3                 # 태스크당 최대 제출 횟수 (ar
 DEFAULT_TIME_BUDGET  = None              # 에피소드 시간 제한(초), None=무제한
 DEFAULT_SM_ROOT      = "semantic_memory" # train 모드 semantic_memory 경로
 DEFAULT_SEED         = 42               # --n 랜덤 선택 시드
+DEFAULT_LOG_WM       = True             # WM triplet 로그 출력
+DEFAULT_QUIET        = False            # 진행 출력 억제
 # ────────────────────────────────────────────────────────
 
 
@@ -98,12 +100,12 @@ def _parse_args():
         help="결과 로그 파일 경로 (train 모드, 미지정 시 stdout만)",
     )
     p.add_argument(
-        "--log-wm", action="store_true", dest="log_wm",
-        help="WM triplet 로그 출력 활성화",
+        "--log-wm", action="store_true", dest="log_wm", default=DEFAULT_LOG_WM,
+        help=f"WM triplet 로그 출력 활성화 (default: {DEFAULT_LOG_WM})",
     )
     p.add_argument(
-        "--quiet", action="store_true",
-        help="진행률 출력 억제",
+        "--quiet", action="store_true", default=DEFAULT_QUIET,
+        help=f"진행률 출력 억제 (default: {DEFAULT_QUIET})",
     )
     return p.parse_args()
 
