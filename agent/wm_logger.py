@@ -9,10 +9,10 @@ SOAR Working Memory Element(WME) 형식:
     attribute  : 필드명
     value      : 프리미티브 또는 하위 노드 identifier
 
-diff 색상 (git diff 스타일):
-    녹색 배경 + 흰 글자  →  이전 호출 대비 추가 / 변경된 WME
-    붉은 배경 + 흰 글자  →  이전 호출 대비 제거된 WME
-    일반                 →  변화 없는 WME
+diff 기호 (git diff 스타일):
+    +  →  이전 호출 대비 추가 / 변경된 WME
+    -  →  이전 호출 대비 제거된 WME
+       →  변화 없는 WME
 
     비교는 auto-id(I1, I2…)가 아닌 path_key(S1/relations/pair_0/type 등) 기반으로
     수행되므로 identifier가 바뀌어도 의미 단위 diff가 정확하게 계산된다.
@@ -31,22 +31,12 @@ from dataclasses import dataclass
 from typing import Any
 
 
-# ── ANSI 색상 ────────────────────────────────────────────────────────── #
-
-_GREEN_BG = "\033[42;37m"   # 녹색 배경, 흰색 글자 (추가/변경)
-_RED_BG   = "\033[41;37m"   # 붉은 배경, 흰색 글자 (제거)
-_RESET    = "\033[0m"
-
-# 출력 폭: 색상 배경을 divider 너비에 맞게 채운다.
-_LINE_WIDTH = 62
-
-
 # ── 출력 상수 ────────────────────────────────────────────────────────── #
 
 _L1      = "  "       # depth 0 (루트 식별자 S1/S2/WM) 줄 들여쓰기
 _L2      = "    "     # depth 1 (직접 자식: I1 등) 들여쓰기
 _L3      = "      "   # depth 2+ (손자 이하: I2, I3 등) 들여쓰기
-_DIVIDER = "═" * _LINE_WIDTH
+_DIVIDER = "═" * 62
 
 # S1·WM 계열 식별자 판별
 _ROOT_IDS = {"S1", "S2", "S3", "S4", "WM"}
@@ -407,35 +397,23 @@ def _grouped_lines(
     return lines
 
 def _render_removed(entry: _WME) -> str:
-    """
-    제거된 WME를 path_key 기반 식별자로 표시한다.
-
-    entry.identifier / attribute / depth 정보를 활용해
-    일반 출력과 동일한 들여쓰기를 유지한다.
-    """
+    """제거된 WME를 일반 출력과 동일한 들여쓰기로 변환한다."""
     base_indent = _indent_for_depth(entry.depth)
     return f"{base_indent}({entry.identifier} ^{entry.attribute} {entry.value})"
-
-
-def _colorize(text: str, ansi: str) -> str:
-    """text를 _LINE_WIDTH 폭으로 패딩한 뒤 ANSI 배경색으로 감싼다."""
-    padded = text.ljust(_LINE_WIDTH)
-    return f"{ansi}{padded}{_RESET}"
 
 
 # ── 공개 출력 함수 ───────────────────────────────────────────────────── #
 
 def print_wm_triplets(wm, label: str = "", step: int = 0) -> None:
     """
-    WorkingMemory 전체 상태를 SOAR triplet 형식 + git diff 스타일 색상으로 출력한다.
+    WorkingMemory 전체 상태를 SOAR triplet 형식 + git diff 기호로 출력한다.
 
     출력 규칙:
-        녹색 배경  → 이전 스냅샷 대비 새로 추가되거나 값이 바뀐 WME
-        붉은 배경  → 이전 스냅샷에 있었지만 현재는 없는 WME  (removed 섹션)
-        일반 텍스트 → 변화 없는 WME
+        +  → 이전 스냅샷 대비 새로 추가되거나 값이 바뀐 WME
+        -  → 이전 스냅샷에 있었지만 현재는 없는 WME
+           → 변화 없는 WME
 
-    첫 번째 호출 시 _prev_snap이 비어 있으므로 모든 항목이 녹색으로 표시된다.
-    태스크가 바뀔 때는 reset_wm_snapshot()으로 스냅샷을 초기화해야 한다.
+    모든 WME 줄은 기호(+/-/ ) 뒤에 탭 1개로 들여쓰기된다.
     """
     global _prev_snap
 
@@ -459,7 +437,6 @@ def print_wm_triplets(wm, label: str = "", step: int = 0) -> None:
     print(_DIVIDER)
 
     # ── 현재 상태 + 제거된 항목을 함께 출력 (identifier별 묶음) ────── #
-    # 디스플레이용 엔트리: 현재 엔트리 + 제거된 엔트리(중복 path_key는 현재가 우선)
     display_entries: list[_WME] = list(entries)
     for k, e in removed.items():
         if k not in curr_snap:
@@ -467,14 +444,12 @@ def print_wm_triplets(wm, label: str = "", step: int = 0) -> None:
 
     op_pref = _op_preference_map_current(entries)
     for text, path_key in _grouped_lines(display_entries, op_preference_map=op_pref):
-        if path_key is not None:
-            if path_key in removed:
-                print(_colorize(text, _RED_BG))
-                continue
-            if path_key in added_keys:
-                print(_colorize(text, _GREEN_BG))
-                continue
-        print(text)
+        if path_key is not None and path_key in removed:
+            print(f"- {text}")
+        elif path_key is not None and path_key in added_keys:
+            print(f"+ {text}")
+        else:
+            print(f"  {text}")
 
     # ── 푸터 ──────────────────────────────────────────────────────── #
     print(_DIVIDER)
