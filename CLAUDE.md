@@ -61,6 +61,17 @@ README의 구현 상태 표를 기준으로:
 - 할 일: M×N 비교, score 정렬, threshold(5/8) 분기, 동점 branching
 - 완료 기준: `docs/ARCKG_judge_rubric.md`의 P1 체크리스트 score >= 80
 
+### Phase 1.5: DSL 구현 및 Transformation Discovery
+- 신규 파일: `dsl/coloring.py`, `dsl/make_grid.py` (또는 동등한 위치)
+- 수정 대상: `agent/apply_rule.py`의 DIFF→DSL 변환 로직
+- 할 일:
+  - `coloring(selection, color)`: selection은 단일 좌표 또는 좌표 리스트, color 13은 투명 처리
+  - `make_grid(height, width, color)`: 새 그리드 생성
+  - **이 두 함수 외 다른 transformation 함수 추가 금지**
+  - DIFF property 타입별 DSL 인자 계산: `color` DIFF → `coloring(coords, comp2)`, `coordinate` DIFF → delta 계산 후 move 시퀀스, `size` DIFF → `make_grid` + `coloring`
+  - DSL 인자는 반드시 `comp1`, `comp2` 실제 값에서 계산되어야 한다. 하드코딩 금지.
+- 완료 기준: P15 체크리스트 score >= 80
+
 ### Phase 2: ExtractPattern
 - 수정 대상: `agent/active_operators.py`의 ExtractPattern operator
 - 할 일: score 가중치 기반 invariant 결정, WM 슬롯 기록

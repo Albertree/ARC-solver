@@ -301,23 +301,112 @@ TASK: {task_id}  |  {timestamp}
 
 ---
 
-## 6. 구현 우선순위
+## 6. DSL 정의 (기본 실행 단위)
+
+### 원칙
+
+transformation은 하드코딩하지 않는다. 발견되는 것이다.
+시스템이 사용할 수 있는 실행 단위는 아래 두 개뿐이다.
+모든 transformation은 이 두 DSL의 조합으로 표현되어야 한다.
+
+### DSL 목록
+
+**1. coloring(selection, color)**
+
+그리드의 특정 위치를 지정한 색으로 칠한다.
+
+- `selection`: 좌표 하나 `[row, col]` 또는 좌표 리스트 `[[row, col], ...]`
+- `color`: 0–9 (ARC 색상), 또는 13 (투명/null — 배경색으로 덮어씀)
+
+```python
+coloring([3, 1], 5)                          # 단일 좌표 색칠
+coloring([[3,1],[4,1],[5,1]], 5)              # 다중 좌표 색칠
+coloring([[3,1],[4,1]], 13)                  # 해당 위치 지움 (투명 처리)
+```
+
+**2. make_grid(height, width, color)**
+
+새로운 그리드를 생성한다.
+
+- `height`: 행 수
+- `width`: 열 수
+- `color`: 배경색 (0–9, 또는 13)
+
+```python
+make_grid(9, 9, 0)    # 9×9 검정 그리드 생성
+make_grid(3, 3, 13)   # 3×3 투명 그리드 생성
+```
+
+### DSL 조합으로 표현되는 transformation 예시
+
+이 예시는 시스템이 **발견해야 할 패턴**이지, 미리 저장된 규칙이 아니다.
+
+| 인간이 보는 transformation | DSL 조합 |
+|---|---|
+| 객체 이동 (+3, +3) | `coloring(old_coords, 13)` + `coloring(shifted_coords, color)` |
+| 객체 색 변경 | `coloring(coords, new_color)` |
+| 객체 삭제 | `coloring(coords, 13)` |
+| 그리드 크기 변경 후 복사 | `make_grid(h, w, bg)` + `coloring(coords, color)` |
+| 객체 복제 | `coloring(new_coords, original_color)` |
+
+### DIFF → DSL 변환 규칙 (Transformation Discovery)
+
+compare()가 DIFF를 감지했을 때, `comp1`과 `comp2`의 실제 값으로부터 DSL 인자를 계산한다.
+이 계산이 "transformation을 발견"하는 과정이다.
+
+| property | DIFF 감지 시 계산 | 생성되는 DSL |
+|---|---|---|
+| `color` | comp2 색상값 확인 | `coloring(coords, comp2_color)` |
+| `coordinate` | comp2 - comp1 = delta | `coloring(comp1_coords, 13)` + `coloring(comp1_coords + delta, color)` |
+| `size` | comp2 / comp1 = ratio | `make_grid(comp2_h, comp2_w, bg)` + `coloring(...)` |
+| `shape` | comp2 shape 패턴 확인 | `coloring(new_shape_coords, color)` |
+
+이 변환 규칙은 apply_rule.py에 구현되며, DIFF 타입별로 분기하여 DSL 호출 시퀀스를 생성한다.
+새로운 DIFF 패턴이 등장해도 이 구조 안에서 처리되어야 한다. 별도 함수를 추가하지 마라.
+
+### Anti-Unification 대상
+
+anti-unification은 COMM/DIFF 구조뿐 아니라 **생성된 DSL 시퀀스**에도 적용된다.
+
+같은 task의 두 pair에서 동일한 DSL 시퀀스 패턴이 나오면:
+```
+pair0: coloring(coords_A, 13) + coloring(coords_A + [+3,+3], 5)
+pair1: coloring(coords_B, 13) + coloring(coords_B + [+3,+3], 2)
+```
+anti-unification 결과:
+```json
+{
+  "dsl_sequence": [
+    {"fn": "coloring", "selection": "?coords", "color": 13},
+    {"fn": "coloring", "selection": "?coords + [+3,+3]", "color": "?color"}
+  ]
+}
+```
+`"?"` 접두사가 붙은 값은 변수 (새 문제에서 실제 값으로 대입됨).
+이 결과가 procedural_memory rule의 `transformation` 필드에 저장된다.
+
+---
+
+## 7. 구현 우선순위
 
 다음 순서로 구현한다. 각 단계가 완료되고 검증된 후 다음 단계로 넘어간다.
 
 1. **Annotated Trace Log 구현** — 모든 이후 단계의 검증 기반이므로 가장 먼저 구현한다
-2. **Object Matching 완성** — score 기반 정렬, threshold(5/8) 적용, 동점 시 branching
-3. **ExtractPattern 완성** — score 높은 쌍 우선으로 invariant 결정
-4. **Generalize 완성** — 2차 compare 후 anti-unification, procedural_memory에 JSON 저장
-5. **Predict/Retrieval 완성** — 3차 compare로 rule retrieval, confidence 기반 우선순위
-6. **Episodic memory 구조화** — 풀이 과정을 에피소드로 저장 (어떤 rule을 시도했고 성공/실패했는지)
+2. **DSL 구현** — `coloring(selection, color)`, `make_grid(h, w, color)` 두 함수만 구현한다. 다른 transformation 함수 추가 금지
+3. **Object Matching 완성** — score 기반 정렬, threshold(5/8) 적용, 동점 시 branching
+4. **ExtractPattern 완성** — score 높은 쌍 우선으로 invariant 결정
+5. **Transformation Discovery 구현** — DIFF property 타입별로 DSL 인자 계산
+6. **Generalize 완성** — 2차 compare + DSL 시퀀스 anti-unification, procedural_memory 저장
+7. **Predict/Retrieval 완성** — 3차 compare로 rule retrieval, DSL 시퀀스 변수 대입
+8. **Episodic memory 구조화** — 풀이 과정 에피소드 저장
 
 ---
 
-## 6. 절대 하지 말아야 할 것
+## 8. 절대 하지 말아야 할 것
 
 - 새 문제를 풀기 위해 규칙을 수동으로 추가하는 것
 - 자연어, feature vector, 신경망 기반 표현 사용
 - SOAR 3종 LTM 외 별도 저장소 생성
 - compare() 함수의 입출력 형식 변경
-- transformation 함수 목록을 미리 고정하는 것 (transformation은 발견되는 것이지 전제되는 것이 아님)
+- `coloring`과 `make_grid` 외 transformation 함수를 미리 추가하는 것
+- DIFF → DSL 변환 외부에서 DSL 인자를 하드코딩하는 것

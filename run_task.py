@@ -8,7 +8,7 @@ import sys
 import traceback
 
 
-TASK_HEX = "easy0014"
+TASK_HEX = "easy0015"
 
 
 def main():

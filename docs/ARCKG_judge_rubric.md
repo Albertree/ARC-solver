@@ -88,6 +88,34 @@ Judge의 출력은 항상 다음 형식을 따른다:
 
 ---
 
+## Phase 1.5: DSL 구현 및 Transformation Discovery
+
+### 평가 대상
+
+`dsl/coloring.py`, `dsl/make_grid.py` (또는 동등한 위치), `agent/apply_rule.py`의 DIFF→DSL 변환 로직
+
+### 체크리스트
+
+| ID | 기준 | 배점 |
+|---|---|---|
+| P15-01 | `coloring(selection, color)` 함수가 구현되어 있다 | 10 |
+| P15-02 | `selection`이 단일 좌표와 좌표 리스트 모두 처리한다 | 10 |
+| P15-03 | `color` 13이 투명(배경색 덮어쓰기)으로 처리된다 | 10 |
+| P15-04 | `make_grid(height, width, color)` 함수가 구현되어 있다 | 10 |
+| P15-05 | 이 두 함수 외 다른 transformation 함수가 추가되어 있지 않다 | 15 |
+| P15-06 | `color` DIFF 시 `coloring(coords, comp2_color)` DSL이 생성된다 | 10 |
+| P15-07 | `coordinate` DIFF 시 delta 계산 후 `coloring(old, 13)` + `coloring(new, color)` 시퀀스가 생성된다 | 15 |
+| P15-08 | `size` DIFF 시 `make_grid(comp2_h, comp2_w, bg)` + `coloring(...)` 시퀀스가 생성된다 | 10 |
+| P15-09 | DSL 인자가 DIFF의 `comp1`, `comp2` 값에서 계산되며 하드코딩되지 않는다 | 10 |
+
+### Judge 판정 기준
+
+- P15-05가 실패하면 (다른 transformation 함수가 추가되었으면) CV-05 위반으로 즉시 거부.
+- P15-09가 실패하면 (DSL 인자가 하드코딩이면) CV-01에 준하는 위반으로 재작성 지시.
+- P15-06~P15-08 중 하나라도 실패하면 Transformation Discovery가 미완성이므로 Phase 진행 불가.
+
+---
+
 ## Phase 2: ExtractPattern
 
 ### 평가 대상

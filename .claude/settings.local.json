@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python run_task.py)",
+      "Bash(wc -l logs/trace_08ed6ac7_*.log)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(python:*)",
+      "Bash(grep:*)",
+      "Bash(tail:*)",
+      "Bash(ls data/ARC_easy/easy0014* data/*/easy0014*)",
+      "Bash(ls -la procedural_memory/R_*.json)",
+      "Bash(ls -la episodic_memory/episode_*.json)",
+      "Bash(head -10 logs/trace_easy0014_*.log)",
+      "Bash(ls data/ARC_easy/*.json)"
+    ]
+  }
+}
