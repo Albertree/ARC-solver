@@ -7,10 +7,11 @@
 # ──────────────────────────────────────────────────────────
 
 # 단일 태스크
-# python run.py --task 08ed6ac7
+python run.py --task 08ed6ac7
+# python run.py --task easy0014
 
 # 복수 태스크
-python run.py --task 08ed6ac7 007bbfb7
+# python run.py --task 08ed6ac7 007bbfb7
 
 # 단일 태스크 + WM 로그 (run_logs/MMDD_HHMM.log 자동 저장)
 # python run.py --task 08ed6ac7 --log-wm

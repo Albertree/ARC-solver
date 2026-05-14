@@ -7,6 +7,7 @@ ARC-solver 메모리 초기화.
 사용법:
   python init.py               dry-run (변경 없음, 목록만 출력)
   python init.py --confirm     실제 초기화 실행
+  python init.py --log         run_logs/ 도 초기화 대상에 포함
 """
 
 import argparse
@@ -20,16 +21,21 @@ def _parse_args():
         description="메모리 초기화. --confirm 없이 실행 시 dry-run.",
     )
     p.add_argument(
-        "--sm-root", default="semantic_memory", dest="sm_root",
+        "--sem", default="semantic_memory", dest="sem",
         metavar="PATH", help="semantic_memory 루트 (default: semantic_memory)",
     )
     p.add_argument(
-        "--ep-root", default="episodic_memory", dest="ep_root",
+        "--epi", default="episodic_memory", dest="epi",
         metavar="PATH", help="episodic_memory 루트 (default: episodic_memory)",
     )
     p.add_argument(
-        "--proc-root", default="procedural_memory", dest="proc_root",
+        "--pro", default="procedural_memory", dest="pro",
         metavar="PATH", help="procedural_memory 루트 (default: procedural_memory)",
+    )
+    p.add_argument(
+        "--log", nargs="?", const="run_logs", default=None, dest="log",
+        metavar="PATH",
+        help="run_logs/ 도 초기화 대상에 포함 (default 경로: run_logs). 경로 지정 가능: --log my_logs",
     )
     p.add_argument(
         "--confirm", action="store_true",
@@ -74,7 +80,9 @@ def _init_dir(root: str, dry_run: bool) -> int:
 
 def main():
     args = _parse_args()
-    roots = [args.sm_root, args.ep_root, args.proc_root]
+    roots = [args.sem, args.epi, args.pro]
+    if args.log is not None:
+        roots.append(args.log)
 
     if not args.confirm:
         print("[dry-run] 아래 항목이 삭제됩니다. 실제 삭제하려면 --confirm을 추가하세요.\n")
