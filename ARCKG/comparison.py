@@ -20,6 +20,7 @@ import json
 import os
 
 from ARCKG.memory_paths import id_pair_to_comparison_path, node_id_to_folder_path
+from procedural_memory.type_system import get_node_schema, compare_typed
 
 
 # ---------------------------------------------------------------------------
@@ -97,13 +98,17 @@ def _compare_scalars(a, b) -> dict:
     return {"type": "COMM" if a == b else "DIFF", "comp1": a, "comp2": b}
 
 
-def _compare_dicts(a: dict, b: dict) -> dict:
+def _compare_dicts(a: dict, b: dict, schema: dict = None) -> dict:
     """
     INTENT: 두 dict의 각 key에 대해 재귀적으로 compare를 수행해
             category 구조를 구성한다.
+            schema가 주어지면 해당 key는 타입 인식 비교(compare_typed)로
+            분기, 없으면 기존 재귀 방식.
     MUST NOT: key 집합이 다른 경우를 무시하지 마 — 누락 key도 DIFF로 처리.
     REF: CLAUDE.md § Relation result format
+         procedural_memory/type_system/compare_dispatch.py
     """
+    schema = schema or {}
     all_keys = sorted(set(a.keys()) | set(b.keys()), key=str)
     if not all_keys:
         return {"type": "COMM", "score": "0/0", "category": {}}
@@ -117,7 +122,14 @@ def _compare_dicts(a: dict, b: dict) -> dict:
         elif not has_b:
             category[key] = {"type": "DIFF", "comp1": a[key], "comp2": None}
         else:
-            category[key] = _compare_values(a[key], b[key])
+            sub = schema.get(key)
+            if isinstance(sub, dict):
+                # 중첩 schema — 하위 dict로 재귀
+                category[key] = _compare_dicts(a[key], b[key], schema=sub)
+            elif isinstance(sub, str):
+                category[key] = compare_typed(a[key], b[key], sub)
+            else:
+                category[key] = _compare_values(a[key], b[key])
 
     comm = sum(1 for v in category.values() if v.get("type") == "COMM")
     total = len(category)
@@ -178,7 +190,9 @@ def compare(a, b, save: bool = False, semantic_memory_root: str = None) -> dict:
     # 1차: KG 노드 비교 — to_json() 속성 dict를 비교
     props_a = a.to_json()
     props_b = b.to_json()
-    raw = _compare_dicts(props_a, props_b)
+    node_kind = type(a).__name__.upper()  # "Pixel" → "PIXEL"
+    schema = get_node_schema(node_kind)
+    raw = _compare_dicts(props_a, props_b, schema=schema)
     result = {
         "type": raw["type"],
         "score": raw.get("score", "0/0"),

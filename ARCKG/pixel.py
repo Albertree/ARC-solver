@@ -8,6 +8,7 @@ import json
 import os
 
 from ARCKG.memory_paths import id_to_json_path, node_id_to_folder_path
+from procedural_memory.type_system import value_to_name
 
 
 class Pixel:
@@ -32,15 +33,14 @@ class Pixel:
 
     def to_json(self) -> dict:
         """
-        PIXEL 속성: color + coordinate(row_index, col_index).
-        REF: ARC-solver/ARCKG/pixel.py  update_property → property['coordinate']
+        PIXEL 속성:
+          color      : NAME 문자열 (class<color>, 단일 슬롯이라 NAME으로 직렬화)
+          coordinate : (row, col) tuple
+        내부 self.color는 INT로 유지하지만 직렬화 시점에 NAME으로 변환.
         """
         return {
-            "color": self.color,
-            "coordinate": {
-                "row_index": self.row,
-                "col_index": self.col,
-            },
+            "color": value_to_name(self.color),
+            "coordinate": (self.row, self.col),
         }
 
     def save(self, semantic_memory_root: str):

@@ -82,24 +82,23 @@ class Grid:
 
     def to_json(self) -> dict:
         """
-        GRID property 3개:
+        GRID property 3개 (schema에 맞춤):
           size     : {"height": int, "width": int}
-          color    : {0: bool, …, 9: bool}
-          contents : 2D int array
-        REF: ARC-solver/ARCKG/grid.py GRID.update_property (line 209-222)
+          color    : set<class<color>>  → 등장 색의 NAME 정렬 리스트
+          contents : list<list<class<color>>>  → 2D int array (대형 데이터라
+                     INT 표현 유지, 타입 의미는 schema가 class<color>로 명시)
         """
-        color_dict = {i: False for i in range(10)}
-        for row in self.raw:
-            for val in row:
-                if 0 <= val <= 9:
-                    color_dict[val] = True
+        from procedural_memory.type_system import value_to_name
+
+        present = sorted({val for row in self.raw for val in row if 0 <= val <= 9})
+        color_set = [value_to_name(v) for v in present]
 
         return {
             "size": {
                 "height": self.height,
                 "width": self.width,
             },
-            "color": color_dict,
+            "color": color_set,
             "contents": self.raw,
         }
 

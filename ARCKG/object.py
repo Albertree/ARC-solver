@@ -70,33 +70,32 @@ class Object:
         self.color = max(set(colors), key=colors.count) if colors else 0
 
     # ------------------------------------------------------------------ #
-    #  대칭성 헬퍼 (원본: ARC-solver/ARCKG/object.py)                       #
+    #  대칭성 헬퍼 — dihedral 모듈의 변환을 자기 자신과 비교             #
     # ------------------------------------------------------------------ #
 
     @staticmethod
     def _hori_symmetry(grid: list) -> bool:
-        """좌우(수직 축) 대칭 — 각 행이 뒤집어도 동일."""
-        return all(row == list(reversed(row)) for row in grid)
+        """좌우(수직 축) 대칭 — flip_h 적용해도 동일."""
+        from procedural_memory.type_system.dihedral import flip_h
+        return flip_h(grid) == grid
 
     @staticmethod
     def _verti_symmetry(grid: list) -> bool:
-        """상하(수평 축) 대칭 — 뒤집어도 동일."""
-        return grid == list(reversed(grid))
+        """상하(수평 축) 대칭 — flip_v 적용해도 동일."""
+        from procedural_memory.type_system.dihedral import flip_v
+        return flip_v(grid) == grid
 
     @staticmethod
     def _diag_symmetry(grid: list) -> bool:
         """주 대각선 대칭 (정사각형 전용)."""
-        n = len(grid)
-        return all(grid[i][j] == grid[j][i] for i in range(n) for j in range(n))
+        from procedural_memory.type_system.dihedral import flip_diag
+        return flip_diag(grid) == grid
 
     @staticmethod
     def _anti_symmetry(grid: list) -> bool:
         """반 대각선 대칭 (정사각형 전용)."""
-        n = len(grid)
-        return all(
-            grid[i][j] == grid[n - 1 - j][n - 1 - i]
-            for i in range(n) for j in range(n)
-        )
+        from procedural_memory.type_system.dihedral import flip_anti
+        return flip_anti(grid) == grid
 
     # ------------------------------------------------------------------ #
     #  직렬화                                                               #
@@ -104,51 +103,50 @@ class Object:
 
     def to_json(self) -> dict:
         """
-        8개 OBJECT property dict 반환.
+        8개 OBJECT property dict 반환 (schema에 맞게 정규화):
 
-        area       : bbox 내 비투명(0-9) 셀 수
-        color      : {0: bool, …, 9: bool}
-        coordinate : [[row, col], …] — 비투명 셀의 절대 좌표 목록
-        method     : {"univalued": bool, "diagonal": bool, "without_bg": bool}
-        position   : left_top / right_top / left_bottom / right_bottom
-        shape      : bbox 2D array, 비투명=1, 투명=-1
-        size       : {"height": int, "width": int}
-        symmetry   : {hori_symm / verti_symm / diag_symm / anti_symm}
+        area       : int                          — bbox 내 비투명(0-9) 셀 수
+        color      : set<class<color>>            — 등장 색 NAME 정렬 리스트
+        coordinate : set<tuple<int,int>>          — 비투명 셀의 절대 (row,col) 집합
+                                                    (순서 무관, 표현은 정렬된 list로 직렬화)
+        method     : {univalued/diagonal/without_bg : bool}
+        position   : {left_top/right_top/left_bottom/right_bottom : tuple<int,int>}
+        shape      : list<list<bool>>             — 비투명=True, 투명=False
+        size       : {height: int, width: int}
+        symmetry   : {hori/verti/diag/anti_symm : bool}
         """
+        from procedural_memory.type_system import value_to_name
+
         h = len(self.colorgrid)
         w = len(self.colorgrid[0]) if self.colorgrid else 0
         row_min, col_min = self.pos
 
-        # color
-        color_dict = {i: False for i in range(10)}
-        for row in self.colorgrid:
-            for cell in row:
-                if 0 <= cell <= 9:
-                    color_dict[cell] = True
+        # color: 등장 색의 NAME 정렬 리스트
+        present = sorted({
+            cell for row in self.colorgrid for cell in row if 0 <= cell <= 9
+        })
+        color_set = [value_to_name(v) for v in present]
 
-        # coordinate (절대 좌표)
+        # coordinate: 비투명 셀의 절대 (row, col) tuple 목록
         coordinate = [
-            [row_min + r, col_min + c]
+            (row_min + r, col_min + c)
             for r, row in enumerate(self.colorgrid)
             for c, cell in enumerate(row)
             if cell != 13
         ]
 
-        # shape: 비투명=1, 투명=-1
-        shape = [
-            [1 if cell != 13 else -1 for cell in row]
-            for row in self.colorgrid
-        ]
+        # shape: bool mask (True=비투명, False=투명)
+        shape = [[cell != 13 for cell in row] for row in self.colorgrid]
 
         # area
-        area = sum(1 for row in shape for v in row if v == 1)
+        area = sum(1 for row in shape for v in row if v)
 
-        # position
+        # position: 4 코너 tuple
         position = {
-            "left_top":     {"row_index": row_min,         "col_index": col_min},
-            "right_top":    {"row_index": row_min,         "col_index": col_min + w - 1},
-            "left_bottom":  {"row_index": row_min + h - 1, "col_index": col_min},
-            "right_bottom": {"row_index": row_min + h - 1, "col_index": col_min + w - 1},
+            "left_top":     (row_min,         col_min),
+            "right_top":    (row_min,         col_min + w - 1),
+            "left_bottom":  (row_min + h - 1, col_min),
+            "right_bottom": (row_min + h - 1, col_min + w - 1),
         }
 
         # symmetry
@@ -163,7 +161,7 @@ class Object:
 
         return {
             "area":       area,
-            "color":      color_dict,
+            "color":      color_set,
             "coordinate": coordinate,
             "method":     self.method,
             "position":   position,
