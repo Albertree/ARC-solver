@@ -15,6 +15,15 @@ import shutil
 from pathlib import Path
 
 
+# 초기화 대상 폴더 안에 있어도 절대 지우지 않을 항목 이름.
+# 데이터가 아니라 코드/구성으로 분류되는 것들.
+# 새로 코드 모듈을 LTM 루트 안에 두게 되면 여기에 추가한다.
+PRESERVE = {
+    ".gitkeep",     # 디렉토리 보존용
+    "type_system",  # procedural_memory/type_system — 영구 코드 모듈
+}
+
+
 def _parse_args():
     p = argparse.ArgumentParser(
         prog="init.py",
@@ -46,7 +55,7 @@ def _parse_args():
 
 def _init_dir(root: str, dry_run: bool) -> int:
     """
-    root/ 아래 .gitkeep 제외 모든 항목 삭제.
+    root/ 아래 PRESERVE 에 들어있지 않은 항목을 모두 삭제.
     dry_run=True이면 삭제 목록만 출력하고 0 반환.
     실제 삭제 후 삭제된 항목 수 반환.
     """
@@ -55,7 +64,7 @@ def _init_dir(root: str, dry_run: bool) -> int:
         print(f"  [{root}] 없음 → 건너뜀")
         return 0
 
-    items = sorted(p for p in path.iterdir() if p.name != ".gitkeep")
+    items = sorted(p for p in path.iterdir() if p.name not in PRESERVE)
     if not items:
         print(f"  [{root}] 이미 비어있음")
         return 0
