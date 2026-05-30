@@ -4,13 +4,11 @@ ARCEnvironment의 agent.solve(task) 인터페이스를 구현한다.
 """
 
 from agent.wm import WorkingMemory
-from agent.cycle import run_cycle
-from agent.elaboration_rules import build_elaborator
-from agent.rules import build_proposer
-from agent.memory import load_rules_from_ltm
-from agent.agent_common import answers_from_wm
+from agent.descent import descend_to_decisive
+from agent.predict import predict_by_all_pair_comm, emit_answer
 from agent.io import inject_arc_task
 from agent.wm_logger import reset_wm_snapshot, print_wm_triplets
+from procedural_memory.DSL.relation import verdict
 
 
 class ActiveSoarAgent:
@@ -41,23 +39,12 @@ class ActiveSoarAgent:
 
     def solve(self, task) -> list:
         """
-        [SOAR 강제] 사이클 실행 흐름 (WM 초기화 → run_cycle → 결과 추출) 자체.
-        [설계 자유] LTM rule 선로드 방식, max_steps 값.
+        ARBOR Slice 1 흐름: inject → 막힘 기반 descent(A) → 결정적 Inter 비교(C) →
+        PredictByAllPairCommOp → emit(K). descent 가 SOAR substate(S1→S2→S3 =
+        TASK→PAIR→GRID)를 만들고, 결정적 비교에 닿으면 답을 도출·제출한다.
 
-        흐름:
-          1. 새 태스크이면 _submission_count 리셋
-          2. WorkingMemory 생성 후 reset_wm_snapshot() 호출
-          3. log_wm 활성 시 "Initial WM (before input)" 출력
-          4. inject_arc_task(task, wm) — input-link에 task_hex 주입
-          5. log_wm 활성 시 "After input-link injection" 출력
-          6. LTM rule 로드 → wm.s1["active_rules"] 초기화
-          7. elaborator = build_elaborator()
-          8. proposer   = build_proposer()
-          9. run_cycle(wm, elaborator, proposer, max_steps, stop_on_goal=True)
-          10. log_wm 활성 시 [cycle] 요약 출력
-          11. answers = answers_from_wm(wm)
-          12. _submission_count += 1
-          13. return answers
+        [설계 자유] max_steps 값. 결정적 비교 없으면 None(미제출) 반환.
+        (구 generic operator-dispatch cycle 은 이 흐름에서 미사용 — 스캐폴드로 보존.)
         """
         task_hex = getattr(task, "task_hex", None)
         if task_hex != self._current_task_hex:
@@ -66,38 +53,38 @@ class ActiveSoarAgent:
 
         wm = WorkingMemory()
         reset_wm_snapshot(wm)
-
         if self._log_wm:
             print_wm_triplets(wm, label="Initial WM (before input)", step=0)
 
         inject_arc_task(task, wm)
+        if self._log_wm:
+            print_wm_triplets(wm, label="After input-link injection", step=0)
+
+        result, _gs = descend_to_decisive(wm, task,
+                                          on_level=self._log_descent if self._log_wm else None)
+
+        answers = None
+        if result["decisive"]:
+            grid = predict_by_all_pair_comm(result["evidence"])
+            answers = emit_answer(task, grid)
 
         if self._log_wm:
-            print_wm_triplets(wm, label="After input-link injection (before cycle)", step=0)
+            print_wm_triplets(wm, label="After descent (substate stack)", step=1)
+            print(f"\n[answer] {('제출 ' + str(len(answers)) + '개') if answers else '미제출(결정 불가)'}")
 
-        try:
-            rules = load_rules_from_ltm(task_hex, self.semantic_memory_root)
-        except NotImplementedError:
-            rules = []
-        wm.s1["active_rules"] = rules
-
-        elaborator = build_elaborator()
-        proposer = build_proposer()
-        out = run_cycle(
-            wm,
-            elaborator,
-            proposer,
-            max_steps=self._max_steps,
-            stop_on_goal=True,
-            log_wm=self._log_wm,
-        )
-
-        if self._log_wm:
-            print(f"\n[cycle] {out}")
-
-        answers = answers_from_wm(wm)
         self._submission_count += 1
         return answers
+
+    @staticmethod
+    def _log_descent(level, goal, res):
+        """descent 각 레벨 trace 출력 (log_wm 시)."""
+        print(f"  [{level}] goal: {goal}")
+        for x, y, r in res["receipts"]:
+            t, s, _ = verdict(r)
+            sn = ".".join(x.node_id.split(".")[1:]) + "↔" + ".".join(y.node_id.split(".")[1:])
+            print(f"        compare({sn}) = {t} ({s})")
+        tag = "결정적 ✓ 멈춤" if res["decisive"] else "막힘 → descend"
+        print(f"     → {tag}  ({res['reason']})")
 
     def on_substate_resolved(self, substate: dict, task_hex: str):
         """
