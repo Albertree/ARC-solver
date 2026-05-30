@@ -37,3 +37,19 @@ def role_of(grid):
 def filter_(items, pred):
     """pred(x) 가 참인 원소만 남긴다."""
     return [x for x in items if pred(x)]
+
+
+@dsl("util", ["grid"], "list[object]")
+def objects_of(grid):
+    """grid 의 객체들 (lazy: 비어있으면 extract_objects() 1회).
+    hodel 다중 추출이 [전경 / 배경 / 전체] 등 여러 view 를 줄 수 있다 —
+    전경만 쓰려면 is_foreground 로 select."""
+    if not grid.objects:
+        grid.extract_objects()
+    return grid.objects
+
+
+def is_foreground(obj) -> bool:
+    """배경(색 0)이 아닌 전경 객체인지 (select predicate). ARC 관례: 0=배경."""
+    c = obj.to_json()["color"]
+    return (not c.get(0)) and any(v for k, v in c.items() if k != 0)

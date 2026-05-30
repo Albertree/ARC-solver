@@ -36,3 +36,29 @@ def color(grid):
 def contents(grid):
     """grid 의 원시 2D 배열."""
     return grid.to_json()["contents"]
+
+
+# ── 객체 property (Slice 2~, object.to_json() 노출) ──
+
+@dsl("property", ["object"], "color-set")
+def color_of(obj):
+    """객체 색 집합 {0..9: bool}."""
+    return obj.to_json()["color"]
+
+
+@dsl("property", ["object"], "coordinate")
+def coordinate_of(obj):
+    """객체가 차지한 셀 좌표 목록 [[r,c],...]."""
+    return obj.to_json()["coordinate"]
+
+
+@dsl("property", ["object"], "size")
+def size_of(obj):
+    """객체 bounding-box 크기 {height, width}."""
+    return obj.to_json()["size"]
+
+
+@dsl("property", ["object"], "area")
+def area_of(obj):
+    """객체 셀 수."""
+    return obj.to_json()["area"]

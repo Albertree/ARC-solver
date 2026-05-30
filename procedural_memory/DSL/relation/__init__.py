@@ -18,10 +18,10 @@ from itertools import combinations
 
 from ARCKG.comparison import compare as _kg_compare
 from procedural_memory.DSL.registry import dsl
-from procedural_memory.DSL.util import pairs_of, grids_of, filter_
+from procedural_memory.DSL.util import pairs_of, grids_of, objects_of, filter_
 
 # level → anchor 아래 그 level 원소를 주는 util
-_LEVEL_CHILDREN = {"pair": pairs_of, "grid": grids_of}
+_LEVEL_CHILDREN = {"pair": pairs_of, "grid": grids_of, "object": objects_of}
 
 
 @dsl("util", ["anchor", "level"], "list[node]")
