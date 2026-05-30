@@ -89,29 +89,37 @@
 ### 구현이 재현해야 할 시퀀스 (단계 수 정확 일치는 불필요 — §0 검증)
 
 ```
-[TASK]  pair-count 확인. 형제 TASK 없음 → 비교 0 (자연 skip, P1) → descend
-[PAIR]  Inter-Pair, Pair-level (grid-count), pairwise 3 (P6):
-          compare(P0,P1)=COMM(2,2) / compare(P1,Pa)=DIFF(2,1) / compare(P0,Pa)=DIFF(2,1)
-        목표(B): "Pa 에 빠진 grid(=출력) 만들기" → grid-count++ DSL 없음 → 막힘 → descend
-[GRID]  목표 구체화(B): Gx.{size, color, contents}
-        ① Intra-Pair, Grid-level:
-             compare(P0.G0, P0.G1)=DIFF, compare(P1.G0, P1.G1)=DIFF  (정보부족, 흐름상 거침)
-        ② Inter-Grid, Grid-level (role==G1):
-             compare(P0.G1, P1.G1)=COMM(size,color,contents)  ★ 결정적 (P4)
+[TASK]  pair-count 확인. 형제 TASK 없음 → 비교 0 (자연 skip, P1) → intra(descend)
+[PAIR]  Inter-Pair (pair property=grid-count) pairwise 3 (P6):
+          compare(P0,P1)=COMM / compare(P0,Pa)=DIFF / compare(P1,Pa)=DIFF
+          (score=COMM개수/전체. Pa 는 출력 가려져 grid 1개 → P0/P1 과 DIFF)
+        목표(B): "Pa 에 빠진 grid(=출력) 만들기" → grid-count++ DSL 없음 → 막힘 → intra(descend)
+[GRID]  Intra-Pair = descent: 막혀서 pair 안 grid 레벨로 내려감. 목표 구체화 Gx.{size,color,contents}
+        내려가서 Inter 비교:
+        ① 한 pair 내 G0↔G1 (정보부족, 흐름상 거침):
+             compare(P0.G0, P0.G1)=DIFF, compare(P1.G0, P1.G1)=DIFF
+        ② Inter-Pair-Grid (role==G1)  ★ 결정적 (P4):
+             compare(P0.G1, P1.G1)=COMM(size,color,contents)
         PredictByAllPairCommOp: 모든 example G1 COMM →
              size=6×6, color={0,2}, contents=P0.G1.contents → Pa.G1 = (5,5)빨강
 [OUT]   K 가 Pa.G1 제출
 ```
 
-**결정적 비교**: Inter-Grid, role==G1, {size·color·contents} 전부 COMM →
-test G1 = 공통값. 나머지(PAIR grid-count, Intra-Pair, G0역할)는 흐름상 거치되
+**용어 (2026-05-31 정정)**: **Intra-[component] = 비교가 아니라 descent** — 현재 레벨
+정보로 목적 달성이 불가능해 *더 깊은 레벨로 내려가는 것*(예: intra-pair = pair 안으로).
+**Inter-[level] = 같은 레벨 노드 property 비교** (Inter-Pair=pair끼리, Inter-Pair-Grid=
+다른 pair 의 grid끼리). 내려가자마자 하위 property 를 확인·비교하므로 예전엔
+"intra=비교"로 혼동됐으나, intra 는 *내려가는 행위* 자체다.
+
+**결정적 비교**: Inter-Pair-Grid, role==G1, {size·color·contents} 전부 COMM →
+test G1 = 공통값. 나머지(Inter-Pair grid-count, G0↔G1, G0역할)는 흐름상 거치되
 정답엔 직접 기여 안 함.
 
 ---
 
 ## 5. 모듈 범위
 
-**IN**: A(descent) · B(goal stack) · C(Intra/Inter+scope) · D(property+util) ·
+**IN**: A(descent=intra) · B(goal stack) · C(Inter 비교+scope) · D(property+util) ·
 K(output) · PredictByAllPairCommOp
 
 **OUT** (Slice 2+): E·F·G·H·I·J, object/pixel property, 비교 후처리 top-k·
@@ -121,15 +129,18 @@ coordinate filter, `make_grid`/`coloring` 외 transformation (영구 금지).
 
 ## 6. 모듈 C 정의 + D 함수 목록 (압축 없음)
 
-### C (구 7규칙 → 2종 + scope. 7규칙으로 되돌리지 말 것)
+### C (scope + 비교. 모든 비교는 Inter — 같은 레벨 노드 property 비교)
 ```
-compare(scope_A, scope_B)   # 항상 N:N (1:1 = N=1 특수), receipt 집합. ARCKG/comparison.py 재사용
+compare(scope_A, scope_B)   # N:N (1:1=N=1), receipt. score=COMM개수/전체개수. comparison.py 재사용
+compare_set(scope)          # 같은 레벨 노드들을 pairwise 비교
 scope = select(anchor, level, predicate?) = filter(elements-at(anchor,level), pred)
         예: select(P0.G0, object, color-of(o)==5)
-두 종류 (재귀 중첩):
-  · Intra-[Level]: 한 부모 형제끼리 (한 pair 의 G0↔G1)
-  · Inter-[Level]: role-aligned 다른 부모 (P0.G1 ↔ P1.G1)
-Slice 1: Intra-Pair(Grid) + Inter-Grid(Grid, role==G1). 폭증 제어 미사용.
+비교의 종류는 "Inter-[level]" 뿐 — 어느 scope 를 넘기냐로 갈림 (모듈은 level-agnostic):
+  · Inter-Pair      : pair 끼리 (pair property, 예: grid-count)
+  · Inter-Pair-Grid : 다른 pair 의 grid 끼리 (P0.G1 ↔ P1.G1, role-aligned)
+※ Intra 는 비교가 아니라 descent → 모듈 A. 내려가자마자 하위 property 를 확인·비교하므로
+  예전엔 "intra=비교"로 오해됐으나, intra 는 *내려가는 것* 자체다.
+Slice 1: Inter-Pair(grid-count) + Inter-Pair-Grid(role==G1). 폭증 제어 미사용.
 C–D 결합: scope selector 가 D 를 호출 → D 먼저 구현.
 ```
 

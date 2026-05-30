@@ -58,6 +58,8 @@ class ARCEnvironment:
         self._enable_trace = enable_trace
         self._max_attempts_per_task = max_attempts_per_task
         self._semantic_memory_root = semantic_memory_root
+        self._mgr = ARCManager(semantic_memory_root=semantic_memory_root)
+        self._test_ground_truths: list = []  # 현재 task 의 test 정답(raw), 채점 전용
         self._trace: list = []
         self._episode_start_time = None
 
@@ -139,8 +141,8 @@ class ARCEnvironment:
             reward = 0.0
             correct_per_pair = [False] * n
         else:
-            for i, test_pair in enumerate(test_pairs):
-                gt = self._get_ground_truth(test_pair)
+            for i in range(n):
+                gt = self._test_ground_truths[i] if i < len(self._test_ground_truths) else None
                 ok = _grids_equal(answer[i], gt)
                 correct_per_pair.append(ok)
             reward = 1.0 if all(correct_per_pair) else 0.0
@@ -320,21 +322,13 @@ class ARCEnvironment:
 
         task_id = self._episode_task_ids[self._current_index]
         try:
-            self._current_task = ARCManager.from_hex_code(
-                task_id,
-                semantic_memory_root=self._semantic_memory_root,
-            )
+            self._current_task = self._mgr.load_task(task_id)
+            # 채점용 정답은 Task 밖에서 따로 보관한다 (에이전트는 못 봄).
+            self._test_ground_truths = self._mgr.test_ground_truth(task_id)
             self._attempts_left = self._max_attempts_per_task
             return self._current_task
         except (FileNotFoundError, Exception):
             return self._advance_to_next_task()
-
-    def _get_ground_truth(self, test_pair) -> list:
-        """test pair의 정답 그리드를 list[list[int]]로 반환."""
-        grid = test_pair.output_grid
-        if hasattr(grid, "view"):
-            return grid.view
-        return grid
 
     def _time_budget_exceeded(self) -> bool:
         if self._time_budget_sec is None or self._episode_start_time is None:

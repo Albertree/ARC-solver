@@ -54,26 +54,7 @@ class ARCManager:
              ARC-solver/ARCKG/task.py TASK.from_json (line 59)
         """
         task_hex = self.get_task_hex(task_file)
-
-        # data/ 아래 여러 위치 탐색
-        candidates = [
-            os.path.join(self.data_root, task_file),
-            os.path.join(self.data_root, f"{task_file}.json"),
-            os.path.join(self.data_root, "ARC_AGI", "training", f"{task_hex}.json"),
-            os.path.join(self.data_root, "ARC_AGI", "evaluation", f"{task_hex}.json"),
-            os.path.join(self.data_root, "ARC_easy", f"{task_hex}.json"),
-            os.path.join(self.data_root, f"{task_hex}.json"),
-        ]
-        raw_data = None
-        for path in candidates:
-            if os.path.exists(path):
-                with open(path, "r") as f:
-                    raw_data = json.load(f)
-                break
-        if raw_data is None:
-            raise FileNotFoundError(
-                f"Task '{task_hex}' not found under '{self.data_root}'"
-            )
+        raw_data = self._load_raw(task_file)
 
         example_pairs = self._build_pairs(
             task_hex=task_hex,
@@ -94,8 +75,38 @@ class ARCManager:
             example_pairs=example_pairs,
             test_pairs=test_pairs,
         )
-        task.save(self.semantic_memory_root)
+        # Lazy: load 시점엔 디스크 저장(task.save) 안 함. ARCKG = 영속화된 WM 이며,
+        # descend 가 방문·확정한 노드만 추후 flush (persisted WM 모델). object/pixel 도
+        # 미생성 — Slice 1 은 GRID 에서 끝남 (SLICE_1_DEV §5).
         return task
+
+    def _resolve_path(self, task_file: str) -> str:
+        """data_root 아래 후보 경로에서 task json 실제 경로를 찾는다."""
+        task_hex = self.get_task_hex(task_file)
+        candidates = [
+            os.path.join(self.data_root, task_file),
+            os.path.join(self.data_root, f"{task_file}.json"),
+            os.path.join(self.data_root, "ARC_AGI", "training", f"{task_hex}.json"),
+            os.path.join(self.data_root, "ARC_AGI", "evaluation", f"{task_hex}.json"),
+            os.path.join(self.data_root, "ARC_easy", f"{task_hex}.json"),
+            os.path.join(self.data_root, "ARC_easy_a", f"{task_hex}.json"),
+            os.path.join(self.data_root, f"{task_hex}.json"),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+        raise FileNotFoundError(f"Task '{task_hex}' not found under '{self.data_root}'")
+
+    def _load_raw(self, task_file: str) -> dict:
+        """task json 원본 dict 로드."""
+        with open(self._resolve_path(task_file), "r") as f:
+            return json.load(f)
+
+    def test_ground_truth(self, task_file: str) -> list:
+        """env 채점용 — test pair 정답 출력(raw)을 순서대로 반환한다.
+        이 값은 에이전트의 Task(ARCKG)에는 절대 들어가지 않는다 (컨닝 방지)."""
+        raw = self._load_raw(task_file)
+        return [p.get("output") for p in raw.get("test", [])]
 
     def _build_pairs(self, task_hex: str, pairs_raw: list,
                      pair_type: str, id_offset: int,
@@ -104,7 +115,8 @@ class ARCManager:
         ARC JSON의 train/test 목록에서 Pair 노드 목록을 구성한다.
         - example pairs: pair_id = "T{hex}.P0", "T{hex}.P1", ...
         - test pairs:    pair_id = "T{hex}.Pa", "T{hex}.Pb", ...
-        각 Grid에서 extract_objects()를 호출한다.
+        test pair 의 output(G1)은 *만들지 않는다* — 정답은 에이전트가 예측해야 하며
+        env 가 test_ground_truth() 로 따로 채점한다.
         """
         pairs = []
         for idx, raw_pair in enumerate(pairs_raw):
@@ -115,19 +127,18 @@ class ARCManager:
 
             pair_id = f"T{task_hex}.P{p_suffix}"
 
-            # Input grid (항상 존재)
+            # Input grid (항상 존재). Lazy: extract_objects() 안 부름 — Slice 1 은
+            # GRID 에서 끝나므로 object/pixel 미생성 (필요 시 descend 가 추후 생성).
             input_id = f"{pair_id}.G0"
             input_grid = Grid(grid_id=input_id, raw=raw_pair["input"])
-            input_grid.extract_objects()
 
-            # Output grid (test pair의 실제 답 없음 → output 있으면 구성, 없으면 None)
-            output_raw = raw_pair.get("output")
-            if output_raw is not None and len(output_raw) > 0 and len(output_raw[0]) > 0:
-                output_id = f"{pair_id}.G1"
-                output_grid = Grid(grid_id=output_id, raw=output_raw)
-                output_grid.extract_objects()
-            else:
-                output_grid = None
+            # Output grid: test pair 는 정답을 숨긴다(output_grid=None). example 만 구성.
+            output_grid = None
+            if not test:
+                output_raw = raw_pair.get("output")
+                if output_raw is not None and len(output_raw) > 0 and len(output_raw[0]) > 0:
+                    output_id = f"{pair_id}.G1"
+                    output_grid = Grid(grid_id=output_id, raw=output_raw)
 
             pair = Pair(pair_id=pair_id, input_grid=input_grid, output_grid=output_grid)
             pairs.append(pair)
