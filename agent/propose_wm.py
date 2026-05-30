@@ -61,17 +61,6 @@ def materialize_operator_proposals(wm, candidates: list) -> None:
     state["operator"] = first_id
 
 
-def clear_operator_proposal_preferences(wm) -> None:
-    """Application 등으로 제안이 철회될 때 O*의 op-preference 제거용 (선택 시에는 호출하지 않음)."""
-    state = wm.s1
-    op_id = state.get("operator")
-    if not op_id or not isinstance(state.get(op_id), dict):
-        return
-    node = state[op_id]
-    if "op-preference" in node:
-        del node["op-preference"]
-
-
 def clear_s1_operator_slots(wm) -> None:
     """
     S1에서 제안/선택/적용용 오퍼레이터 WME를 제거한다.

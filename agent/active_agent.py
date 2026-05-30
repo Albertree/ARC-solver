@@ -7,8 +7,8 @@ from agent.wm import WorkingMemory
 from agent.cycle import run_cycle
 from agent.elaboration_rules import build_elaborator
 from agent.rules import build_proposer
-from agent.memory import load_rules_from_ltm, chunk_from_substate, save_rule_to_ltm
-from agent.agent_common import build_wm_from_task, goal_satisfied, answers_from_wm
+from agent.memory import load_rules_from_ltm
+from agent.agent_common import answers_from_wm
 from agent.io import inject_arc_task
 from agent.wm_logger import reset_wm_snapshot, print_wm_triplets
 

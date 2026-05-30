@@ -30,7 +30,7 @@ SOAR의 4개 구성요소 중 하나.
 • 리팩터링 시 제거·대체 검토 가능 (편의/캐시)
   - s1 : S1은 WME 그래프 안의 식별자일 뿐이나, “루트 포인터”로 두면 구현이 단순함.
          순수 그래프만 쓰면 entry point 검색으로 대체 가능.
-  - task : WM 밖 캐시. 순수 Soar라면 input-link 등 그래프 탐색으로만 접근하도록 없앨 수 있음.
+  (구 wm.task 캐시는 제거됨 — task는 io/input-link.task 심볼로만 접근. 순수 SOAR.)
 
 이 클래스는 “WM 데이터 집합” + “그 집합을 관리·사이클 구동”을 겸한다.
 ────────────────────────────────────────────────────────────────
@@ -98,7 +98,6 @@ class WorkingMemory:
         self.s1["smem"] = {"id": "SM1"}
         self.s1["epmem"] = {"id": "E1"}
 
-        self.task = None
         self._substate_stack: list = []
 
     def _record_wme(self, identifier: str, attribute: str, value: Any) -> int:

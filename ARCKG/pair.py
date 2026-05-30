@@ -29,8 +29,6 @@ class Pair:
         self.node_id = pair_id
         self.input_grid = input_grid
         self.output_grid = output_grid
-        # 프로그램 생성 후 적재되는 pair-level 프로그램
-        self.program: list = []
 
     def to_json(self) -> dict:
         """

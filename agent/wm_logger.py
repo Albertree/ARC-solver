@@ -81,8 +81,8 @@ def reset_wm_snapshot(wm=None) -> None:
                → 다음 print_wm_triplets 호출은 변화가 없어 모두 일반 색으로 출력됨
 
     권장 사용 패턴:
-        # run_task.py — 초기 WM 상태를 기준으로 diff 시작
-        build_wm_from_task(task, wm)
+        # 초기 WM 상태를 기준으로 diff 시작
+        inject_arc_task(task, wm)
         reset_wm_snapshot(wm)              # 초기 상태를 baseline으로 설정
         print_wm_triplets(wm, "Initial WM state")  # 색상 없이 현재 상태 출력
 
@@ -197,13 +197,6 @@ def _wm_as_entries(wm) -> list[_WME]:
                 _collect(attr, child_attr, child_val, id_gen, out, attr, depth=0)
             continue
         _collect(root, attr, val, id_gen, out, root, depth=0)
-
-    # task는 WM 밖(파이썬 레벨)의 외부 참조이므로 요약만 출력한다.
-    # SOAR 스타일에서는 환경 입력은 io/input-link 아래로 들어가야 하므로
-    # 여기 값은 디버그 용도로만 유지한다.
-    if getattr(wm, "task", None) is not None:
-        summary = getattr(wm.task, "task_hex", repr(wm.task))
-        out.append(_WME(root, "task_ref", f"<task {summary}>", f"{root}/task_ref", True, 0))
 
     # S2, S3, … (서브스테이트 스택) — 각 substate는 독립된 Sx identifier로만 표현한다.
     for depth, substate in enumerate(wm._substate_stack, start=2):

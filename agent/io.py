@@ -36,19 +36,3 @@ def inject_arc_task(task, wm) -> None:
     in_link["task"] = task.task_hex
     wm.register_wme("input-link", "task", task.task_hex)
 
-
-def clear_input_link(wm) -> None:
-    """^input-link 아래의 내용을 비운다 (다음 execution cycle 입력 갱신용)."""
-    io = wm.s1.get("io")
-    if not isinstance(io, dict) or "input-link" not in io:
-        raise ValueError("WM에 io/input-link 구조가 없습니다.")
-    io["input-link"].clear()
-
-
-def clear_output_link(wm) -> None:
-    """^output-link 아래의 내용을 비운다 (환경에 반영 후 초기화)."""
-    io = wm.s1.get("io")
-    if not isinstance(io, dict) or "output-link" not in io:
-        raise ValueError("WM에 io/output-link 구조가 없습니다.")
-    io["output-link"].clear()
-

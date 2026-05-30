@@ -13,7 +13,6 @@ cycle — SOAR 결정 사이클.
 
 from __future__ import annotations
 
-from agent.agent_common import goal_satisfied
 from agent.wm_logger import print_wm_triplets
 from agent.propose_wm import (
     materialize_operator_proposals,
