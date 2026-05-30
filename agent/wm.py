@@ -42,7 +42,7 @@ import copy
 import itertools
 from typing import Any
 
-MAX_SUBSTATE_DEPTH: int = 2
+MAX_SUBSTATE_DEPTH: int = 3   # TASK(S1)→PAIR(S2)→GRID(S3)→OBJECT(S4)
 
 # SOAR 스타일에서 기본적으로 보호하고 싶은 top-level 슬롯들
 _RESERVED_TOP_KEYS = frozenset({"io"})

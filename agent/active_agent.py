@@ -5,7 +5,7 @@ ARCEnvironment의 agent.solve(task) 인터페이스를 구현한다.
 
 from agent.wm import WorkingMemory
 from agent.descent import descend_to_decisive
-from agent.predict import predict_by_all_pair_comm, emit_answer
+from agent.predict import predict, emit_answer
 from agent.io import inject_arc_task
 from agent.wm_logger import reset_wm_snapshot, print_wm_triplets
 from procedural_memory.DSL.relation import verdict
@@ -65,7 +65,7 @@ class ActiveSoarAgent:
 
         answers = None
         if result["decisive"]:
-            grid = predict_by_all_pair_comm(result["evidence"])
+            grid = predict(result["evidence"])
             answers = emit_answer(task, grid)
 
         if self._log_wm:

@@ -6,7 +6,7 @@ SOAR substate 스택 위에 얹혀, 각 레벨(TASK/PAIR/GRID)의 목표를 보�
 즉 B 는 SOAR substate 스택의 *목표-증강 뷰* — 별도 구조를 두지 않는다.
 """
 
-LEVELS = ["TASK", "PAIR", "GRID"]
+LEVELS = ["TASK", "PAIR", "GRID", "OBJECT"]
 
 
 def next_level(level: str):

@@ -1,22 +1,26 @@
 """
-Predict (PredictByAllPairCommOp) + K (output / emit_answer).
+Predict + K (output / emit_answer).
 
-GRID 레벨의 결정적 비교 — 모든 example G1 이 COMM — 으로부터 test 출력을 도출한다.
-값-agnostic: 정답 값을 하드코딩하지 않고 *비교 결과(공통 grid)* 에서 끌어온다 (P3/P4).
-같은 코드가 easy000a((5,5)빨강) 도, easy000a2(다른 고정 출력) 도 통과해야 한다.
+결정적 비교(descend_to_decisive)의 evidence 로부터 test 출력을 도출한다. 값-agnostic:
+정답을 하드코딩하지 않고 *비교 결과* 에서 끌어온다 (P3/P4). evidence 모양에 따라 분기:
+  · Slice 1 (모든 G1 COMM): evidence={size, color, contents} → 공통 contents 복사
+  · Slice 2 (객체 스키마):  evidence={size, position, color} → make_grid+coloring 조합
 """
 
+from procedural_memory.DSL.transformation import make_grid, coloring
 
-def predict_by_all_pair_comm(evidence: dict):
-    """모든 example G1 이 COMM → test 출력 = 그 공통 grid.
 
-    contents 가 COMM(전부 동일)이므로 공통 contents 가 곧 답. evidence 는
-    descend_to_decisive 의 결정적 결과 {size, color, contents} (값 하드코딩 ✗).
-    """
-    return evidence["contents"]
+def predict(evidence: dict):
+    """evidence → 출력 grid (2D 배열)."""
+    if "contents" in evidence:
+        # Slice 1: 출력 고정 — 공통 grid 그대로
+        return evidence["contents"]
+    # Slice 2: 위치(COMM) + 색(G0) 스키마를 씨앗 2개로 *구성*
+    r, c = evidence["position"]
+    return coloring(make_grid(evidence["size"], 0), (r, c), evidence["color"])
 
 
 def emit_answer(task, grid) -> list:
-    """K (output) — 모든 test pair 에 공통 grid 를 제출한다.
-    Slice 1 은 출력 고정(input 무관)이라 test 마다 같은 grid."""
+    """K (output) — test pair 마다 출력 grid 제출.
+    (Slice 1~2 는 test pair 1개. 다중 test·test별 G0 변수는 추후.)"""
     return [grid for _ in task.test_pairs]
