@@ -1,12 +1,21 @@
 """
 property DSL — ARCKG 노드 to_json() 키를 함수형으로 노출 (재계산 ✗, 노출 ○).
 
-Slice 1 은 GRID 에서 끝나므로 object/pixel property 는 불필요 (SLICE_1_DEV §6).
+*계층별로* 묶는다 (property 는 그 입력 노드의 계층에 속한다):
+
+  TASK-level   : pair_count
+  PAIR-level   : grid_count
+  GRID-level   : size, color, contents
+  OBJECT-level : color_of, coordinate_of, size_of, area_of
+
+(각 함수의 입력 타입 = 그 property 의 계층. registry SPECS 의 in[0] 으로도 계층을 안다.)
+PIXEL-level property 는 아직 불필요 — 도입 시 여기 같은 자리에.
 """
 
 from procedural_memory.DSL.registry import dsl
 
 
+# ── TASK-level ──────────────────────────────────────────────
 @dsl("property", ["task"], "int")
 def pair_count(task):
     """task 의 pair 수 (example + test)."""
@@ -14,12 +23,14 @@ def pair_count(task):
     return j["example_pair_count"] + j["test_pair_count"]
 
 
+# ── PAIR-level ──────────────────────────────────────────────
 @dsl("property", ["pair"], "int")
 def grid_count(pair):
     """pair 의 grid 수 (2=in+out, 1=in only)."""
     return pair.to_json()["grid_count"]
 
 
+# ── GRID-level ──────────────────────────────────────────────
 @dsl("property", ["grid"], "size")
 def size(grid):
     """grid 크기 {height, width}."""
@@ -38,8 +49,7 @@ def contents(grid):
     return grid.to_json()["contents"]
 
 
-# ── 객체 property (Slice 2~, object.to_json() 노출) ──
-
+# ── OBJECT-level ────────────────────────────────────────────
 @dsl("property", ["object"], "color-set")
 def color_of(obj):
     """객체 색 집합 {0..9: bool}."""

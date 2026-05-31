@@ -74,9 +74,9 @@ def _try_resolve(level: str, task) -> dict:
                 f"→ G1 obj(색 {_fgcolor(color_of(o1))} @{coordinate_of(o1)[0]})")
         schema = anti_unify_objects(examples, ["color", "coordinate"])
         out_sizes = [p.output_grid.to_json()["size"] for p in task.example_pairs]
-        schema["grid_size"] = ({"kind": "const", "value": out_sizes[0]}
-                               if all(s == out_sizes[0] for s in out_sizes)
-                               else {"kind": "unexplained"})
+        schema["grid_size"] = (
+            {"kind": "const", "value": out_sizes[0], "via": "const", "scope": "inter", "mode": "elemental"}
+            if all(s == out_sizes[0] for s in out_sizes) else {"kind": "unexplained"})
         examined.append("anti-unify schema: " + ", ".join(f"{k}={v['kind']}" for k, v in schema.items()))
         decisive = is_solvable(schema)
         evidence = None
