@@ -59,13 +59,32 @@ def solve_with_trace(task_id):
             "result": result, "answer": answer, "correct": bool(gt) and answer == gt[0]}
 
 
-# ── 레벨별 흐름 성격(고정/막힘/우선순위) 설명 ──
-FLOW_NOTE = {
-    "TASK": "레벨 순서(TASK→PAIR→GRID→OBJECT)는 <b>코드로 고정</b>(LEVELS). 진입은 항상 TASK.",
-    "PAIR": "TASK 에서 <b>막혀(impasse)</b> 한 단계 내려옴 — 강제 아님, 결정 못 해서.",
-    "GRID": "PAIR 에서 <b>막혀</b> 내려옴.",
-    "OBJECT": "GRID 에서 <b>막혀</b> 내려옴. 여기서 property 별 <b>우선순위 탐색</b>.",
-}
+def _short(v, n=44):
+    s = str(v)
+    return html.escape(s if len(s) <= n else s[:n] + " …")
+
+
+def render_receipt(receipt, depth=2):
+    """comparison receipt 를 per-property COMM/DIFF·점수로 (긴 값은 … 후략)."""
+    def rr(r, d):
+        t, sc = r.get("type"), r.get("score")
+        head = (f'<span class="{ "ok" if t == "COMM" else "bad" }">{t}</span>'
+                + (f' <span class="muted">({sc})</span>' if sc else ""))
+        cat = r.get("category")
+        if isinstance(cat, dict) and d > 0:
+            items = [(k, v) for k, v in cat.items() if isinstance(v, dict)]
+            shown = items[:6]
+            lis = "".join(f'<li><code>{html.escape(str(k))}</code>: {rr(v, d - 1)}</li>' for k, v in shown)
+            more = (f'<li class="muted">… ({len(items) - len(shown)}개 더)</li>'
+                    if len(items) > len(shown) else "")
+            return head + f'<ul class="rec">{lis}{more}</ul>'
+        if "comp1" in r:
+            return head + f' <span class="muted">[{_short(r.get("comp1"))} | {_short(r.get("comp2"))}]</span>'
+        return head
+    return rr(receipt["result"], depth)
+
+
+_TAG_LABEL = {"observe": "관측", "compare": "비교", "goal": "목표변경", "decide": "판단"}
 
 
 def render_task(d):
@@ -80,37 +99,45 @@ def render_task(d):
                  f'<div class="cap">example</div></div>')
     for gi, go in d["grids"]["test"]:
         h.append(f'<div class="pair test">{grid_html(gi)}<span class="arr">→</span>{grid_html(go)}'
-                 f'<div class="cap">test (출력은 예측 대상)</div></div>')
+                 f'<div class="cap">test (출력=예측대상)</div></div>')
     h.append('</div>')
 
-    # 2) 풀이 흐름 (레벨별)
-    h.append('<h3>2. 풀이 흐름 (막혀야 내려간다 · P1)</h3>')
-    for lv, goal, r in d["levels"]:
+    # 2) 풀이 흐름 — 레벨별, phase(관측·비교·목표변경) 단위. 목표는 관측-주도로 진화.
+    h.append('<h3>2. 풀이 흐름 (막혀야 내려간다 · 목표는 관측 때마다 진화)</h3>')
+    fixed = "레벨 순서(TASK→PAIR→GRID→OBJECT)는 <b>코드 고정</b>; 내려가는 <b>시점</b>은 막힘(impasse)."
+    for li, (lv, goal, r) in enumerate(d["levels"]):
         cls = "decisive" if r["decisive"] else "impasse"
-        h.append(f'<div class="step {cls}"><div class="lv">[{lv}]</div>'
-                 f'<div class="body"><div class="goal">목표: {html.escape(goal)}</div>'
-                 f'<div class="flow">{FLOW_NOTE.get(lv, "")}</div>')
-        if r["examined"]:
-            h.append('<div class="ex"><b>읽은 정보 · 비교</b><ul>' +
-                     "".join(f"<li>{html.escape(s)}</li>" for s in r["examined"]) + '</ul></div>')
-        # OBJECT 레벨: property 탐색 시도 상세
-        if lv == "OBJECT" and d["attempts"]:
-            h.append('<div class="search"><b>property 탐색 (우선순위대로, 첫 적합 채택)</b>')
-            cur = None
-            for a in d["attempts"]:
-                if a["prop"] != cur:
-                    if cur is not None:
-                        h.append('</ul>')
-                    h.append(f'<div class="prop">▶ <code>{a["prop"]}</code></div><ul>')
-                    cur = a["prop"]
-                mark = '<span class="ok">✓ 채택</span>' if a["ok"] else '<span class="bad">✗</span>'
-                h.append(f'<li>{mark} {html.escape(a["attempt"])} — '
-                         f'<span class="muted">{html.escape(a["detail"])}</span></li>')
-            h.append('</ul></div>')
-        verdict = ("<b class='ok'>결정적 → 멈춤</b>" if r["decisive"]
-                   else "<b class='impasse'>막힘 → 더 깊이 내려감</b>")
-        h.append(f'<div class="decide">판단: {verdict} &nbsp;<span class="muted">'
-                 f'({html.escape(r["reason"])})</span></div></div></div>')
+        note = fixed if li == 0 else "이전 레벨에서 <b>막혀</b> 내려옴 (강제 ✗)."
+        h.append(f'<div class="step {cls}"><div class="lv">[{lv}]</div><div class="body">'
+                 f'<div class="flow">{note}</div><ol class="phases">')
+        for p in r["phases"]:
+            tag = p["tag"]
+            badge = f'<span class="tag t-{tag}">{_TAG_LABEL.get(tag, tag)}</span>'
+            line = f'<li class="ph-{tag}">{badge} {p["desc"]}'
+            if tag == "goal":
+                line += f'<div class="gnow">→ 목표: <b>{html.escape(p["goal"])}</b></div>'
+            for la, lb, rec in p["compares"]:
+                line += (f'<div class="cmp">compare(<code>{la}</code>, <code>{lb}</code>) = '
+                         f'{render_receipt(rec)}</div>')
+            # OBJECT 의 anti-unify(decide) phase 뒤에 property 탐색 상세 붙이기
+            if lv == "OBJECT" and tag == "decide" and d["attempts"]:
+                line += '<div class="search"><b>property 탐색 (우선순위대로, 첫 적합 채택)</b>'
+                cur = None
+                for a in d["attempts"]:
+                    if a["prop"] != cur:
+                        if cur is not None:
+                            line += '</ul>'
+                        line += f'<div class="prop">▶ <code>{a["prop"]}</code></div><ul>'
+                        cur = a["prop"]
+                    mark = '<span class="ok">✓ 채택</span>' if a["ok"] else '<span class="bad">✗</span>'
+                    line += (f'<li>{mark} {html.escape(a["attempt"])} — '
+                             f'<span class="muted">{html.escape(a["detail"])}</span></li>')
+                line += '</ul></div>'
+            h.append(line + '</li>')
+        v = ("<b class='ok'>결정적 → 멈춤</b>" if r["decisive"]
+             else "<b class='impasse'>막힘 → 더 깊이</b>")
+        h.append(f'</ol><div class="decide">{v} <span class="muted">({html.escape(r["reason"])})</span>'
+                 f'</div></div></div>')
 
     # 3) 찾은 규칙(schema) + 예측
     ev = d["result"].get("evidence") or {}
@@ -162,11 +189,21 @@ table.grid td{width:13px;height:13px;border:1px solid #333}
 .step.decisive{border-left-color:#1a7f37;background:#f3faf4}
 .step.impasse{border-left-color:#d4a017;background:#fdf9ef}
 .step .lv{font-weight:700;min-width:64px;color:#444}
-.goal{font-weight:600}.flow{font-size:.9em;color:#666;margin:2px 0 6px}
-.ex ul,.search ul{margin:4px 0 8px;padding-left:20px}.ex li,.search li{font-size:.92em}
-.search{margin:6px 0;padding:8px;background:#f0f4ff;border-radius:6px}
+.flow{font-size:.9em;color:#666;margin:2px 0 6px}
+ol.phases{margin:4px 0;padding-left:22px}
+ol.phases>li{margin:5px 0;font-size:.93em}
+li.ph-goal{background:#fff7e6;border-left:3px solid #e0a000;padding:3px 8px;list-style:none;margin-left:-22px}
+li.ph-compare{padding:2px 0}
+.tag{font-size:.72em;padding:1px 6px;border-radius:9px;margin-right:5px;vertical-align:middle;color:#fff}
+.t-observe{background:#9aa}.t-compare{background:#3b6}.t-goal{background:#e0a000}.t-decide{background:#789}
+.gnow{margin:3px 0 0 4px;color:#a06000}
+.cmp{margin:4px 0 4px 8px;padding:4px 8px;background:#f4f8ff;border-radius:5px;font-size:.95em}
+ul.rec{margin:2px 0;padding-left:18px;list-style:none}
+ul.rec>li{margin:1px 0;font-size:.95em}
+.search{margin:6px 0;padding:8px;background:#eef3ff;border-radius:6px}
+.search ul{margin:3px 0 6px;padding-left:18px}.search li{font-size:.9em}
 .prop{font-weight:600;margin-top:4px}
-.decide{margin-top:6px}
+.decide{margin-top:8px;font-weight:600}
 table.schema{border-collapse:collapse;margin:8px 0}
 table.schema th,table.schema td{border:1px solid #ccc;padding:4px 10px;font-size:.92em;text-align:left}
 table.schema th{background:#f0f0f0}

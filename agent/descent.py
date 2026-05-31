@@ -1,11 +1,9 @@
 """
-Descent (모듈 A = intra) — 막혀야 내려간다 (P1: 계층 깊이는 *필요* 에 의해).
+Descent (모듈 A) + GoalStack(B) — 막혀야 내려간다 (P1). 그리고 *목표는 관측-주도*로
+바뀐다: 레벨 진입 시 고정이 아니라, 새 observation(특히 비교 결과)을 받을 때마다 진화.
 
-TASK→PAIR→GRID→OBJECT. 각 레벨에서 Inter 비교(모듈 C)를 시도하고, 목적 달성이
-불가능하면(막힘) 다음 레벨로 intra-descend. 강제 하강 ✗ — 결정적 비교를 찾는 순간 멈춤.
-
-각 레벨에서 *읽은 ARCKG 정보·비교 결과·schema* 를 WM substate(`examined`)에 기록한다
-→ WM 로그로 "무슨 정보가 있고 무엇을 비교했나"가 보인다.
+흐름(관측 → 가능?No → 비교 → 발견 → 목표 변경 → DSL?No → 하강)을 phase 단위로 기록한다.
+각 비교는 *전체 receipt* 를 phase 에 담는다 (해설서가 per-property COMM/DIFF·점수를 표기).
 """
 
 from procedural_memory.DSL.util import pairs_of, role_of, is_foreground
@@ -15,105 +13,131 @@ from procedural_memory.DSL.relation import compare, verdict
 from program.anti_unification import anti_unify_objects, is_solvable, resolve_property
 from agent.goal_stack import GoalStack, next_level
 
-_GOAL = {
-    "TASK": "solve task — Pa 의 출력 만들기",
-    "PAIR": "Pa 에 빠진 grid(출력) 만들기",
-    "GRID": "출력 grid 의 {size, color, contents} 정하기",
-    "OBJECT": "출력 객체의 {위치, 색} 정하기 — 위치=COMM, 색=G0 에서",
-}
-
 _is_output = lambda g: role_of(g) == "output"
-_sn = lambda node: ".".join(node.node_id.split(".")[1:])          # 짧은 라벨
-_cols = lambda d: sorted(k for k, v in d.items() if v)            # color dict → 색 목록
+_sn = lambda n: ".".join(n.node_id.split(".")[1:])
+_cols = lambda d: sorted(k for k, v in d.items() if v)
 _fgcolor = lambda d: next((k for k, v in d.items() if v and k != 0), None)
 
+ROOT_GOAL = "이 문제(Task)를 해결한다 = Pa 의 출력 만들기"
 
-def _try_resolve(level: str, task) -> dict:
-    """현재 레벨에서 결정적 비교를 시도. 반환: {decisive, reason, examined, evidence}."""
+
+def _ph(desc, goal, compares=None, tag="observe"):
+    return {"desc": desc, "goal": goal, "compares": compares or [], "tag": tag}
+
+
+def _try_resolve(level, task, goal):
+    """현재 레벨 처리 → {decisive, reason, phases, evidence, goal}. 목표는 관측 중 진화."""
+    P = []
+
     if level == "TASK":
-        examined = [f"TASK: example {len(task.example_pairs)}쌍, test {len(task.test_pairs)}쌍 (형제 TASK 없음)"]
-        return {"decisive": False, "reason": "형제 TASK 없음 → 비교 0",
-                "examined": examined, "evidence": None}
+        P.append(_ph(f"TASK 받음 — Task.property 확인: example {len(task.example_pairs)}쌍, "
+                     f"test {len(task.test_pairs)}쌍", goal))
+        P.append(_ph("목표 달성에 지금 할 수 있는 비교? — 형제 TASK 없음 → 비교 0", goal, tag="decide"))
+        return {"decisive": False, "reason": "형제 TASK 없음 → 비교 0 → 하강",
+                "phases": P, "evidence": None, "goal": goal}
 
     if level == "PAIR":
         pairs = select(task, "pair")
-        receipts = compare(pairs, pairs)
-        examined = ["grid-count: " + ", ".join(f"{_sn(p)}={grid_count(p)}" for p in pairs)]
-        examined += [f"compare({_sn(x)},{_sn(y)}) = {verdict(r)[0]}" for x, y, r in receipts]
-        return {"decisive": False, "reason": "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정",
-                "examined": examined, "evidence": None}
+        for p in pairs:
+            P.append(_ph(f"PAIR {_sn(p)} 관측 — grid_count = {grid_count(p)}", goal))
+        P.append(_ph("목표 달성 가능? — No. 가진 PAIR.property 끼리 비교", goal, tag="decide"))
+        recs = compare(pairs, pairs)
+        P.append(_ph("PAIR 끼리 비교 (Inter-Pair, property=grid_count)", goal,
+                     compares=[(_sn(x), _sn(y), r) for x, y, r in recs], tag="compare"))
+        goal = "Pa 의 빠진 grid(출력) 만들기 — grid_count 를 P0·P1 과 같게"
+        P.append(_ph("Pa 의 grid_count 가 다름 발견 → <b>목표 변경</b>", goal, tag="goal"))
+        P.append(_ph("이 변화를 만들 DSL 있나? — grid 추가 DSL 없음 → 더 깊이", goal, tag="decide"))
+        return {"decisive": False, "reason": "grid_count 차이는 알았으나 만들 DSL 없음 → 하강",
+                "phases": P, "evidence": None, "goal": goal}
 
     if level == "GRID":
+        ex = task.example_pairs
+        goal = "Pa 의 GRID 3요소(size·color·contents) 찾기"
+        P.append(_ph(f"{_sn(ex[0].input_grid)} 관측 — GRID 구성요소 3개(size·color·contents) 인지 "
+                     f"→ <b>목표 변경</b>", goal, tag="goal"))
+        # 한 pair 안 grid 비교 (Intra-Pair: 변화 전 G0 ↔ 변화 후 G1) — 흐름상 거침
+        intra = []
+        for p in ex:
+            r = compare([p.input_grid], [p.output_grid])
+            intra.append((_sn(p.input_grid), _sn(p.output_grid), r[0][2]))
+        P.append(_ph("한 Pair 안 G0(변화전)↔G1(변화후) 비교 — 어느 쪽이 답인지 모르니 흐름상 거침", goal,
+                     compares=intra, tag="compare"))
+        goal = "Pa.G1(변화 후)의 3요소 찾기"
+        P.append(_ph("test 에 없는 건 G1(출력) → 비교 대상 = 변화 후 G1 확정 → <b>목표 구체화</b>", goal, tag="goal"))
+        # G1 끼리 비교 (Inter-Pair-Grid)
         g1s = [g for p in pairs_of(task) for g in select(p, "grid", _is_output)]
-        receipts = compare(g1s, g1s)
-        examined = [f"{_sn(g)}: size={size(g)['height']}x{size(g)['width']}, colors={_cols(color(g))}"
-                    for g in g1s]
-        examined += [f"compare({_sn(x)},{_sn(y)}) = {verdict(r)[0]}, COMM={verdict(r)[2]}"
-                     for x, y, r in receipts]
-        all_comm = bool(receipts) and all(verdict(r)[0] == "COMM" for _, _, r in receipts)
+        recs = compare(g1s, g1s)
+        P.append(_ph("규칙: '모든 Pair 의 변화가 같아야'. G1=변화후. example G1 끼리 비교", goal,
+                     compares=[(_sn(x), _sn(y), r) for x, y, r in recs], tag="compare"))
+        all_comm = bool(recs) and all(verdict(r)[0] == "COMM" for _, _, r in recs)
         if all_comm:
             ref = g1s[0]
-            evidence = {"size": size(ref), "color": color(ref), "contents": contents(ref)}
+            P.append(_ph("size·color·contents 가 G1 전부 COMM → 3요소 모두 결정 (출력 고정)", goal, tag="decide"))
             return {"decisive": True, "reason": "모든 example G1 COMM → 공통 grid 가 답",
-                    "examined": examined, "evidence": evidence}
-        comm = verdict(receipts[0][2])[2] if receipts else []
-        return {"decisive": False,
-                "reason": f"부분 COMM (같음={comm}) — 출력이 입력에 의존 → OBJECT 로",
-                "examined": examined, "evidence": None}
+                    "phases": P, "evidence": {"size": size(ref), "color": color(ref), "contents": contents(ref)},
+                    "goal": goal}
+        commk = verdict(recs[0][2])[2] if recs else []
+        goal = "Pa.G1 의 contents 유추 (size·color 는 G1 공통으로 결정됨)"
+        P.append(_ph(f"size·color 는 G1 공통(={commk}) → 결정. 하지만 contents 다름 → "
+                     f"변화 후끼리론 부족 → <b>목표 변경</b>", goal, tag="goal"))
+        P.append(_ph("contents 는 G0·G1 다 달라 'after'끼리론 불가 → 변화(G0→G1) 관계에 초점 → OBJECT 하강",
+                     goal, tag="decide"))
+        return {"decisive": False, "reason": f"size·color 는 COMM, contents 다름 → 변화 관계로 OBJECT 하강",
+                "phases": P, "evidence": None, "goal": goal}
 
     if level == "OBJECT":
+        goal = "G0→G1 변화를 해소하는 DSL 조합 찾기 (Pa.G1.contents)"
+        P.append(_ph("변화(G0→G1) 관계에 초점 — 각 Pair 의 G0·G1 객체 관측", goal, tag="goal"))
         fg = lambda g: select(g, "object", is_foreground)[0]
 
         def ctx(grid):
-            """grid 의 *통합 property 맥락* — 전경 객체 속성 + grid 속성 한 namespace.
-            property 가 서로(객체↔grid)를 가로질러 조합될 수 있게 (예: 위치 ← grid 크기)."""
             o = fg(grid).to_json()
             gs = grid.to_json()["size"]
             return {"color": o["color"], "coordinate": o["coordinate"],
                     "grid_size": gs, "grid_h": gs["height"], "grid_w": gs["width"]}
 
-        examined, examples = [], []
+        examples, change_cmp = [], []
         for p in task.example_pairs:
-            ci, co = ctx(p.input_grid), ctx(p.output_grid)
-            examples.append((ci, co))
-            examined.append(
-                f"{_sn(p)}: G0(색 {_fgcolor(ci['color'])} @{ci['coordinate'][0]} grid {ci['grid_h']}x{ci['grid_w']}) "
-                f"→ G1(색 {_fgcolor(co['color'])} @{co['coordinate'][0]} grid {co['grid_h']}x{co['grid_w']})")
+            o0, o1 = fg(p.input_grid), fg(p.output_grid)
+            examples.append((ctx(p.input_grid), ctx(p.output_grid)))
+            change_cmp.append((f"{_sn(p)}.G0.obj", f"{_sn(p)}.G1.obj", compare([o0], [o1])[0][2]))
+        P.append(_ph("G0.objects ↔ G1.objects 집단 비교 → 점수 높은 매칭을 '가장 유력한 변화쌍'으로 "
+                     "[지금은 전경 객체 1개로 단순화 — 항목 ③ 논의 대상]", goal,
+                     compares=change_cmp, tag="compare"))
 
         schema = anti_unify_objects(examples, ["color", "coordinate", "grid_size"])
-        examined.append("anti-unify schema: " + ", ".join(
-            f"{k}={v['kind']}" for k, v in schema.items()))
+        P.append(_ph("그 변화쌍의 property 별 변화를 우선순위 탐색으로 일반화 (anti-unify): "
+                     + ", ".join(f"{k}={v.get('via', v['kind'])}" for k, v in schema.items()), goal, tag="decide"))
         decisive = is_solvable(schema)
         evidence = None
         if decisive:
             test = ctx(task.test_pairs[0].input_grid)
-            evidence = {
-                "schema": schema,
-                "size": resolve_property(schema["grid_size"], test),
-                "cells": resolve_property(schema["coordinate"], test),
-                "color": _fgcolor(resolve_property(schema["color"], test)),
-            }
+            evidence = {"schema": schema,
+                        "size": resolve_property(schema["grid_size"], test),
+                        "cells": resolve_property(schema["coordinate"], test),
+                        "color": _fgcolor(resolve_property(schema["color"], test))}
         return {"decisive": decisive,
-                "reason": "schema 전부 설명됨" if decisive else "schema 에 unexplained 있음",
-                "examined": examined, "evidence": evidence}
+                "reason": "변화 schema 전부 설명됨" if decisive else "schema 에 unexplained 있음",
+                "phases": P, "evidence": evidence, "goal": goal}
 
-    return {"decisive": False, "reason": f"미지원 level {level}",
-            "examined": [], "evidence": None}
+    return {"decisive": False, "reason": f"미지원 level {level}", "phases": P, "evidence": None, "goal": goal}
 
 
 def descend_to_decisive(wm, task, on_level=None):
-    """막힘 기반 descent 루프. 결정적 비교에 도달하면 (result, goal_stack) 반환.
-    각 레벨에서 examined(읽은 ARCKG 정보·비교)를 WM substate 에 기록 → WM 로그 가시화."""
-    gs = GoalStack(wm, _GOAL["TASK"])
+    """막힘 기반 descent. 목표는 관측-주도로 진화하며 thread 된다."""
+    gs = GoalStack(wm, ROOT_GOAL)
+    goal = ROOT_GOAL
     while True:
         level = gs.current_level()
-        result = _try_resolve(level, task)
-        wm.active["examined"] = result["examined"]      # WM 에 기록 → 로그로 보임
+        result = _try_resolve(level, task, goal)
+        goal = result["goal"]                                  # 진화한 목표를 이어감
+        wm.active["goal"] = goal
+        wm.active["examined"] = [p["desc"] for p in result["phases"]]
         if on_level:
-            on_level(level, gs.current_goal(), result)
+            on_level(level, goal, result)
         if result["decisive"]:
             return result, gs
         nxt = next_level(level)
         if nxt is None:
             return result, gs
-        gs.descend(nxt, _GOAL[nxt], result["reason"])
+        gs.descend(nxt, goal, result["reason"])

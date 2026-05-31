@@ -81,12 +81,14 @@ class ActiveSoarAgent:
 
     @staticmethod
     def _log_descent(level, goal, res):
-        """descent 각 레벨 trace 출력 (log_wm 시) — 읽은 ARCKG 정보·비교."""
-        print(f"  [{level}] goal: {goal}")
-        for line in res["examined"]:
-            print(f"        {line}")
+        """descent 각 레벨 trace 출력 (log_wm 시) — phase(관측·비교·목표변경)."""
+        import re
+        strip = lambda s: re.sub(r"<[^>]+>", "", s)
+        print(f"  [{level}] goal: {strip(goal)}")
+        for p in res["phases"]:
+            print(f"        · {strip(p['desc'])}")
         tag = "결정적 ✓ 멈춤" if res["decisive"] else "막힘 → descend"
-        print(f"     → {tag}  ({res['reason']})")
+        print(f"     → {tag}  ({strip(res['reason'])})")
 
     def on_substate_resolved(self, substate: dict, task_hex: str):
         """
