@@ -218,9 +218,10 @@ eval_result/
 !episodic_memory/**
 !procedural_memory/**
 !run_logs/**
-# 단, __pycache__ / .pyc 는 추적 안 함 (위 un-ignore 뒤에 다시 제외)
+# 단, __pycache__ / .pyc / .DS_Store 는 추적 안 함 (위 un-ignore 뒤에 다시 제외)
 __pycache__/
 *.py[codz]
+.DS_Store
 
 # Memory (Claude 자동 메모리 디렉터리)
 memory/

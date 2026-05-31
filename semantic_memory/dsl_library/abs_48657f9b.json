@@ -1,0 +1,31 @@
+{
+  "id": "48657f9b",
+  "schema": {
+    "color": {
+      "kind": "from_g0",
+      "attr": "color"
+    },
+    "coordinate": {
+      "kind": "const",
+      "value": [
+        [
+          5,
+          5
+        ]
+      ]
+    },
+    "grid_size": {
+      "kind": "const",
+      "value": {
+        "height": 6,
+        "width": 6
+      }
+    }
+  },
+  "provenance": [
+    {
+      "task": "easy000c"
+    }
+  ],
+  "reuse_count": 0
+}

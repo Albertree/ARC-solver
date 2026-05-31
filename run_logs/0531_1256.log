@@ -1,0 +1,382 @@
+[run-log] run_logs/0531_1256.log
+==============================================================
+  [ARC-solver] 2026-05-31 12:56:55
+  cmd  : run.py --task easy000a easy000b easy000c easy000d
+  mode : train
+  tasks: easy000a easy000b easy000c easy000d  (n=4)
+  steps: max_steps=50  max_attempts=3
+  log  : log_wm=True  quiet=False
+==============================================================
+
+══════════════════════════════════════════════════════════════
+  [Step 0] Initial WM (before input)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════
+  [Step 0] After input-link injection
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
++       (I2 ^task easy000a)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+  [TASK] goal: solve task — Pa 의 출력 만들기
+     → 막힘 → descend  (형제 TASK 없음 → 비교 0)
+  [PAIR] goal: Pa 에 빠진 grid(출력) 만들기
+        compare(P0↔P1) = COMM (1/1)
+        compare(P0↔Pa) = DIFF (0/1)
+        compare(P1↔Pa) = DIFF (0/1)
+     → 막힘 → descend  (pair 비교는 grid-count 뿐 → 출력 grid 내용 미정)
+  [GRID] goal: 출력 grid 의 {size, color, contents} 정하기
+        compare(P0.G1↔P1.G1) = COMM (3/3)
+     → 결정적 ✓ 멈춤  (모든 example G1 COMM → 공통 grid 가 답)
+══════════════════════════════════════════════════════════════
+  [Step 1] After descent (substate stack)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5
++       ^goal "solve task — Pa 의 출력 만들기"
++       ^level TASK)
++   (S2 ^type state
++       ^superstate S1
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I6
++       ^epmem I7
++       ^descend-reason "형제 TASK 없음 → 비교 0"
++       ^goal "Pa 에 빠진 grid(출력) 만들기"
++       ^level PAIR)
++   (S3 ^type state
++       ^superstate S2
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I8
++       ^epmem I9
++       ^descend-reason "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정"
++       ^goal "출력 grid 의 {size, color, contents} 정하기"
++       ^level GRID)
+      (I1 ^input-link I2
+          ^output-link I3)
+        (I2 ^task easy000a)
+      (I4 ^id SM1)
+      (I5 ^id E1)
++     (I6 ^id SM2)
++     (I7 ^id E2)
++     (I8 ^id SM3)
++     (I9 ^id E3)
+══════════════════════════════════════════════════════════════
+
+
+[answer] 제출 1개
+══════════════════════════════════════════════════════════════
+  [Step 0] Initial WM (before input)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════
+  [Step 0] After input-link injection
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
++       (I2 ^task easy000b)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+  [TASK] goal: solve task — Pa 의 출력 만들기
+     → 막힘 → descend  (형제 TASK 없음 → 비교 0)
+  [PAIR] goal: Pa 에 빠진 grid(출력) 만들기
+        compare(P0↔P1) = COMM (1/1)
+        compare(P0↔Pa) = DIFF (0/1)
+        compare(P1↔Pa) = DIFF (0/1)
+     → 막힘 → descend  (pair 비교는 grid-count 뿐 → 출력 grid 내용 미정)
+  [GRID] goal: 출력 grid 의 {size, color, contents} 정하기
+        compare(P0.G1↔P1.G1) = COMM (3/3)
+     → 결정적 ✓ 멈춤  (모든 example G1 COMM → 공통 grid 가 답)
+══════════════════════════════════════════════════════════════
+  [Step 1] After descent (substate stack)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5
++       ^goal "solve task — Pa 의 출력 만들기"
++       ^level TASK)
++   (S2 ^type state
++       ^superstate S1
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I6
++       ^epmem I7
++       ^descend-reason "형제 TASK 없음 → 비교 0"
++       ^goal "Pa 에 빠진 grid(출력) 만들기"
++       ^level PAIR)
++   (S3 ^type state
++       ^superstate S2
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I8
++       ^epmem I9
++       ^descend-reason "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정"
++       ^goal "출력 grid 의 {size, color, contents} 정하기"
++       ^level GRID)
+      (I1 ^input-link I2
+          ^output-link I3)
+        (I2 ^task easy000b)
+      (I4 ^id SM1)
+      (I5 ^id E1)
++     (I6 ^id SM2)
++     (I7 ^id E2)
++     (I8 ^id SM3)
++     (I9 ^id E3)
+══════════════════════════════════════════════════════════════
+
+
+[answer] 제출 1개
+══════════════════════════════════════════════════════════════
+  [Step 0] Initial WM (before input)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════
+  [Step 0] After input-link injection
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
++       (I2 ^task easy000c)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+  [TASK] goal: solve task — Pa 의 출력 만들기
+     → 막힘 → descend  (형제 TASK 없음 → 비교 0)
+  [PAIR] goal: Pa 에 빠진 grid(출력) 만들기
+        compare(P0↔P1) = COMM (1/1)
+        compare(P0↔Pa) = DIFF (0/1)
+        compare(P1↔Pa) = DIFF (0/1)
+     → 막힘 → descend  (pair 비교는 grid-count 뿐 → 출력 grid 내용 미정)
+  [GRID] goal: 출력 grid 의 {size, color, contents} 정하기
+        compare(P0.G1↔P1.G1) = DIFF (1/3)
+     → 막힘 → descend  (부분 COMM (같음=['size']) — 출력이 입력에 의존 → OBJECT 로)
+  [OBJECT] goal: 출력 객체의 {위치, 색} 정하기 — 위치=COMM, 색=G0 에서
+     → 결정적 ✓ 멈춤  (anti-unify schema {'color': 'from_g0', 'coordinate': 'const', 'grid_size': 'const'})
+══════════════════════════════════════════════════════════════
+  [Step 1] After descent (substate stack)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5
++       ^goal "solve task — Pa 의 출력 만들기"
++       ^level TASK)
++   (S2 ^type state
++       ^superstate S1
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I6
++       ^epmem I7
++       ^descend-reason "형제 TASK 없음 → 비교 0"
++       ^goal "Pa 에 빠진 grid(출력) 만들기"
++       ^level PAIR)
++   (S3 ^type state
++       ^superstate S2
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I8
++       ^epmem I9
++       ^descend-reason "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정"
++       ^goal "출력 grid 의 {size, color, contents} 정하기"
++       ^level GRID)
++   (S4 ^type state
++       ^superstate S3
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I10
++       ^epmem I11
++       ^descend-reason "부분 COMM (같음=['size']) — 출력이 입력에 의존 → OBJECT 로"
++       ^goal "출력 객체의 {위치, 색} 정하기 — 위치=COMM, 색=G0 에서"
++       ^level OBJECT)
+      (I1 ^input-link I2
+          ^output-link I3)
++     (I10 ^id SM4)
++     (I11 ^id E4)
+        (I2 ^task easy000c)
+      (I4 ^id SM1)
+      (I5 ^id E1)
++     (I6 ^id SM2)
++     (I7 ^id E2)
++     (I8 ^id SM3)
++     (I9 ^id E3)
+══════════════════════════════════════════════════════════════
+
+
+[answer] 제출 1개
+══════════════════════════════════════════════════════════════
+  [Step 0] Initial WM (before input)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════
+  [Step 0] After input-link injection
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5)
+      (I1 ^input-link I2
+          ^output-link I3)
++       (I2 ^task easy000d)
+      (I4 ^id SM1)
+      (I5 ^id E1)
+══════════════════════════════════════════════════════════════
+
+  [TASK] goal: solve task — Pa 의 출력 만들기
+     → 막힘 → descend  (형제 TASK 없음 → 비교 0)
+  [PAIR] goal: Pa 에 빠진 grid(출력) 만들기
+        compare(P0↔P1) = COMM (1/1)
+        compare(P0↔Pa) = DIFF (0/1)
+        compare(P1↔Pa) = DIFF (0/1)
+     → 막힘 → descend  (pair 비교는 grid-count 뿐 → 출력 grid 내용 미정)
+  [GRID] goal: 출력 grid 의 {size, color, contents} 정하기
+        compare(P0.G1↔P1.G1) = DIFF (1/3)
+     → 막힘 → descend  (부분 COMM (같음=['size']) — 출력이 입력에 의존 → OBJECT 로)
+  [OBJECT] goal: 출력 객체의 {위치, 색} 정하기 — 위치=COMM, 색=G0 에서
+     → 결정적 ✓ 멈춤  (anti-unify schema {'color': 'from_g0', 'coordinate': 'const', 'grid_size': 'const'})
+══════════════════════════════════════════════════════════════
+  [Step 1] After descent (substate stack)
+══════════════════════════════════════════════════════════════
+    (S1 ^type state
+        ^superstate nil
+        ^io I1
+        ^smem I4
+        ^epmem I5
++       ^goal "solve task — Pa 의 출력 만들기"
++       ^level TASK)
++   (S2 ^type state
++       ^superstate S1
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I6
++       ^epmem I7
++       ^descend-reason "형제 TASK 없음 → 비교 0"
++       ^goal "Pa 에 빠진 grid(출력) 만들기"
++       ^level PAIR)
++   (S3 ^type state
++       ^superstate S2
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I8
++       ^epmem I9
++       ^descend-reason "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정"
++       ^goal "출력 grid 의 {size, color, contents} 정하기"
++       ^level GRID)
++   (S4 ^type state
++       ^superstate S3
++       ^impasse no-change
++       ^choices none
++       ^attribute operator
++       ^quiescence true
++       ^smem I10
++       ^epmem I11
++       ^descend-reason "부분 COMM (같음=['size']) — 출력이 입력에 의존 → OBJECT 로"
++       ^goal "출력 객체의 {위치, 색} 정하기 — 위치=COMM, 색=G0 에서"
++       ^level OBJECT)
+      (I1 ^input-link I2
+          ^output-link I3)
++     (I10 ^id SM4)
++     (I11 ^id E4)
+        (I2 ^task easy000d)
+      (I4 ^id SM1)
+      (I5 ^id E1)
++     (I6 ^id SM2)
++     (I7 ^id E2)
++     (I8 ^id SM3)
++     (I9 ^id E3)
+══════════════════════════════════════════════════════════════
+
+
+[answer] 제출 1개
+[task] easy000a  reward=1.0  submissions=1
+[task] easy000b  reward=1.0  submissions=1
+[task] easy000c  reward=1.0  submissions=1
+[task] easy000d  reward=1.0  submissions=1
+--------------------------------------------------------------
+[summary] correct=4/4 (100.0%)
