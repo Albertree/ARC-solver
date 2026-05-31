@@ -1,19 +1,21 @@
 """
 Descent (모듈 A = intra) — 막혀야 내려간다 (P1: 계층 깊이는 *필요* 에 의해).
 
-TASK→PAIR→GRID. 각 레벨에서 Inter 비교(모듈 C)를 시도하고, 목적 달성이 불가능하면
-(막힘) 다음 레벨로 intra-descend 한다. 강제 하강 ✗ — 결정적 비교를 찾는 순간 멈춘다.
+TASK→PAIR→GRID→OBJECT. 각 레벨에서 Inter 비교(모듈 C)를 시도하고, 목적 달성이
+불가능하면(막힘) 다음 레벨로 intra-descend. 강제 하강 ✗ — 결정적 비교를 찾는 순간 멈춤.
 
-비교 자체는 모듈 C(relation), 목표 스택은 모듈 B(GoalStack). A 는 *언제 내려갈지* 만 정한다.
+각 레벨에서 *읽은 ARCKG 정보·비교 결과·schema* 를 WM substate(`examined`)에 기록한다
+→ WM 로그로 "무슨 정보가 있고 무엇을 비교했나"가 보인다.
 """
 
 from procedural_memory.DSL.util import pairs_of, role_of, is_foreground
-from procedural_memory.DSL.property import size, color, contents
+from procedural_memory.DSL.property import (
+    size, color, contents, grid_count, color_of, coordinate_of,
+)
 from procedural_memory.DSL.relation import select, compare_set, verdict
-from program.anti_unification import anti_unify_objects, is_solvable
+from program.anti_unification import anti_unify_objects, is_solvable, resolve_property
 from agent.goal_stack import GoalStack, next_level
 
-# 레벨별 목표 (B 가 descent 시 채택) — 내려갈수록 구체화
 _GOAL = {
     "TASK": "solve task — Pa 의 출력 만들기",
     "PAIR": "Pa 에 빠진 grid(출력) 만들기",
@@ -22,85 +24,92 @@ _GOAL = {
 }
 
 _is_output = lambda g: role_of(g) == "output"
+_sn = lambda node: ".".join(node.node_id.split(".")[1:])          # 짧은 라벨
+_cols = lambda d: sorted(k for k, v in d.items() if v)            # color dict → 색 목록
+_fgcolor = lambda d: next((k for k, v in d.items() if v and k != 0), None)
 
 
 def _try_resolve(level: str, task) -> dict:
-    """현재 레벨에서 결정적 비교를 시도한다.
-    반환: {decisive, reason, receipts, evidence}. decisive=False 면 막힘."""
+    """현재 레벨에서 결정적 비교를 시도. 반환: {decisive, reason, examined, evidence}."""
     if level == "TASK":
-        # 형제 TASK 가 없으니 비교 0 (P1: 자연 skip) → 결정 불가
+        examined = [f"TASK: example {len(task.example_pairs)}쌍, test {len(task.test_pairs)}쌍 (형제 TASK 없음)"]
         return {"decisive": False, "reason": "형제 TASK 없음 → 비교 0",
-                "receipts": [], "evidence": None}
+                "examined": examined, "evidence": None}
 
     if level == "PAIR":
-        # pair 끼리 Inter 비교 — pair property(grid-count)뿐, 출력 내용은 못 정함
-        receipts = compare_set(select(task, "pair"))
-        return {"decisive": False,
-                "reason": "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정",
-                "receipts": receipts, "evidence": None}
+        pairs = select(task, "pair")
+        receipts = compare_set(pairs)
+        examined = ["grid-count: " + ", ".join(f"{_sn(p)}={grid_count(p)}" for p in pairs)]
+        examined += [f"compare({_sn(x)},{_sn(y)}) = {verdict(r)[0]}" for x, y, r in receipts]
+        return {"decisive": False, "reason": "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정",
+                "examined": examined, "evidence": None}
 
     if level == "GRID":
-        # 다른 pair 의 출력 grid(role==G1)끼리 Inter 비교 — Pa.G1 은 가려져 자연 제외
         g1s = [g for p in pairs_of(task) for g in select(p, "grid", _is_output)]
         receipts = compare_set(g1s)
+        examined = [f"{_sn(g)}: size={size(g)['height']}x{size(g)['width']}, colors={_cols(color(g))}"
+                    for g in g1s]
+        examined += [f"compare({_sn(x)},{_sn(y)}) = {verdict(r)[0]}, COMM={verdict(r)[2]}"
+                     for x, y, r in receipts]
         all_comm = bool(receipts) and all(verdict(r)[0] == "COMM" for _, _, r in receipts)
         if all_comm:
-            ref = g1s[0]  # 전부 COMM → 공통값 = 아무 example G1
+            ref = g1s[0]
             evidence = {"size": size(ref), "color": color(ref), "contents": contents(ref)}
             return {"decisive": True, "reason": "모든 example G1 COMM → 공통 grid 가 답",
-                    "receipts": receipts, "evidence": evidence}
-        # 부분 COMM (일부 property 만 같음) → 출력이 입력에 의존 → 객체 레벨로
+                    "examined": examined, "evidence": evidence}
         comm = verdict(receipts[0][2])[2] if receipts else []
         return {"decisive": False,
                 "reason": f"부분 COMM (같음={comm}) — 출력이 입력에 의존 → OBJECT 로",
-                "receipts": receipts, "evidence": None}
+                "examined": examined, "evidence": None}
 
     if level == "OBJECT":
-        fg = lambda g: select(g, "object", is_foreground)[0]   # 전경 객체 1개
-        # 각 pair 의 (G0전경, G1전경) property → anti-unify 로 schema 추출
-        #   intra(같은 pair 입력과 일치) → from_g0,  inter(모든 pair 동일) → const
-        examples = [(fg(p.input_grid).to_json(), fg(p.output_grid).to_json())
-                    for p in task.example_pairs]
-        schema = anti_unify_objects(examples, ["color", "coordinate"])   # 객체 속성
-        # 출력 *grid* 크기도 일반화 (객체 bbox 가 아니라 격자 크기 — Slice 2: const)
+        fg = lambda g: select(g, "object", is_foreground)[0]
+        examined = []
+        examples = []
+        for p in task.example_pairs:
+            o0, o1 = fg(p.input_grid), fg(p.output_grid)
+            examples.append((o0.to_json(), o1.to_json()))
+            examined.append(
+                f"{_sn(p)}: G0 obj(색 {_fgcolor(color_of(o0))} @{coordinate_of(o0)[0]}) "
+                f"→ G1 obj(색 {_fgcolor(color_of(o1))} @{coordinate_of(o1)[0]})")
+        schema = anti_unify_objects(examples, ["color", "coordinate"])
         out_sizes = [p.output_grid.to_json()["size"] for p in task.example_pairs]
         schema["grid_size"] = ({"kind": "const", "value": out_sizes[0]}
                                if all(s == out_sizes[0] for s in out_sizes)
                                else {"kind": "unexplained"})
+        examined.append("anti-unify schema: " + ", ".join(f"{k}={v['kind']}" for k, v in schema.items()))
         decisive = is_solvable(schema)
         evidence = None
         if decisive:
-            test_props = fg(task.test_pairs[0].input_grid).to_json()   # 변수 출처
-            resolve = lambda e: e["value"] if e["kind"] == "const" else test_props[e["attr"]]
-            color_dict = resolve(schema["color"])
+            test_props = fg(task.test_pairs[0].input_grid).to_json()
+            color_dict = resolve_property(schema["color"], test_props)
             evidence = {
                 "schema": schema,
-                "size": resolve(schema["grid_size"]),
-                "cells": resolve(schema["coordinate"]),               # [[r,c],...]
-                "color": next(k for k, v in color_dict.items() if v and k != 0),
+                "size": resolve_property(schema["grid_size"], test_props),
+                "cells": resolve_property(schema["coordinate"], test_props),
+                "color": _fgcolor(color_dict),
             }
-        kinds = {k: schema[k]["kind"] for k in schema}
-        return {"decisive": decisive, "reason": f"anti-unify schema {kinds}",
-                "receipts": [], "evidence": evidence}
+        return {"decisive": decisive,
+                "reason": "schema 전부 설명됨" if decisive else "schema 에 unexplained 있음",
+                "examined": examined, "evidence": evidence}
 
     return {"decisive": False, "reason": f"미지원 level {level}",
-            "receipts": [], "evidence": None}
+            "examined": [], "evidence": None}
 
 
 def descend_to_decisive(wm, task, on_level=None):
     """막힘 기반 descent 루프. 결정적 비교에 도달하면 (result, goal_stack) 반환.
-
-    on_level(level, goal, result): 각 레벨 방문 시 콜백 (로그·해석용).
-    """
+    각 레벨에서 examined(읽은 ARCKG 정보·비교)를 WM substate 에 기록 → WM 로그 가시화."""
     gs = GoalStack(wm, _GOAL["TASK"])
     while True:
         level = gs.current_level()
         result = _try_resolve(level, task)
+        wm.active["examined"] = result["examined"]      # WM 에 기록 → 로그로 보임
         if on_level:
             on_level(level, gs.current_goal(), result)
         if result["decisive"]:
             return result, gs
         nxt = next_level(level)
         if nxt is None:
-            return result, gs  # 더 못 내려감 (Slice 1 범위에선 미발생)
+            return result, gs
         gs.descend(nxt, _GOAL[nxt], result["reason"])

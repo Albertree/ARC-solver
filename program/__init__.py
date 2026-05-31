@@ -6,6 +6,6 @@ Public interface:
     is_solvable         — schema 가 전부 설명되는가
 """
 
-from program.anti_unification import anti_unify_objects, is_solvable
+from program.anti_unification import anti_unify_objects, is_solvable, resolve_property
 
-__all__ = ["anti_unify_objects", "is_solvable"]
+__all__ = ["anti_unify_objects", "is_solvable", "resolve_property"]

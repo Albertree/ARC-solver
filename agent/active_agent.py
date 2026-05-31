@@ -8,7 +8,6 @@ from agent.descent import descend_to_decisive
 from agent.predict import predict, emit_answer
 from agent.io import inject_arc_task
 from agent.wm_logger import reset_wm_snapshot, print_wm_triplets
-from procedural_memory.DSL.relation import verdict
 from procedural_memory.DSL.library import deposit
 
 
@@ -82,12 +81,10 @@ class ActiveSoarAgent:
 
     @staticmethod
     def _log_descent(level, goal, res):
-        """descent 각 레벨 trace 출력 (log_wm 시)."""
+        """descent 각 레벨 trace 출력 (log_wm 시) — 읽은 ARCKG 정보·비교."""
         print(f"  [{level}] goal: {goal}")
-        for x, y, r in res["receipts"]:
-            t, s, _ = verdict(r)
-            sn = ".".join(x.node_id.split(".")[1:]) + "↔" + ".".join(y.node_id.split(".")[1:])
-            print(f"        compare({sn}) = {t} ({s})")
+        for line in res["examined"]:
+            print(f"        {line}")
         tag = "결정적 ✓ 멈춤" if res["decisive"] else "막힘 → descend"
         print(f"     → {tag}  ({res['reason']})")
 
