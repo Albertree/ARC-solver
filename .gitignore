@@ -213,10 +213,16 @@ __marimo__/
 # Eval results (run_MMDD_HHMM/ 폴더들)
 eval_result/
 
-# run_logs/ 안의 .log는 위 *.log 룰의 예외로 트래킹
-!run_logs/*.log
+# 메모리 산물(KG dump, dsl_library, trace, 로그)은 전부 추적 — 전역 *.log 등 ignore 예외.
+!semantic_memory/**
+!episodic_memory/**
+!procedural_memory/**
+!run_logs/**
+# 단, __pycache__ / .pyc 는 추적 안 함 (위 un-ignore 뒤에 다시 제외)
+__pycache__/
+*.py[codz]
 
-# Memory
+# Memory (Claude 자동 메모리 디렉터리)
 memory/
 # Result code
 result_code/
