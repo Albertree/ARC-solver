@@ -39,7 +39,7 @@ def _try_resolve(level: str, task) -> dict:
 
     if level == "PAIR":
         pairs = select(task, "pair")
-        receipts = compare(pairs)
+        receipts = compare(pairs, pairs)
         examined = ["grid-count: " + ", ".join(f"{_sn(p)}={grid_count(p)}" for p in pairs)]
         examined += [f"compare({_sn(x)},{_sn(y)}) = {verdict(r)[0]}" for x, y, r in receipts]
         return {"decisive": False, "reason": "pair 비교는 grid-count 뿐 → 출력 grid 내용 미정",
@@ -47,7 +47,7 @@ def _try_resolve(level: str, task) -> dict:
 
     if level == "GRID":
         g1s = [g for p in pairs_of(task) for g in select(p, "grid", _is_output)]
-        receipts = compare(g1s)
+        receipts = compare(g1s, g1s)
         examined = [f"{_sn(g)}: size={size(g)['height']}x{size(g)['width']}, colors={_cols(color(g))}"
                     for g in g1s]
         examined += [f"compare({_sn(x)},{_sn(y)}) = {verdict(r)[0]}, COMM={verdict(r)[2]}"
