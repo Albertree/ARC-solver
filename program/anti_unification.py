@@ -31,4 +31,6 @@ def resolve_property(entry: dict, test_props: dict):
     if entry["kind"] == "g0_offset":
         dr, dc = entry["offset"]
         return [[r + dr, c + dc] for r, c in test_props[entry["attr"]]]
+    if entry["kind"] == "corner":
+        return [[test_props["grid_h"] - 1, test_props["grid_w"] - 1]]
     raise ValueError(f"unknown schema kind: {entry['kind']}")

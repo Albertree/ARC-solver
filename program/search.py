@@ -43,11 +43,24 @@ def _detect_offset(examples, k):
     return {"kind": "g0_offset", "attr": k, "offset": off} if off is not None else None
 
 
+def _detect_corner(examples, k):
+    """relational(*다른* property): 출력 좌표 == 입력 grid 우하단 (grid_h-1, grid_w-1).
+    cross-property — 좌표가 *grid 크기* 에서 옴 (g0_offset 처럼 같은 property 아님)."""
+    if k != "coordinate":
+        return None
+    try:
+        ok = all(out[k] == [[inp["grid_h"] - 1, inp["grid_w"] - 1]] for inp, out in examples)
+    except (KeyError, TypeError):
+        return None
+    return {"kind": "corner"} if ok else None
+
+
 # 우선순위 순 (priority 작을수록 먼저). scope/mode = 그 move 의 성격이자 선택 이유.
 MOVES = [
-    {"name": "from_g0",   "priority": 1, "scope": "intra", "mode": "elemental",  "detect": _detect_from_g0},
-    {"name": "const",     "priority": 2, "scope": "inter", "mode": "elemental",  "detect": _detect_const},
-    {"name": "g0_offset", "priority": 3, "scope": "inter", "mode": "relational", "detect": _detect_offset},
+    {"name": "from_g0",   "priority": 1, "scope": "intra", "mode": "elemental",       "detect": _detect_from_g0},
+    {"name": "const",     "priority": 2, "scope": "inter", "mode": "elemental",       "detect": _detect_const},
+    {"name": "g0_offset", "priority": 3, "scope": "inter", "mode": "relational",      "detect": _detect_offset},
+    {"name": "corner",    "priority": 4, "scope": "inter", "mode": "relational(grid)", "detect": _detect_corner},
 ]
 
 

@@ -9,9 +9,7 @@ TASK→PAIR→GRID→OBJECT. 각 레벨에서 Inter 비교(모듈 C)를 시도�
 """
 
 from procedural_memory.DSL.util import pairs_of, role_of, is_foreground
-from procedural_memory.DSL.property import (
-    size, color, contents, grid_count, color_of, coordinate_of,
-)
+from procedural_memory.DSL.property import size, color, contents, grid_count
 from procedural_memory.DSL.selection import select
 from procedural_memory.DSL.relation import compare, verdict
 from program.anti_unification import anti_unify_objects, is_solvable, resolve_property
@@ -65,30 +63,35 @@ def _try_resolve(level: str, task) -> dict:
 
     if level == "OBJECT":
         fg = lambda g: select(g, "object", is_foreground)[0]
-        examined = []
-        examples = []
+
+        def ctx(grid):
+            """grid 의 *통합 property 맥락* — 전경 객체 속성 + grid 속성 한 namespace.
+            property 가 서로(객체↔grid)를 가로질러 조합될 수 있게 (예: 위치 ← grid 크기)."""
+            o = fg(grid).to_json()
+            gs = grid.to_json()["size"]
+            return {"color": o["color"], "coordinate": o["coordinate"],
+                    "grid_size": gs, "grid_h": gs["height"], "grid_w": gs["width"]}
+
+        examined, examples = [], []
         for p in task.example_pairs:
-            o0, o1 = fg(p.input_grid), fg(p.output_grid)
-            examples.append((o0.to_json(), o1.to_json()))
+            ci, co = ctx(p.input_grid), ctx(p.output_grid)
+            examples.append((ci, co))
             examined.append(
-                f"{_sn(p)}: G0 obj(색 {_fgcolor(color_of(o0))} @{coordinate_of(o0)[0]}) "
-                f"→ G1 obj(색 {_fgcolor(color_of(o1))} @{coordinate_of(o1)[0]})")
-        schema = anti_unify_objects(examples, ["color", "coordinate"])
-        out_sizes = [p.output_grid.to_json()["size"] for p in task.example_pairs]
-        schema["grid_size"] = (
-            {"kind": "const", "value": out_sizes[0], "via": "const", "scope": "inter", "mode": "elemental"}
-            if all(s == out_sizes[0] for s in out_sizes) else {"kind": "unexplained"})
-        examined.append("anti-unify schema: " + ", ".join(f"{k}={v['kind']}" for k, v in schema.items()))
+                f"{_sn(p)}: G0(색 {_fgcolor(ci['color'])} @{ci['coordinate'][0]} grid {ci['grid_h']}x{ci['grid_w']}) "
+                f"→ G1(색 {_fgcolor(co['color'])} @{co['coordinate'][0]} grid {co['grid_h']}x{co['grid_w']})")
+
+        schema = anti_unify_objects(examples, ["color", "coordinate", "grid_size"])
+        examined.append("anti-unify schema: " + ", ".join(
+            f"{k}={v['kind']}" for k, v in schema.items()))
         decisive = is_solvable(schema)
         evidence = None
         if decisive:
-            test_props = fg(task.test_pairs[0].input_grid).to_json()
-            color_dict = resolve_property(schema["color"], test_props)
+            test = ctx(task.test_pairs[0].input_grid)
             evidence = {
                 "schema": schema,
-                "size": resolve_property(schema["grid_size"], test_props),
-                "cells": resolve_property(schema["coordinate"], test_props),
-                "color": _fgcolor(color_dict),
+                "size": resolve_property(schema["grid_size"], test),
+                "cells": resolve_property(schema["coordinate"], test),
+                "color": _fgcolor(resolve_property(schema["color"], test)),
             }
         return {"decisive": decisive,
                 "reason": "schema 전부 설명됨" if decisive else "schema 에 unexplained 있음",
