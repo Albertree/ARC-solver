@@ -5,10 +5,13 @@ ARCEnvironment의 agent.solve(task) 인터페이스를 구현한다.
 
 from agent.wm import WorkingMemory
 from agent.descent import descend_to_decisive
+import os
+
 from agent.predict import predict, emit_answer
 from agent.io import inject_arc_task
 from agent.wm_logger import reset_wm_snapshot, print_wm_triplets
 from procedural_memory.DSL.relation import verdict
+from procedural_memory.DSL.library import deposit
 
 
 class ActiveSoarAgent:
@@ -67,6 +70,11 @@ class ActiveSoarAgent:
         if result["decisive"]:
             grid = predict(result["evidence"])
             answers = emit_answer(task, grid)
+            # anti-unify schema 가 있으면 학습 라이브러리에 적재 (semantic 성장)
+            schema = result["evidence"].get("schema")
+            if schema is not None:
+                deposit(schema, {"task": task_hex},
+                        path=os.path.join(self.semantic_memory_root, "dsl_library.json"))
 
         if self._log_wm:
             print_wm_triplets(wm, label="After descent (substate stack)", step=1)

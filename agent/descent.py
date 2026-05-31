@@ -8,8 +8,9 @@ TASK→PAIR→GRID. 각 레벨에서 Inter 비교(모듈 C)를 시도하고, 목
 """
 
 from procedural_memory.DSL.util import pairs_of, role_of, is_foreground
-from procedural_memory.DSL.property import size, color, contents, coordinate_of, color_of
-from procedural_memory.DSL.relation import select, compare, compare_set, verdict
+from procedural_memory.DSL.property import size, color, contents
+from procedural_memory.DSL.relation import select, compare_set, verdict
+from program.anti_unification import anti_unify_objects, is_solvable
 from agent.goal_stack import GoalStack, next_level
 
 # 레벨별 목표 (B 가 descent 시 채택) — 내려갈수록 구체화
@@ -56,27 +57,31 @@ def _try_resolve(level: str, task) -> dict:
 
     if level == "OBJECT":
         fg = lambda g: select(g, "object", is_foreground)[0]   # 전경 객체 1개
-        # ① intra (각 pair, 먼저): G0객체↔G1객체 에서 색 COMM 이 *모든 pair* 에 일관한가
-        #    (= "출력색 = 입력색" 의 구조적 일치. 값 변수화는 안 함 — 일치만 사용.)
-        intra_comm = [verdict(compare(fg(p.input_grid), fg(p.output_grid)))[2]
-                      for p in task.example_pairs]
-        color_from_g0 = all("color" in c for c in intra_comm)
-        # ② inter (pair 간): G1객체 끼리 위치(coordinate) COMM 인가
-        g1objs = [fg(p.output_grid) for p in task.example_pairs]
-        inter = compare_set(g1objs)
-        pos_comm = bool(inter) and "coordinate" in verdict(inter[0][2])[2]
-        decisive = color_from_g0 and pos_comm
+        # 각 pair 의 (G0전경, G1전경) property → anti-unify 로 schema 추출
+        #   intra(같은 pair 입력과 일치) → from_g0,  inter(모든 pair 동일) → const
+        examples = [(fg(p.input_grid).to_json(), fg(p.output_grid).to_json())
+                    for p in task.example_pairs]
+        schema = anti_unify_objects(examples, ["color", "coordinate"])   # 객체 속성
+        # 출력 *grid* 크기도 일반화 (객체 bbox 가 아니라 격자 크기 — Slice 2: const)
+        out_sizes = [p.output_grid.to_json()["size"] for p in task.example_pairs]
+        schema["grid_size"] = ({"kind": "const", "value": out_sizes[0]}
+                               if all(s == out_sizes[0] for s in out_sizes)
+                               else {"kind": "unexplained"})
+        decisive = is_solvable(schema)
         evidence = None
         if decisive:
-            ref_out = task.example_pairs[0].output_grid
-            pos = coordinate_of(fg(ref_out))[0]                       # COMM 위치
-            test_g0 = fg(task.test_pairs[0].input_grid)               # 색 = test 의 G0 전경색
-            test_color = next(k for k, v in color_of(test_g0).items() if v and k != 0)
-            evidence = {"size": ref_out.to_json()["size"], "position": pos, "color": test_color}
-        reason = (f"intra 색보존(모든 pair {'O' if color_from_g0 else 'X'}) + "
-                  f"inter 위치 COMM({'O' if pos_comm else 'X'})")
-        return {"decisive": decisive, "reason": reason,
-                "receipts": inter, "evidence": evidence}
+            test_props = fg(task.test_pairs[0].input_grid).to_json()   # 변수 출처
+            resolve = lambda e: e["value"] if e["kind"] == "const" else test_props[e["attr"]]
+            color_dict = resolve(schema["color"])
+            evidence = {
+                "schema": schema,
+                "size": resolve(schema["grid_size"]),
+                "cells": resolve(schema["coordinate"]),               # [[r,c],...]
+                "color": next(k for k, v in color_dict.items() if v and k != 0),
+            }
+        kinds = {k: schema[k]["kind"] for k in schema}
+        return {"decisive": decisive, "reason": f"anti-unify schema {kinds}",
+                "receipts": [], "evidence": evidence}
 
     return {"decisive": False, "reason": f"미지원 level {level}",
             "receipts": [], "evidence": None}

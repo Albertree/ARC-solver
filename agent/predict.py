@@ -15,9 +15,11 @@ def predict(evidence: dict):
     if "contents" in evidence:
         # Slice 1: 출력 고정 — 공통 grid 그대로
         return evidence["contents"]
-    # Slice 2: 위치(COMM) + 색(G0) 스키마를 씨앗 2개로 *구성*
-    r, c = evidence["position"]
-    return coloring(make_grid(evidence["size"], 0), (r, c), evidence["color"])
+    # Slice 2: schema 가 푼 {size, cells, color} 를 씨앗 2개로 *구성*
+    grid = make_grid(evidence["size"], 0)
+    for (r, c) in evidence["cells"]:
+        grid = coloring(grid, (r, c), evidence["color"])
+    return grid
 
 
 def emit_answer(task, grid) -> list:
