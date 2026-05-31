@@ -11,6 +11,7 @@ from procedural_memory.DSL.property import size, color, contents, grid_count
 from procedural_memory.DSL.selection import select
 from procedural_memory.DSL.relation import compare, verdict
 from program.anti_unification import anti_unify_objects, is_solvable, resolve_property
+from procedural_memory.preference import by_preference
 from agent.goal_stack import GoalStack, next_level
 
 _is_output = lambda g: role_of(g) == "output"
@@ -105,7 +106,8 @@ def _try_resolve(level, task, goal):
                      "[지금은 전경 객체 1개로 단순화 — 항목 ③ 논의 대상]", goal,
                      compares=change_cmp, tag="compare"))
 
-        schema = anti_unify_objects(examples, ["color", "coordinate", "grid_size"])
+        # 분석할 property 를 *선호(preference)* 순서로 (어느 속성부터 볼지 = 독립 모듈)
+        schema = anti_unify_objects(examples, by_preference(["color", "coordinate", "grid_size"]))
         P.append(_ph("그 변화쌍의 property 별 변화를 우선순위 탐색으로 일반화 (anti-unify): "
                      + ", ".join(f"{k}={v.get('via', v['kind'])}" for k, v in schema.items()), goal, tag="decide"))
         decisive = is_solvable(schema)
