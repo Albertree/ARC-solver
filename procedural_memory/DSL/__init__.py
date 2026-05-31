@@ -8,8 +8,9 @@ DSL — ARBOR 그리드 풀이 DSL (Slice 1).
 종류:
   · transformation — coloring, make_grid (동결 원자 2개)
   · property       — pair_count, grid_count, size, color, contents (to_json 노출)
-  · util           — pairs_of, grids_of, role_of, filter_, elements_at
-  · relation (C)   — select, compare, compare_set  (Inter-* 비교; Intra=descent 는 모듈 A)
+  · util           — pairs_of, grids_of, objects_of, role_of, filter_  (날 것 항해)
+  · selection      — select, elements_at  (조건 맞는 요소 찾기; 범위 지정·객체 선택 공용)
+  · relation (C)   — compare(두 노드 또는 scope pairwise), verdict  (비교 = 공통점·차이점)
 """
 
 from procedural_memory.DSL.registry import SPECS, spec, body
@@ -18,6 +19,7 @@ from procedural_memory.DSL.registry import SPECS, spec, body
 import procedural_memory.DSL.util            # noqa: F401,E402
 import procedural_memory.DSL.property        # noqa: F401,E402
 import procedural_memory.DSL.transformation  # noqa: F401,E402
+import procedural_memory.DSL.selection       # noqa: F401,E402
 import procedural_memory.DSL.relation        # noqa: F401,E402
 
 __all__ = ["SPECS", "spec", "body"]
