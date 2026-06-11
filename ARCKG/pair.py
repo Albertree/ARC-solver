@@ -32,11 +32,15 @@ class Pair:
 
     def to_json(self) -> dict:
         """
-        PAIR property: grid_count 하나.
-        REF: CLAUDE.md § Edge Creation Timing
+        PAIR property: roles — 자기 배선 시그니처 (어느 역할 grid 로 채워졌나).
+        수치(grid_count) 대체: presence-dict 라 '무엇이' 빠졌는지 보존 (color 와 같은 꼴).
+        REF: CLAUDE.md § Edge Creation Timing; wiki arbor-execution-trace §3-3
         """
         return {
-            "grid_count": 2 if self.output_grid is not None else 1,
+            "roles": {
+                "input": self.input_grid is not None,
+                "output": self.output_grid is not None,
+            },
         }
 
     def save(self, semantic_memory_root: str):

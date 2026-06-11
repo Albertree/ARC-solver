@@ -220,3 +220,52 @@ class WorkingMemory:
         if not self._substate_stack:
             return
         self._substate_stack.pop()
+
+    # ── ARCKG(영속 WM) → 가동 WM 적재 ───────────────────────────────────
+    def _active_id(self) -> str:
+        """현재 활성 상태의 식별자 (S1, S2, …) — _wm_as_entries 와 동일 규칙."""
+        return "S1" if not self._substate_stack else f"S{len(self._substate_stack) + 1}"
+
+    def load_node(self, node) -> str:
+        """
+        ARCKG 노드 하나를 *현재 활성 상태* 의 WM 에 WME 로 적재한다 (lazy).
+        영속화된 WM(ARCKG)에서 노드를 *가동 WM* 으로 가져오는 입력 단계 —
+        operator 가 파이썬 객체가 아니라 WM 에서 지식을 읽게 하는 토대.
+
+            (Sx ^arckg A)(A ^<node_id> N)
+            (N ^type grid ^size … ^color … ^contents …          ; 속성(to_json)
+               ^input G0 ^output G1 ^objects […])                ; 구조 엣지(id 참조)
+
+        node_id 로 조회 가능. 이미 적재됐으면 그대로 둔다 (중복 적재 방지).
+        반환: node_id.
+        """
+        nid = node.node_id
+        bag = self.active.setdefault("arckg", {})
+        if nid in bag:
+            return nid
+
+        rec: dict[str, Any] = {"type": type(node).__name__.lower()}
+        rec.update(node.to_json())                       # 속성 (size/color/contents · roles · 8속성 …)
+        # 구조 엣지 — id 참조로 (있을 때만, lazy compute 트리거 안 함)
+        for edge, attr in (("input", "input_grid"), ("output", "output_grid")):
+            child = getattr(node, attr, None)
+            if child is not None and hasattr(child, "node_id"):
+                rec[edge] = child.node_id
+        for edge, attr in (("example", "example_pairs"), ("test", "test_pairs")):
+            kids = getattr(node, attr, None)
+            if kids:
+                rec[edge] = [k.node_id for k in kids if hasattr(k, "node_id")]
+
+        bag[nid] = rec
+        self._record_wme(self._active_id(), "arckg", nid)
+        for attr, val in rec.items():
+            self._record_wme(nid, attr, val)
+        return nid
+
+    def find_node(self, node_id: str):
+        """적재된 ARCKG 노드를 WM 에서 조회 (활성 → 상위 substate → S1 순)."""
+        for state in reversed([self.s1] + self._substate_stack):
+            bag = state.get("arckg")
+            if isinstance(bag, dict) and node_id in bag:
+                return bag[node_id]
+        return None

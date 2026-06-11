@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>ARBOR dashboard</title>
+<style>
+:root{--bg:#0f1117;--panel:#171a23;--panel2:#1d2130;--line:#2a2f3e;--txt:#d7dbe6;
+  --muted:#8b93a7;--accent:#5aa9ff;--add:#3fb950;--del:#f85149;--chg:#d29922;--goal:#e3b341;--write:#2fa7a0}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:12.5px}
+.hint{color:var(--muted)} .ok{color:var(--add)} .bad{color:var(--del)}
+code{font-family:ui-monospace,Menlo,monospace;background:#222838;padding:0 4px;border-radius:3px}
+/* select */
+#select{padding:24px;max-width:1100px;margin:0 auto}
+#select h1{font-size:19px;border-bottom:2px solid var(--line);padding-bottom:10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-top:18px}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center}
+.card:hover{border-color:var(--muted)} .card .id{font-weight:700;margin-bottom:6px}
+table.grid{border-collapse:collapse;display:inline-block;border:1px solid #444;background:#444;margin:2px}
+table.grid td{width:10px;height:10px;border:1px solid #222}
+/* dashboard */
+#dash{display:none;grid-template-columns:1.05fr 1fr;grid-template-rows:auto 54px 1.25fr 1fr auto;gap:6px;height:100vh;padding:6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;overflow:auto;min-height:0}
+.panel.hl{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.panel h3{margin:0 0 5px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;background:var(--panel);padding-bottom:3px;border-bottom:1px solid var(--line)}
+#top{grid-column:1/3;grid-row:1;display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px}
+#pgoal{grid-column:1/3;grid-row:2}
+#pwm{grid-column:1;grid-row:3/5} #pdec{grid-column:2;grid-row:3} #pgrid{grid-column:2;grid-row:4}
+#ptime{grid-column:1/3;grid-row:5;display:flex;gap:2px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;overflow-x:auto}
+.gframe{display:inline-block;padding:2px 7px;border:1px solid transparent;border-radius:6px;margin:1px 0}
+.gframe.on{border-color:var(--accent);background:#1d2740}
+/* tokens */
+.kv{margin:2px 0}.kv .k{color:var(--muted);display:inline-block;min-width:42px}
+.tok{display:inline-block;padding:1px 8px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;cursor:help}
+.tok.pass{color:var(--add);border-color:#2c5} .tok.fail{color:var(--muted);opacity:.55}
+.tok.sel{background:#13332a;border-color:var(--add);font-weight:700;color:var(--txt)}
+.run{font-family:ui-monospace,Menlo,monospace;font-size:12px;display:block;margin:4px 0}
+.lvchip{font-size:10px;padding:1px 7px;border:1px solid var(--line);border-radius:8px;color:var(--muted)}
+.lvchip.on{color:var(--txt);font-weight:700}
+.phase{background:var(--accent);color:#08111e;font-weight:700;padding:1px 9px;border-radius:6px}
+table.t{border-collapse:collapse;margin:4px 0;font-size:11.5px}
+table.t td,table.t th{border:1px solid var(--line);padding:1px 7px;font-family:ui-monospace,Menlo,monospace}
+.need{background:#241f0a;border-left:2px solid var(--goal);padding:2px 8px;border-radius:4px;margin:3px 0;font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
+.grow{display:flex;align-items:center;gap:6px;margin:3px 0}.gcap{color:var(--muted);font-size:10px;min-width:46px}
+.built{outline:2px solid var(--goal);border-radius:4px;padding:2px}
+/* WM tree */
+.wml{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.5}
+.wml .added{color:var(--add)}.wml .removed{color:var(--del);text-decoration:line-through;opacity:.7}
+.wml .changed{color:var(--chg)}.wml .same{color:var(--txt);opacity:.62}
+.wml .wpre{display:inline-block;width:.95em;text-align:center;font-weight:700}   /* +/−/~ 고정칸 — 위치 안 밀림 */
+.wml .trig{background:#4a4012;border-radius:3px;outline:1px solid #d6b656}
+.wml details{margin:0}.wml summary{cursor:pointer;list-style:none}
+.wml summary::-webkit-details-marker{display:none}
+.wml summary::before{content:"▸";color:var(--muted);display:inline-block;width:1.1em;text-align:center}
+.wml details[open]>summary::before{content:"▾"}
+.wml details>:not(summary){margin-left:11px;border-left:1px solid var(--line);padding-left:4px}
+.wml .wleaf{padding-left:1.1em}
+/* timeline */
+.tstep{min-width:13px;height:22px;border-radius:3px;cursor:pointer;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:9px;color:#08111e;flex:0 0 auto}
+.tstep.cur{outline:2px solid #fff}
+</style>
+</head>
+<body>
+<div id="select"></div>
+<div id="dash">
+  <div id="top"></div>
+  <div class="panel" id="pgoal"><h3>목표 스택 (상위→하위)</h3><div id="goal"></div></div>
+  <div class="panel hl" id="pwm"><h3>① WM (근거 · 고정)</h3><div id="wm" class="wml"></div></div>
+  <div class="panel" id="pdec"><h3>② 결정 — 무슨 행동을 왜</h3><div id="dec"></div></div>
+  <div class="panel" id="pgrid"><h3>③ 격자</h3><div id="grids"></div></div>
+  <div id="ptime"></div>
+</div>
+<script src="data.js"></script>
+<script>
+const D=window.ARBOR_DATA;
+const PAL={0:"#111",1:"#0074D9",2:"#FF4136",3:"#2ECC40",4:"#FFDC00",5:"#AAA",6:"#F012BE",7:"#FF851B",8:"#7FDBFF",9:"#870C25"};
+const LAYER={TASK:"#B85450",PAIR:"#D79B00",GRID:"#D6B656",OBJECT:"#82B366",PIXEL:"#6C8EBF"};
+const KCOL={view:"#6c8ebf",write:"#2fa7a0",descend:"#bc6cff",unwind:"#3fb950"};
+const MECH=["match","preference","compute"], RESULT=["propose","select"];
+let ti=0, si=0;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function gridHTML(raw,cls=""){ if(!raw) return '<span class="hint">·</span>';
+  return `<table class="grid ${cls}">`+raw.map(r=>"<tr>"+r.map(v=>`<td style="background:${PAL[v]||'#fff'}"></td>`).join("")+"</tr>").join("")+"</table>"; }
+
+/* ── select ── */
+function renderSelect(){
+  $("select").style.display="block"; $("dash").style.display="none";
+  $("select").innerHTML=`<h1>ARBOR dashboard — <span class="hint">${esc(D.repo)}</span></h1>
+   <p class="hint">WM(근거)은 좌측 고정 · 결정은 토큰·색·op→결과 · 하단바로 스텝 이동 · 토큰 호버=조건</p>
+   <div class="cards">${D.tasks.map((t,i)=>`<div class="card" onclick="open_(${i})">
+     <div class="id">${esc(t.id)} <span class="${t.correct?'ok':'bad'}">${t.correct?'✓':'✗'}</span></div>
+     ${gridHTML(t.grids.test[0].in)}</div>`).join("")}</div>`;
+}
+function open_(i){ ti=i; si=0; render(); }
+
+/* ── render ── */
+function triggered(path,trig){ return (trig||[]).some(k=>(path||"").indexOf(k)>=0); }
+function render(){
+  $("select").style.display="none"; $("dash").style.display="grid";
+  const t=D.tasks[ti], s=t.steps[si], m=s.meta||{};
+  const LV=["TASK","PAIR","GRID","OBJECT"];
+  $("top").innerHTML=`<b>${esc(t.id)}</b> ${t.correct?'<span class=ok>✓</span>':'<span class=bad>✗</span>'}
+    <span class="hint">attempt 1/3 · 스텝 ${si+1}/${t.steps.length}</span>
+    &nbsp; ${LV.map(l=>`<span class="lvchip ${l==s.level?'on':''}" style="${l==s.level?'border-color:'+LAYER[l]+';color:'+LAYER[l]:''}">${l}</span>`).join("")}
+    &nbsp; <span class="phase">${esc(s.phase)}</span> <span class="hint">· op ${esc(s.op)}</span>
+    <span style="margin-left:auto" class="hint">←/→ 스텝 · Esc</span>`;
+  // step0(wm-init) view·input 에선 목표 숨김 — 목표는 다음 장부터 (박스는 고정높이라 안 흔들림)
+  $("goal").innerHTML=(s.phase=='input'||(s.big===0&&s.phase=='view'))?'<span class="hint">·</span>':goalStackHTML(s);
+  $("wm").innerHTML=wmTree(s.wm||[], s.show_trigger?(m.trig||[]):[]);
+  $("dec").innerHTML=decHTML(s,m);
+  renderGrids(t,s);
+  // 활성 패널 강조: 결정 단계면 ②, 격자(input/solved)면 ③, 그 외 ① WM
+  const act = (s.phase=='input'||s.phase=='solved')?'pgrid':(['match','propose','preference','select','compute'].includes(s.phase)?'pdec':'pwm');
+  ['pwm','pdec','pgrid'].forEach(id=>$(id).classList.toggle('hl', id==act));
+  renderTime(t);
+}
+
+/* 목표 스택 — 레벨별 목표 계층, 현재 강조 (need 는 활성 프레임만) */
+function goalStackHTML(s){
+  const gs=s.goals||[];
+  if(!gs.length) return '<span class="hint">·</span>';
+  return gs.map(g=>{
+    const dk=LAYER[g.level]||'#888';
+    return `<span class="gframe ${g.active?'on':''}" style="${g.active?'border-color:'+dk:''}">
+      <span class="lvchip on" style="color:${dk};border-color:${dk}">${esc(g.level||'-')}</span>
+      ${esc(g.intent||'')} <span class="hint">[${esc(g.status||'')}]</span>${(g.active&&g.need)?` <span class="hint">· need</span> <code>${esc((g.need+'').split(' requires')[0])}</code>`:''}</span>`;
+  }).join('<span class="hint"> ▸ </span>');
+}
+
+/* ② 결정 — 토큰·색·op→결과 (문장 X) */
+function decHTML(s,m){
+  // substep 별 점진 노출 — 그 장까지 *밝혀진 것* 만 (impasse 는 select 에서만)
+  const RANK={input:-1,view:0,match:1,propose:2,preference:3,select:4,compute:5,apply:6,descend:6};
+  const r=RANK[s.phase]??9;   // input·view = ② 비움 (아직 결정 없음, WM 만 보면 됨)
+  const tableCmp=()=>(s.comparisons&&s.comparisons.length)?`<table class="t"><tr><th>left</th><th>right</th><th>attr</th><th>=</th></tr>`+
+    s.comparisons.map(c=>`<tr><td>${esc(c.left)}</td><td>${esc(c.right)}</td><td>${esc(c.attr)}</td><td class="${c.result=='COMM'?'ok':'bad'}">${esc(c.result)}</td></tr>`).join("")+`</table>`:'';
+  const tableGP=()=>s.grid_props?`<table class="t"><tr><th>prop</th><th>=</th><th>값</th></tr>`+
+    Object.entries(s.grid_props).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="${v.verdict=='COMM'?'ok':'bad'}">${esc(v.verdict)}</td><td>${esc(v.relation||(v.value!=null?'채택':''))}</td></tr>`).join("")+`</table>`:'';
+  let h="";
+  // (goal/need 는 상단바로 이관 — ②엔 결정 과정만)
+  // match (≥match) — 이 레벨 operator 스캔, 조건 T/F (호버=조건)
+  if(r>=1){
+    if(s.match&&s.match.length) h+=`<div class="kv"><span class="k">match</span>`+s.match.map(o=>{
+        const sel=o.passed&&o.name===s.op, cls=o.passed?(sel?'tok pass sel':'tok pass'):'tok fail';
+        return `<span class="${cls}" title="${esc(o.doc||'')}">${esc(o.name)}${sel?' ◀':o.passed?' ✓':' ✗'}</span>`;}).join("")+`</div>`;
+    else h+=`<div class="kv"><span class="k">match</span> <span class="tok fail">0개 — 이 레벨 operator 없음</span></div>`;
+  }
+  // propose (≥propose) — 통과 후보 열거
+  if(r>=2){ const p=(s.match||[]).filter(o=>o.passed).map(o=>o.name);
+    h+=`<div class="kv"><span class="k">후보</span> ${p.length?p.map(n=>`<span class="tok pass">${esc(n)}</span>`).join(''):'<span class="bad">∅</span>'}</div>`; }
+  // select (≥select, descend 제외) — 선택 or impasse
+  if(r>=4 && s.phase!='descend'){
+    if(s.op=='impasse') h+=`<div class="kv"><span class="k">select</span> <span class="bad">impasse</span> <span class="hint">통과 후보 0 → 사이클 중단, substate 생성</span></div>`;
+    else if(s.op!='—') h+=`<div class="kv"><span class="k">select</span> <span class="tok sel">${esc(s.op)}</span> <span class="hint">← 유일 후보 (tie 없음)</span></div>`;
+  }
+  // run + computation (≥compute, domain op 만)
+  if(r>=5 && s.op!='—' && s.op!='impasse' && s.phase!='descend')
+    h+=`<div class="kv"><span class="k">run</span> ${runHTML(s)}</div>`+tableCmp()+tableGP();
+  // 해결 — descend
+  if(s.phase=='descend')
+    h+=`<div class="kv"><span class="k">해결</span> 계층하강 <span style="color:${KCOL.descend};font-weight:700">↓ ${esc(s.level)}</span> <span class="hint">(impasse 해결법 — 현재 구현된 유일 방법)</span></div>`;
+  return h;
+}
+function runHTML(s){
+  const v=s.compared&&s.compared.verdict;
+  const comm=s.grid_props?Object.entries(s.grid_props).filter(([k,x])=>x&&x.verdict=='COMM').map(([k])=>k).join('·'):'';
+  const B=(a,r)=>`<span class="run"><b>${esc(a)}</b> → ${r}</span>`;
+  switch(s.op){
+    case 'compare': return v?B('compare',`<span class="${v=='COMM'?'ok':'bad'}">${v}</span>`)
+                            :B('compare',`COMM <span class=ok>${esc(comm||'-')}</span>`);
+    case 'observe': return B('observe',`{${esc((s.frame&&s.frame.props||[]).join('·'))}}`);
+    case 'select': return B('select',`${s.obj_sel?s.obj_sel.count:'?'} 후보 객체`);
+    case 'search': return B('search',(s.dsl_search&&s.dsl_search.length)?`<span class=ok>[${esc(s.dsl_search.join(', '))}]</span>`:`<span class=bad>∅</span>`);
+    case 'generalize': return B('anti-unify','→ schema');
+    case 'compose': return B('compose','<span class=ok>grid ✓</span>');
+    case 'descend': return B('impasse ∅',`↓ <span style="color:${KCOL.descend}">${esc(s.level)}</span>`);
+    case 'unwind': return B('unwind',`↑ ${esc(s.level)}`);
+    case 'solved': return B('output','제출');
+    default: return `<span class="hint">${esc(s.op)}</span>`;
+  }
+}
+
+function wmTree(es,trig){
+  let i=0;
+  function line(e){ const sym={added:"+",removed:"−",changed:"~",same:""}[e.status]||"";
+    let cls=e.status; if(trig.length&&triggered(e.path,trig)) cls+=" trig";
+    return {cls,txt:`<span class="wpre">${sym}</span>(${esc(e.id)} ^${esc(e.attr)} ${esc(e.val)})`}; }
+  function R(d){ let h="";
+    while(i<es.length&&es[i].depth===d){ const e=es[i]; i++;
+      const kids=(i<es.length)&&es[i].depth===d+1; const{cls,txt}=line(e);
+      if(kids){ const op=(e.attr=='color')?'':' open';
+        h+=`<details${op}><summary class="${cls}">${txt}</summary>${R(d+1)}</details>`; }
+      else h+=`<div class="wleaf ${cls}">${txt}</div>`; }
+    return h; }
+  return R(0)||'<span class="hint">·</span>';
+}
+function renderGrids(t,s){
+  $("grids").innerHTML=t.grids.train.map((p,i)=>`<div class="grow"><span class="gcap">train${i}</span>${gridHTML(p.in)}→${gridHTML(p.out)}</div>`).join("")
+    +t.grids.test.map(p=>`<div class="grow"><span class="gcap">test</span>${gridHTML(p.in)}→<span class="hint">?</span></div>`).join("")
+    +(s.built?`<div class="grow"><span class="gcap">조립물</span><span class="built">${gridHTML(s.built)}</span></div>`:"");
+}
+function renderTime(t){
+  $("ptime").innerHTML=t.steps.map((s,i)=>{
+    const isHead=s.phase=='view'; let gap=(isHead||s.phase=='solved')&&i>0?'margin-left:9px':'';
+    let col,lbl="",extra="";
+    if(s.phase=='input'){col="#000";extra="color:#fff;font-weight:700";lbl="I";}
+    else if(s.phase=='solved'){col="#000";extra="color:#fff;font-weight:700";lbl="O";}
+    else if(isHead){col=KCOL.view;extra="color:#08111e;font-weight:700";lbl=String(s.big);}
+    else if(s.phase=='descend'){col=KCOL.descend;}
+    else if(s.phase=='apply'){col=KCOL.write;}
+    else if(s.phase=='unwind'){col=KCOL.unwind;}
+    else if(RESULT.includes(s.phase)){col='#565d75';}
+    else col='#3a3f4d';
+    return `<div class="tstep ${i==si?'cur':''}" title="step ${s.big} · ${esc(s.phase)} · ${esc(s.op)}" style="background:${col};${gap};${extra}" onclick="si=${i};render()">${lbl}</div>`;
+  }).join("");
+}
+document.addEventListener("keydown",e=>{
+  if($("dash").style.display=="none") return;
+  if(e.key=="Escape") renderSelect();
+  else if(e.key=="ArrowRight"){ si=Math.min(D.tasks[ti].steps.length-1,si+1); render(); e.preventDefault(); }
+  else if(e.key=="ArrowLeft"){ si=Math.max(0,si-1); render(); e.preventDefault(); }
+});
+renderSelect();
+</script>
+</body>
+</html>

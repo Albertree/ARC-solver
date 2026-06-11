@@ -3,8 +3,8 @@ property DSL — ARCKG 노드 to_json() 키를 함수형으로 노출 (재계산
 
 *계층별로* 묶는다 (property 는 그 입력 노드의 계층에 속한다):
 
-  TASK-level   : pair_count                                              (Task 1)
-  PAIR-level   : grid_count                                              (Pair 1)
+  TASK-level   : roles {example,test} (배선; pair_count 는 edge 파생)        (Task)
+  PAIR-level   : roles {input,output} (배선; grid_count 는 roles 파생)        (Pair)
   GRID-level   : size, color, contents                                  (ARCKG Grid 3)
   OBJECT-level : area_of, color_of, coordinate_of, method_of,           (ARCKG Object 8)
                  position_of, shape_of, size_of, symmetry_of
@@ -19,16 +19,25 @@ from procedural_memory.DSL.registry import dsl
 # ── TASK-level ──────────────────────────────────────────────
 @dsl("property", ["task"], "int")
 def pair_count(task):
-    """task 의 pair 수 (example + test)."""
-    j = task.to_json()
-    return j["example_pair_count"] + j["test_pair_count"]
+    """task 의 pair 수 (example + test). (to_json 이 roles presence 로 바뀜 → edge 에서 셈.)"""
+    return len(task.example_pairs) + len(task.test_pairs)
 
 
 # ── PAIR-level ──────────────────────────────────────────────
+@dsl("property", ["pair"], "role-set")
+def roles(pair):
+    """pair 가 *어떤 역할의 grid 로 채워졌나* = 자기 배선 시그니처 (color 와 같은 꼴).
+
+    수치(grid_count)가 아니라 presence-dict {input:bool, output:bool}. '무엇이'
+    빠졌는지를 보존해, 통째 비교 후 localize 로 빠진 역할을 집어낼 수 있다.
+    """
+    return pair.to_json()["roles"]                  # 단일 출처: pair 의 정식 property
+
+
 @dsl("property", ["pair"], "int")
 def grid_count(pair):
-    """pair 의 grid 수 (2=in+out, 1=in only)."""
-    return pair.to_json()["grid_count"]
+    """pair 의 grid 수 (2=in+out, 1=in only). roles presence 에서 파생 (구 수치 속성, roles 로 대체됨)."""
+    return sum(pair.to_json()["roles"].values())
 
 
 # ── GRID-level ──────────────────────────────────────────────

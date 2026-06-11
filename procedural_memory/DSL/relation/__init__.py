@@ -32,3 +32,14 @@ def verdict(receipt) -> tuple:
     comm = [k for k, v in res.get("category", {}).items()
             if isinstance(v, dict) and v.get("type") == "COMM"]
     return res["type"], res["score"], comm
+
+
+def localize(ref: dict, cur: dict) -> dict:
+    """비교 *심화*: 통째 DIFF 를 받아도 '어디가' 다른지 모름 → 막힘. 그 막힘의
+    근거로 두 presence-dict 를 *이름정렬* 해 항목별로 비교, 다른 키만 집어낸다.
+
+    ref = 기준(완전한 example), cur = 대상(불완전한 test).
+    반환 {key: (cur_val, ref_val)}  — cur 를 ref 에 맞추려면 cur_val→ref_val.
+    (정렬이 이름으로 공짜인 presence-dict 라 쉬움. grid·object 면 정렬이 비싸짐.)
+    """
+    return {k: (cur.get(k), ref[k]) for k in ref if cur.get(k) != ref[k]}

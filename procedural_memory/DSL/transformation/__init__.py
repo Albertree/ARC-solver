@@ -7,15 +7,16 @@ transformation DSL — 그리드 변형 *동결 원자 2개* (씨앗).
 """
 
 from procedural_memory.DSL.registry import dsl
+from procedural_memory.DSL.effect import effect
 
 
-@dsl("transformation", ["size", "color"], "grid")
+@dsl("transformation", ["size", "color"], "grid", effect=effect("create", "grid"))
 def make_grid(size, fill=0):
     """size={height,width} 격자를 fill 색으로 채워 생성."""
     return [[fill for _ in range(size["width"])] for _ in range(size["height"])]
 
 
-@dsl("transformation", ["grid", "position", "color"], "grid")
+@dsl("transformation", ["grid", "position", "color"], "grid", effect=effect("recolor", "grid"))
 def coloring(grid, position, color):
     """grid 의 position=(row, col) 한 셀을 color 로 칠한 *새* 격자 반환."""
     r, c = position

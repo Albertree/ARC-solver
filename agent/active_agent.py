@@ -4,11 +4,11 @@ ARCEnvironment의 agent.solve(task) 인터페이스를 구현한다.
 """
 
 from agent.wm import WorkingMemory
-from agent.descent import descend_to_decisive
-from agent.predict import predict, emit_answer
+from agent.decision import run as decision_run
+from agent.goal import Goal, deposit_goal
+from agent.predict import emit_answer
 from agent.io import inject_arc_task
 from agent.wm_logger import reset_wm_snapshot, print_wm_triplets
-from procedural_memory.DSL.library import deposit
 
 
 class ActiveSoarAgent:
@@ -36,20 +36,30 @@ class ActiveSoarAgent:
         self._log_wm = log_wm
         self._submission_count: int = 0
         self._current_task_hex: str = None
+        self._rejected: list = []        # 이 task 에서 "틀림" 으로 돌아온 직전 답들 (reject 누적)
+        self._last_answer = None         # 직전 제출한 built-grid (재호출 시 reject 로 이관)
 
-    def solve(self, task) -> list:
+    def solve(self, task, on_step=None) -> list:
         """
-        ARBOR Slice 1 흐름: inject → 막힘 기반 descent(A) → 결정적 Inter 비교(C) →
-        PredictByAllPairCommOp → emit(K). descent 가 SOAR substate(S1→S2→S3 =
-        TASK→PAIR→GRID)를 만들고, 결정적 비교에 닿으면 답을 도출·제출한다.
+        ARBOR SOAR 사이클(decision.run): inject → 루트 목표 → propose/select/apply,
+        막히면 impasse→하강. built-grid 가 완성되면 unwind→answer 로 회수해 emit(K).
 
-        [설계 자유] max_steps 값. 결정적 비교 없으면 None(미제출) 반환.
-        (구 generic operator-dispatch cycle 은 이 흐름에서 미사용 — 스캐폴드로 보존.)
+        retry 구조(SOAR 충실): 환경은 *오답일 때만* 같은 task 를 다시 준다 → solve 가
+        같은 task 로 재호출됨 = 직전 답이 "틀림". 그 답을 ``_rejected`` 에 누적해 WM
+        (`s1["rejected"]`)에 주입한다. (decision.run 의 *소비*(ranked preference)는 다음
+        단계 — 지금은 구조만 완성. → wiki [[arbor]] "SOAR 정렬 정정".)
+
+        [설계 자유] max_steps 값. answer 미도출 시 None(미제출) 반환.
+        on_step: decision.run 에 그대로 넘기는 사이클 추적 콜백(visualizer 용).
         """
         task_hex = getattr(task, "task_hex", None)
-        if task_hex != self._current_task_hex:
+        if task_hex != self._current_task_hex:        # 새 task → 카운터·reject 초기화
             self._current_task_hex = task_hex
             self._submission_count = 0
+            self._rejected = []
+            self._last_answer = None
+        elif self._last_answer is not None:           # 같은 task 재호출 = 직전 답이 "틀림"
+            self._rejected.append(self._last_answer)
 
         wm = WorkingMemory()
         reset_wm_snapshot(wm)
@@ -57,38 +67,24 @@ class ActiveSoarAgent:
             print_wm_triplets(wm, label="Initial WM (before input)", step=0)
 
         inject_arc_task(task, wm)
+        wm.s1["level"] = "TASK"
+        deposit_goal(wm, Goal("이 task 를 푼다", scope="TASK"))
+        wm.s1["rejected"] = list(self._rejected)      # 틀린 답 누적 → 다음 deliberation 이 회피(예정)
         if self._log_wm:
             print_wm_triplets(wm, label="After input-link injection", step=0)
 
-        result, _gs = descend_to_decisive(wm, task,
-                                          on_level=self._log_descent if self._log_wm else None)
+        decision_run(wm, task, on_step=on_step, max_steps=self._max_steps)
 
-        answers = None
-        if result["decisive"]:
-            grid = predict(result["evidence"])
-            answers = emit_answer(task, grid)
-            # anti-unify schema 가 있으면 학습 라이브러리에 적재 (semantic 성장)
-            schema = result["evidence"].get("schema")
-            if schema is not None:
-                deposit(schema, {"task": task_hex}, root=self.semantic_memory_root)
+        built = wm.s1.get("answer")
+        answers = emit_answer(task, built) if built is not None else None
+        self._last_answer = built
 
         if self._log_wm:
-            print_wm_triplets(wm, label="After descent (substate stack)", step=1)
+            print_wm_triplets(wm, label="After decision cycle (substate stack)", step=1)
             print(f"\n[answer] {('제출 ' + str(len(answers)) + '개') if answers else '미제출(결정 불가)'}")
 
         self._submission_count += 1
         return answers
-
-    @staticmethod
-    def _log_descent(level, goal, res):
-        """descent 각 레벨 trace 출력 (log_wm 시) — phase(관측·비교·목표변경)."""
-        import re
-        strip = lambda s: re.sub(r"<[^>]+>", "", s)
-        print(f"  [{level}] goal: {strip(goal)}")
-        for p in res["phases"]:
-            print(f"        · {strip(p['desc'])}")
-        tag = "결정적 ✓ 멈춤" if res["decisive"] else "막힘 → descend"
-        print(f"     → {tag}  ({strip(res['reason'])})")
 
     def on_substate_resolved(self, substate: dict, task_hex: str):
         """

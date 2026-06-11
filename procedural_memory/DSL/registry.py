@@ -15,10 +15,12 @@ Slice 2 에서 자란다 (지금 풍부하게 짜면 "그럴싸한 추상" — �
 SPECS: dict = {}
 
 
-def dsl(kind: str, sig_in: list, sig_out: str):
+def dsl(kind: str, sig_in: list, sig_out: str, effect: dict = None):
     """함수를 DSL 본체로 등록하고 그 선언적 명세를 SPECS 에 남긴다.
 
-    kind: "property" | "util" | "transformation"
+    kind: "property" | "util" | "transformation" | "relation"
+    effect: 이 DSL 이 *무엇을 어떻게 바꾸나* (effect 양식). 활성화의 키.
+            읽기(property·util·relation)는 변화가 없으니 None.
     """
     def deco(fn):
         SPECS[fn.__name__] = {
@@ -26,6 +28,7 @@ def dsl(kind: str, sig_in: list, sig_out: str):
             "kind": kind,
             "in": list(sig_in),
             "out": sig_out,
+            "effect": effect,
             "body": fn,
         }
         return fn

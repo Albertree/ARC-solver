@@ -36,11 +36,14 @@ class Task:
         INTENT: 이 노드의 0th-order 속성(E_T{hex}.json 내용)을 dict로 반환한다.
                 반환 결과는 semantic_memory에 기록된다.
         MUST NOT: 비교(comparison) 결과를 포함하지 마. 속성만.
-        REF: CLAUDE.md § Edge Creation Timing
+        REF: CLAUDE.md § Edge Creation Timing; wiki arbor-execution-trace §3-3
+        property = roles (구조 계층의 배선 = 어느 pair-슬롯이 점유됐나). 개수는 edge(example/test) 로.
         """
         return {
-            "example_pair_count": len(self.example_pairs),
-            "test_pair_count": len(self.test_pairs),
+            "roles": {
+                "example": len(self.example_pairs) > 0,
+                "test": len(self.test_pairs) > 0,
+            },
         }
 
     def save(self, semantic_memory_root: str):

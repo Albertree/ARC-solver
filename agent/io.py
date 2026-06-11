@@ -29,10 +29,10 @@ def inject_arc_task(task, wm) -> None:
     if not isinstance(io, dict) or "input-link" not in io:
         raise ValueError("WM에 io/input-link 구조가 없습니다.")
 
+    # lazy: input 에선 *TASK 노드만* WM 에 적재 (속성 + example/test pair id 엣지).
+    # pair/grid/object 세부는 막혀서 그 레벨로 descend 할 때 load_node 로 가져온다.
+    nid = wm.load_node(task)                  # 영속 WM(ARCKG) → 가동 WM
     in_link = io["input-link"]
-    # SOAR 스타일: input-link에는 우선 task를 가리키는 심볼만 올린다.
-    # 세부 example/test 구조는 이후 production/elaboration 단계에서
-    # current-task를 따라가거나 별도 input function으로 확장한다.
-    in_link["task"] = task.task_hex
-    wm.register_wme("input-link", "task", task.task_hex)
+    in_link["task"] = nid                     # input-link 가 적재된 TASK 노드를 가리킴
+    wm.register_wme("input-link", "task", nid)
 
